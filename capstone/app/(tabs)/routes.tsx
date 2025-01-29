@@ -39,7 +39,7 @@ return (
               </View>
               <View style={styles.vehicleItem}>
                   <View style={{ paddingBottom: 2, paddingTop: 2 }}>
-                      <FontAwesome6 name="bus-simple" size={22} color="#4F46E5" />
+                      <FontAwesome5 name="bus" size={22} color="#4F46E5" />
                   </View>
                   <Text style={[styles.vehicleText]}>Modern jeep</Text>
               </View>
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   routecontainer:{borderWidth: 1, borderColor: '#C7D2FE',borderRadius: 8, padding:10, flexDirection: 'column', width: '100%', },
   fare: {fontSize: 12, fontWeight: '500', color: '#6B7280',},
   position: { flexDirection: 'row', justifyContent: 'space-between',},
-  vehicleTypes: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#EEF2FF', borderRadius: 8, padding: 4, marginTop:10},
+  vehicleTypes : { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#EEF2FF', borderRadius: 8, padding: 4, marginTop:10},
   vehicleItem: { alignItems: 'center',},
   vehicleText: {fontSize: 9, color: '#6B7280', marginVertical: 4,},
   estimatedTime: {fontSize: 8,color: '#6B7280', textAlign: 'center',},

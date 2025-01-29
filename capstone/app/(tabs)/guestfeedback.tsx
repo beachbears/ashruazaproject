@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     color: '#fff',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '400',
   },
 });
 

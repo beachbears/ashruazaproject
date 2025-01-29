@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   descriptionText: { color: '#44457D', textAlign: 'center', marginBottom: 30, fontSize: 13 },
   boldText: { fontWeight: 'bold' },
   floatingButton: { position: 'relative', width: 40, height: 40, borderRadius: 28, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 }, shadowRadius: 4, elevation: 6, marginTop: 30 },
-  floatingButtonText: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 'bold', },
+  floatingButtonText: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: '400', },
   modalBackground: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', height: '100%' },
   modalContainer: {paddingVertical: 16,backgroundColor: 'white',borderRadius: 10,paddingHorizontal: 20,width: '90%',height: 'auto',minHeight: '40%',justifyContent: 'space-between'},
   modalText: { fontSize: 11, color: '#6B7280', flexWrap: 'wrap', paddingTop: 20, paddingBottom: 6 },
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   user: { flexDirection: 'column' },
   loginusername: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
   username: { fontSize: 11, color: '#6B7280' },
-  suggestiontextbox: {backgroundColor: '#EEF2FF',borderWidth: 1,borderColor: '#C7D2FE',borderRadius: 8,padding: 8,fontSize: 11,color: '#374151',marginVertical: 8,width: '100%',height: 120,textAlignVertical: 'top',},
+  suggestiontextbox: {backgroundColor: '#F5F7FF',borderWidth: 1,borderColor: '#C7D2FE',borderRadius: 8,padding: 8,fontSize: 11,color: '#374151',marginVertical: 8,width: '100%',height: 120,textAlignVertical: 'top',},
 });
 
 export default guestfeedback;

@@ -567,6 +567,6 @@ const styles = StyleSheet.create({
   },
 
   floatingButton: { position: 'relative', width: 40, height: 40, borderRadius: 28, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 }, shadowRadius: 4, elevation: 6, marginTop: 30 },
-  floatingButtonText: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 'bold', },
+  floatingButtonText: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: '400', },
  
 });
