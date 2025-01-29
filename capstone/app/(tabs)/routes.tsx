@@ -50,7 +50,7 @@ return (
           </View>
 
           <Text style={styles.estimatedTime}>Estimated Time: 45 minutes to 1.5 hours depending on traffic.</Text>
-          <View style={{ marginTop: 22, marginBottom: 5 }}>
+          <View style={{ marginTop: 10, marginBottom: 5 }}>
               <Text style={styles.label}>Route Overview</Text>
           </View>
 
@@ -102,8 +102,8 @@ return (
       </View>
 
       <Text style={styles.comment}>We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets.</Text>
-      <View style={[{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, gap: 8 }]}>
-          <TextInput style={styles.commenttextbox} placeholder="Write a comment" placeholderTextColor="#666" />
+      <View style={[{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, gap: 2, width: '100%',  }]}>
+          <TextInput style={styles.commenttextbox} placeholder="Write a comment" placeholderTextColor="#666" multiline={true}  />
           <TouchableOpacity style={styles.button} onPress={() => { }}>
               <Text style={styles.buttonText}>Post</Text>
           </TouchableOpacity>
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   vehicleTypes : { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#EEF2FF', borderRadius: 8, padding: 4, marginTop:10},
   vehicleItem: { alignItems: 'center',},
   vehicleText: {fontSize: 9, color: '#6B7280', marginVertical: 4,},
-  estimatedTime: {fontSize: 8,color: '#6B7280', textAlign: 'center',},
+  estimatedTime: {fontSize: 10,color: '#6B7280', textAlign: 'center',},
  
   routeline: { paddingLeft: 14, borderLeftWidth: 3  ,borderLeftColor: 'green', marginTop: 6},
   greencircle: {position: 'absolute',left: -7 ,paddingHorizontal: 6,paddingVertical: 6, borderRadius: 24, backgroundColor: 'green', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
@@ -243,8 +243,8 @@ const styles = StyleSheet.create({
   commenteremail: { fontSize: 12, color: '#6B7280',},
   comment: { fontSize: 12, color: '#6B7280',},
 
-  commenttextbox: {backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 6,fontSize: 11, color: '#374151', width:'80%'}, 
-  button: {backgroundColor: '#6366F1', paddingHorizontal: 12, paddingVertical: 0, borderRadius: 10, justifyContent: 'center', alignItems: 'center',},
+  commenttextbox: {backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 6,fontSize: 11, color: '#374151', width: '85%'}, 
+  button: {backgroundColor: '#6366F1', paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center', height: 30},
   buttonText: {color: 'white', fontSize: 11, paddingVertical: 2},
 
   picturecontainer: {justifyContent: 'center',alignItems: 'center',marginVertical: 10},
