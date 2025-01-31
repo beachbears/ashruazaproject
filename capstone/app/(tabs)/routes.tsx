@@ -1,11 +1,57 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput,} from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Platform } from "react-native";
+import MapView, { Marker } from "react-native-maps"; // Default for mobile
+
+let WebMapView: any; // Explicitly set type to any
+if (Platform.OS === "web") {
+  WebMapView = require("react-native-web-maps").default;
+}
+
+
+type CommentItem = {
+    id: number;
+    text: string;
+    commenterName: string;
+    userHandle: string;
+    commenterEmail: string;
+  };
 
 export default function TabTwoScreen() {
-    const stepsCount = 4; // Replace with actual number of steps
-const lineHeight = stepsCount * 38; // Adjust the multiplier based on step spacing
+  const [inputText, setInputText] = useState('');
+   const [comments, setComments] = useState<CommentItem[]>([]);
+
+   const handlePost = () => {
+    if (inputText.trim()) {
+      const newComment: CommentItem = {
+        id: comments.length + 1,
+        text: inputText,
+        commenterName: 'Ash Ruaza',
+        userHandle: '@ashleyruaza',
+        commenterEmail: 'AR',
+      };
+
+      setComments([...comments, newComment]); // Save new comment to state
+      setInputText(''); // Clear input after posting
+    }
+  };
+
+const Comment: React.FC<{ comment: CommentItem }> = ({ comment }) => (
+    <View>
+      <View style={styles.commenterDetails}>
+        <View style={styles.circlecomment}>
+          <Text style={styles.commenterinitial}>{comment.commenterEmail}</Text>
+        </View>
+        <View style={{ flexDirection: 'column' }}>
+          <Text style={styles.commentername}>{comment.commenterName}</Text>
+          <Text style={styles.commenteremail}>{comment.userHandle}</Text>
+        </View>
+      </View>
+      <Text style={styles.comment}>{comment.text}</Text>
+    </View>
+  ); 
 
 return (
   <ScrollView style={styles.maincontainer}>
@@ -34,17 +80,17 @@ return (
 
           <View style={styles.vehicleTypes}>
               <View style={styles.vehicleItem}>
-                  <MaterialCommunityIcons name="jeepney" size={27} color='#4F46E5' />
+                  <TouchableOpacity> <MaterialCommunityIcons name="jeepney" size={27} color='#4F46E5' /></TouchableOpacity>
                   <Text style={styles.vehicleText}>Jeep</Text>
               </View>
               <View style={styles.vehicleItem}>
                   <View style={{ paddingBottom: 2, paddingTop: 2 }}>
-                      <FontAwesome5 name="bus" size={22} color="#4F46E5" />
+                       <TouchableOpacity> <FontAwesome5 name="bus" size={22} color="#4F46E5" /> </TouchableOpacity>
                   </View>
                   <Text style={[styles.vehicleText]}>Modern jeep</Text>
               </View>
               <View style={styles.vehicleItem}>
-                  <FontAwesome5 name="bus-alt" size={24} color='#4F46E5' />
+              <TouchableOpacity> <FontAwesome5 name="bus-alt" size={24} color='#4F46E5' />  </TouchableOpacity>
                   <Text style={styles.vehicleText}>Bus</Text>
               </View>
           </View>
@@ -87,7 +133,7 @@ return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 }}>
           <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '700', marginTop: 10 }}>Comments</Text>
           <View style={styles.commentcircle}>
-              <Text style={styles.numofcomments}>12</Text>
+              <Text style={styles.numofcomments}>{comments.length + 1}</Text>
           </View>
       </View>
 
@@ -102,15 +148,56 @@ return (
       </View>
 
       <Text style={styles.comment}>We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets.</Text>
-      <View style={[{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, gap: 2, width: '100%',  }]}>
-          <TextInput style={styles.commenttextbox} placeholder="Write a comment" placeholderTextColor="#666" multiline={true}  />
-          <TouchableOpacity style={styles.button} onPress={() => { }}>
-              <Text style={styles.buttonText}>Post</Text>
-          </TouchableOpacity>
-      </View>
+       
+      {comments.map((comment) => (
+        <Comment key={comment.id} comment={comment} />
+      ))}
+      
+       <View style={[{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, gap: 2, width: '100%',  }]}>
+                
+                <TextInput style={styles.commenttextbox} placeholder="Write a comment" placeholderTextColor="#666" multiline={true} value={inputText}
+                     onChangeText={setInputText} />
+                
+                <TouchableOpacity style={styles.button} onPress={handlePost}>
+                    <Text style={styles.buttonText}>Post</Text>
+                </TouchableOpacity>
+      
+            </View>
 
-      <View style={[{ borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#EEF2FF', borderRadius: 8, padding: 10, flexDirection: 'column', width: '100%', marginVertical: 15, height: '10%' }]}>
-          <Text>MAP</Text>
+      <View style={[{ borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#EEF2FF', borderRadius: 2, padding: 2, flexDirection: 'column', width: '100%', marginVertical: 15, }]}>
+      
+      <View style={{ flex: 1 }}>
+  {Platform.OS === "web" ? (
+    // Use react-native-web-maps for web
+    <WebMapView
+      style={{ width: "100%", height: 300 }}
+      initialRegion={{
+        latitude: 14.5896,
+        longitude: 120.9793,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }}
+    />
+  ) : (
+    // Use react-native-maps for Android/iOS
+    <MapView
+      style={{ width: "100%", height: 300 }}
+      initialRegion={{
+        latitude: 14.5896,
+        longitude: 120.9793,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }}
+    >
+      <Marker
+        coordinate={{ latitude: 14.5896, longitude: 120.9793 }}
+        title="Intramuros"
+      />
+    </MapView>
+  )}
+</View>
+
+
       </View>
 
       <View style={styles.picturecontainer}>
@@ -136,49 +223,44 @@ return (
           <Text style={styles.comment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
       </View>
 
-      <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '700', marginTop: 10, marginBottom: 8 }}>Tourist Attraction Feedbacks</Text>
+      <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '700', marginTop: 20, marginBottom: 8 }}>Tourist Attraction Feedbacks</Text>
 
       <ScrollView 
       nestedScrollEnabled={true}
       style={styles.imageScrollBox}
       contentContainerStyle={[styles.imageScrollContainer, { flexGrow: 1 }]} // Added flexGrow: 1 here
    >
-          
+
               <View style={styles.feedbackbox}>
                   <View style={styles.feedback}>
                       <Text style={styles.feedbacktitle}>Juan Dela Cruz</Text>
-                      <Text style={styles.comment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
+                      <Text style={styles.feedbackcomment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
                   </View>
               </View>
 
               <View style={styles.feedbackbox}>
                   <View style={styles.feedback}>
                       <Text style={styles.feedbacktitle}>Juan Dela Cruz</Text>
-                      <Text style={styles.comment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
+                      <Text style={styles.feedbackcomment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
                   </View>
               </View>
 
               <View style={styles.feedbackbox}>
                   <View style={styles.feedback}>
                       <Text style={styles.feedbacktitle}>Juan Dela Cruz</Text>
-                      <Text style={styles.comment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
+                      <Text style={styles.feedbackcomment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
                   </View>
               </View>
 
               <View style={styles.feedbackbox}>
                   <View style={styles.feedback}>
                       <Text style={styles.feedbacktitle}>Juan Dela Cruz</Text>
-                      <Text style={styles.comment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
+                      <Text style={styles.feedbackcomment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
                   </View>
               </View>
 
-              <View style={styles.feedbackbox}>
-                  <View style={styles.feedback}>
-                      <Text style={styles.feedbacktitle}>Juan Dela Cruz</Text>
-                      <Text style={styles.comment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
-                  </View>
-              </View>
-  
+                
+
       </ScrollView>
 
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginVertical: 25 }}>
@@ -197,6 +279,9 @@ return (
               }}>Close</Text>
           </TouchableOpacity>
       </View>
+
+     
+
   </ScrollView>
 );}
 
@@ -273,15 +358,18 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 30,},
 
-    feedbackcontainer: { flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', flex:1, borderWidth: 1, marginVertical: 8},
-    feedback: {flexDirection: 'column', },
-    feedbackbox: {borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#FBFCFF', borderRadius: 14, padding: 5, width: '100%', marginVertical: 5},  
-    feedbacktitle: {fontSize: 13, color: '#6B7280', fontWeight: '700', },
+    feedbackcontainer: { flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', flex:1, borderWidth: 1, marginVertical: 14},
+    feedback: {flexDirection: 'column', gap: 2 },
+    feedbackbox: {borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#FBFCFF', borderRadius: 14, padding: 10, width: '100%', marginVertical: 5},  
+    feedbacktitle: {fontSize: 12, color: '#6B7280', fontWeight: '700', },
+    feedbackcomment: { fontSize: 11, color: '#6B7280',},
 
     imageScrollBox: {
-      height: 350,  // Fixed height for the box to enable scrolling
+      height: 200,  padding: 6
     },
     imageScrollContainer: {
       paddingBottom: 16, // Optional padding at the bottom for spacing
     },
+
+      
 })

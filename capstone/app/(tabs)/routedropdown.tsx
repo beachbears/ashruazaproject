@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { useRouter } from 'expo-router';
+import PostModal from '../(tabs)/postmodal';
 
 // Dropdown Component
 interface DropdownProps {
@@ -12,43 +12,28 @@ interface DropdownProps {
   defaultValue?: string;
 }
 
-const Dropdown: React.FC<DropdownProps> = ({ 
-  options, 
-  onSelect,
-  defaultValue = 'Select Option' 
-}) => {
+const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
 
-  const toggleDropdown = () => {
-    setIsOpen(!isOpen);
-  };
+  const toggleDropdown = () => setIsOpen(!isOpen);
 
   const selectOption = (option: string) => {
     setSelectedOption(option);
     setIsOpen(false);
-    if (onSelect) {
-      onSelect(option);
-    }
+    if (onSelect) onSelect(option);
   };
 
-
-  
   return (
     <View style={styles.newcontainer}>
       <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
         <Text style={styles.buttonText}>{selectedOption}</Text>
-        <Entypo name="chevron-down" size={20} color= '#44457D' />
+        <Entypo name="chevron-down" size={20} color="#44457D" />
       </TouchableOpacity>
-
       {isOpen && (
         <View style={styles.dropdownList}>
           {options.map((option, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => selectOption(option)}
-              style={styles.option}
-            >
+            <TouchableOpacity key={index} onPress={() => selectOption(option)} style={styles.option}>
               <Text style={styles.optionText}>{option}</Text>
             </TouchableOpacity>
           ))}
@@ -58,258 +43,235 @@ const Dropdown: React.FC<DropdownProps> = ({
   );
 };
 
+// UserCard Component (Refactored to avoid duplication)
+interface UserCardProps {
+  name: string;
+  username: string;
+  timedate: string;
+  suggestion: string;
+}
+
+const UserCard: React.FC<UserCardProps> = ({ name, username, timedate, suggestion }) => {
+  
+  return (
+    <View style={styles.usercard}>
+      <View style={styles.id}>
+        <View style={styles.alignment}>
+          <View style={styles.profile}>
+          <Text style={styles.nn}>
+  {name
+    .split(' ') // Split name into words
+    .map(word => word[0]) // Get first letter of each word
+    .join('')} {/* Join the initials */}
+</Text>
+
+          </View>
+          <View style={styles.user}>
+            <Text style={styles.name}>{name}</Text>
+            <Text style={styles.username}>@{username}</Text>
+          </View>
+        </View>
+        <Text style={styles.timedate}>{timedate}</Text>
+      </View>
+      <Text style={styles.suggestorsdestination}>Destination: Intramuros, Manila</Text>
+      <Text style={styles.touristexp}>Tourist Experience:</Text>
+      <Text style={styles.suggestion}>{suggestion}</Text>
+      <View style={styles.iconStatus}>
+        <View style={styles.content}>
+          <Octicons name="shield-check" size={18} color="#6366F1" />
+          <Text style={styles.status}>Status</Text>
+          <View style={styles.badge}>
+            <Entypo name="check" size={14} color="#03C04A" />
+            <Text style={styles.cert}>Certified Kommutsera</Text>
+          </View>
+        </View>
+        <View style={styles.arrowcontainer}>
+          <View style={styles.arrowup}>
+            <AntDesign name="arrowup" size={15} color="#03C04A" />
+            <Text style={[styles.num, { color: '#22c55e' }]}>11</Text>
+          </View>
+
+  
+
+          <View style={styles.arrowdown}>
+            <AntDesign name="arrowdown" size={15} color="red" />
+            <Text style={[styles.num, { color: 'red' }]}>4</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
 // Main Screen Component
 export default function TabTwoScreen() {
   const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
-  
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
+
   const handleOptionSelect = (option: string) => {
     console.log('Selected option:', option);
-    // Add your logic here
   };
 
   return (
-    <ScrollView style={styles.maincontainer}>
-      <View style={{
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        marginBottom: 8, 
-        marginTop: 30
-      }}>
-        <Text style={{ color: '#44457D', fontWeight: '500', fontSize: 16 }}>Details</Text>
-        <TouchableOpacity style={styles.postbutton} onPress={() => { }}>
-          <Text style={{color: 'white', fontSize: 12 }}>Post</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.container}>
-        <Text style={styles.label}>Location</Text>
-        <TextInput 
-          style={styles.userlocation} 
-          placeholder="Novaliches, Bayan Glori" 
-          placeholderTextColor="#666" 
-        />
-        <Text style={[styles.label]}>Destination</Text>
-        <TextInput 
-          style={styles.userdestination} 
-          placeholder="Intramuros, Manila City" 
-          placeholderTextColor="#666" 
-        />
-      </View>
-
-      <Text style={{
-        color: '#44457D',
-        fontWeight: '500',
-        fontSize: 16, 
-        marginTop: 20
-      }}>Best Way</Text>
-
-      <View style={styles.bestwaycard}>
-        <View style={{flexDirection: 'row', alignItems: 'center'}}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarinitial}>KT</Text>
-          </View>
-          <Text style={styles.appname}>Kommutsera</Text>
+    <>
+      <ScrollView style={styles.maincontainer}>
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Details</Text>
+          <TouchableOpacity style={styles.postbutton} onPress={() => setModalVisible(true)}>
+            <Text style={styles.postButtonText}>Post</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.bestwaydestination}>Destination: Intramuros, Manila</Text>
-        <Text style={styles.bestwaydescription}>Tourist Spot Description</Text>
-        <Text style={styles.bestway}>
-          Intramuros represents the Philippines' colonial past,
-          where the Spanish influence is deeply woven into the country's
-          culture, architecture, and traditions. It is a symbol of both
-          the glory and the struggles during the Spanish colonization.
-          Today, it serves as a popular tourist destination that offers
-          a look back in time, showcasing historical landmarks, museums,
-          and the enduring spirit of the Filipino people
-        </Text>
 
-        <View style={styles.bestwayStatus}>
-          <Octicons name="shield-check" size={16} color="#6366F1" />
-          <Text style={styles.status}>Status</Text>
-          <View style={styles.badge}>
-            <Entypo name="check" size={14} color="#22C55E" />
-            <Text style={styles.certified}>Certified Kommutsera</Text>
-          </View>
+        <View style={styles.container}>
+          <Text style={styles.label}>Location</Text>
+          <TextInput
+            style={styles.userlocation}
+            placeholder="Novaliches, Bayan Glori"
+            placeholderTextColor="#666"
+          />
+          <Text style={styles.label}>Destination</Text>
+          <TextInput
+            style={styles.userdestination}
+            placeholder="Intramuros, Manila City"
+            placeholderTextColor="#666"
+          />
         </View>
-      </View>
 
-      <View style={{
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        width: '100%',
-        marginTop: 20,
-        marginBottom: 13
-      }}>
-        <Text style={{
-          color: '#44457D',
-          fontWeight: '500',
-          fontSize: 16
-        }}>Route Post Suggestion</Text>
+        <Text style={styles.sectionTitle}>Best Way</Text>
 
-<View style={{ zIndex: 1000 }}>
-        <Dropdown 
-          options={dropdownOptions} 
-          onSelect={handleOptionSelect}
-          defaultValue="Select Option  "
-          
-         
-        />
-      </View>
-      </View>
-
-      <View style={styles.usercard}>
-          <View style={styles.id}>
-            <View style={styles.alignment}>
-            <View style={styles.profile}>
-              <Text style={styles.nn}>AR</Text>
+        <View style={styles.bestwaycard}>
+          <View style={styles.bestwayHeader}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarinitial}>KT</Text>
             </View>
-            <View style={styles.user}>
-              <Text style={styles.name}>Ash Ruaza</Text>
-              <Text style={styles.username}>@ashruaza</Text>
-            </View>
-
-            </View>
-            <Text style={styles.timedate}>12 Hours ago</Text>
+            <Text style={styles.appname}>Kommutsera</Text>
           </View>
-          <Text style={styles.suggestorsdestination}>Destination: Intramuros, Manila</Text>
-          <Text style={styles.touristexp}>Tourist Experience:</Text>
-          <Text style={styles.suggestion}>
-            Intramuros represents the Philippines' colonial past,
-            where the Spanish influence is deeply woven into the country's
-            culture, architecture, and traditions. It is a symbol of both
-            the glory and the struggles during the Spanish colonization.
-            Today, it serves as a popular tourist destination that offers
-            a look back in time, showcasing historical landmarks, museums,
-            and the enduring spirit of the Filipino people
+          <Text style={styles.bestwaydestination}>Destination: Intramuros, Manila</Text>
+          <Text style={styles.bestwaydescription}>Tourist Spot Description</Text>
+          <Text style={styles.bestway}>
+            Intramuros represents the Philippines' colonial past, where the Spanish influence is deeply woven into the country's culture, architecture, and traditions. It is a symbol of both the glory and the struggles during the Spanish colonization. Today, it serves as a popular tourist destination that offers a look back in time, showcasing historical landmarks, museums, and the enduring spirit of the Filipino people.
           </Text>
-
-          <View style={styles.iconStatus}>
-            <View style={styles.content}>
-            <Octicons name="shield-check" size={18} color="#6366F1" />
+          <View style={styles.bestwayStatus}>
+            <Octicons name="shield-check" size={16} color="#6366F1" />
             <Text style={styles.status}>Status</Text>
             <View style={styles.badge}>
-              <Entypo name="check" size={14} color="#03C04A" />
-              <Text style={styles.cert}>Certified Kommutsera</Text>
-            </View>
-            </View>
-
-            <View style={styles.arrowcontainer}>
-            <View style={styles.arrowup}>
-              <AntDesign name="arrowup" size={15} color="#03C04A" />
-              <Text style={[styles.num, { color: '#22c55e' }]}>11</Text>
-            </View>
-
-            <View style={styles.arrowdown}>
-              <AntDesign name="arrowdown" size={15} color="red" />
-              <Text style={[styles.num, { color: 'red' }]}>4</Text>
-            </View>
+              <Entypo name="check" size={14} color="#22C55E" />
+              <Text style={styles.certified}>Certified Kommutsera</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.usercard}>
-          <View style={styles.id}>
-            <View style={styles.alignment}>
-            <View style={styles.profile}>
-              <Text style={styles.nn}>AR</Text>
-            </View>
-            <View style={styles.user}>
-              <Text style={styles.name}>Ash Ruaza</Text>
-              <Text style={styles.username}>@ashruaza</Text>
-            </View>
-
-            </View>
-            <Text style={styles.timedate}>12 Hours ago</Text>
-          </View>
-          <Text style={styles.suggestorsdestination}>Destination: Intramuros, Manila</Text>
-          <Text style={styles.touristexp}>Tourist Experience:</Text>
-          <Text style={styles.suggestion}>
-            Intramuros represents the Philippines' colonial past,
-            where the Spanish influence is deeply woven into the country's
-            culture, architecture, and traditions. It is a symbol of both
-            the glory and the struggles during the Spanish colonization.
-            Today, it serves as a popular tourist destination that offers
-            a look back in time, showcasing historical landmarks, museums,
-            and the enduring spirit of the Filipino people
-          </Text>
-
-          <View style={styles.iconStatus}>
-            <View style={styles.content}>
-            <Octicons name="shield-check" size={18} color="#6366F1" />
-            <Text style={styles.status}>Status</Text>
-            <View style={styles.badge}>
-              <Entypo name="check" size={14} color="#03C04A" />
-              <Text style={styles.cert}>Certified Kommutsera</Text>
-            </View>
-            </View>
-
-            <View style={styles.arrowcontainer}>
-            <View style={styles.arrowup}>
-              <AntDesign name="arrowup" size={15} color="#03C04A" />
-              <Text style={[styles.num, { color: '#22c55e' }]}>11</Text>
-            </View>
-
-            <View style={styles.arrowdown}>
-              <AntDesign name="arrowdown" size={15} color="red" />
-              <Text style={[styles.num, { color: 'red' }]}>4</Text>
-            </View>
-            </View>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
+          <View style={{ zIndex: 1000 }}>
+            <Dropdown
+              options={dropdownOptions}
+              onSelect={handleOptionSelect}
+              defaultValue="Select Option"
+            />
           </View>
         </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginLeft: 300, marginBottom: 100 }}>
-        <TouchableOpacity style={styles.floatingButton} >
-          <Text style={styles.floatingButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
+        {/* User Cards */}
+        <UserCard
+          name="Ash Ruaza"
+          username="ashruaza"
+          timedate="12 Hours ago"
+          suggestion="Intramuros represents the Philippines' colonial past..."
+        />
+        <UserCard
+          name="Jane Doe"
+          username="janedoe"
+          timedate="1 Day ago"
+          suggestion="A wonderful place to explore history and culture."
+        />
 
-    </ScrollView>
+        <View style={styles.floatingButtonContainer}>
+          <TouchableOpacity style={styles.floatingButton}>
+            <Text style={styles.floatingButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      {/* Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        
+        <PostModal closeModal={() => setModalVisible(false)} visible={modalVisible} />
+
+      </Modal>
+    </>
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
-  maincontainer: { 
-    flexDirection: 'column', 
-    padding: 30, 
-    backgroundColor: '#F9FAFB', 
-    width: '100%' 
+  maincontainer: {
+    flexDirection: 'column',
+    padding: 30,
+    backgroundColor: '#F9FAFB',
+    width: '100%',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    marginTop: 30,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  headerText: {
+    color: '#44457D',
+    fontWeight: '500',
+    fontSize: 16,
   },
   postbutton: {
-    backgroundColor: '#6366F1', 
-    paddingHorizontal: 14, 
-    paddingVertical: 6, 
-    borderRadius: 10, 
+    backgroundColor: '#6366F1',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  postButtonText: {
+    color: 'white',
+    fontSize: 12,
   },
   container: {
     padding: 8,
   },
   label: {
-    fontSize: 12, 
-    fontWeight: '500', 
-    color: '#6B7280', 
-    marginTop: 10
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginTop: 10,
   },
   userlocation: {
-    backgroundColor: '#F5F7FF', 
-    borderWidth: 1, 
-    borderColor: '#C7D2FE', 
-    borderRadius: 8, 
-    padding: 8, 
-    fontSize: 11, 
-    color: '#374151', 
+    backgroundColor: '#F5F7FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 11,
+    color: '#374151',
     marginVertical: 8,
   },
   userdestination: {
-    backgroundColor: '#F5F7FF', 
-    borderWidth: 1, 
-    borderColor: '#C7D2FE', 
-    borderRadius: 8, 
+    backgroundColor: '#F5F7FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 8,
     padding: 8,
-    fontSize: 11, 
-    color: '#374151', 
+    fontSize: 11,
+    color: '#374151',
     marginVertical: 8,
   },
   bestwaycard: {
@@ -318,13 +280,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 16,
-    marginVertical: 20, 
-    elevation: 4, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.2, 
-    shadowRadius: 4, 
+    marginVertical: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
     marginBottom: 18,
+  },
+  bestwayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   avatar: {
     width: 36,
@@ -341,7 +307,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   appname: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#4B5563',
   },
@@ -358,14 +324,14 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
     marginLeft: 50,
-    marginBottom: 6
+    marginBottom: 6,
   },
   bestway: {
     fontSize: 12,
     color: '#6B7280',
     flexWrap: 'wrap',
     marginLeft: 50,
-    marginBottom: 10
+    marginBottom: 10,
   },
   bestwayStatus: {
     marginLeft: 4,
@@ -380,7 +346,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     fontWeight: '700',
-  
   },
   badge: {
     borderWidth: 1,
@@ -398,20 +363,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
   },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4
-  },
   newcontainer: {
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
   dropdownButton: {
-    backgroundColor: '#F5F7FF', 
-    borderWidth: 1, 
-    borderColor: '#C7D2FE', 
-    borderRadius: 8, 
+    backgroundColor: '#F5F7FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 8,
     width: 125,
     alignItems: 'center',
     flexDirection: 'row',
@@ -436,7 +396,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
-    top: 40
+    top: 40,
   },
   option: {
     borderBottomWidth: 1,
@@ -456,9 +416,8 @@ const styles = StyleSheet.create({
     padding: 16,
     marginVertical: 2,
     zIndex: -1,
-    marginBottom: 20
+    marginBottom: 20,
   },
-
   profile: {
     width: 36,
     height: 36,
@@ -472,6 +431,8 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: 'bold',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   username: {
     fontSize: 12,
@@ -483,16 +444,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginLeft: 50,
   },
-
   suggestorsdestination: {
     fontSize: 12,
     color: '#6B7280',
     fontWeight: '500',
     marginLeft: 50,
     marginTop: 10,
-    marginBottom: 6
+    marginBottom: 6,
   },
-
   iconStatus: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -503,9 +462,8 @@ const styles = StyleSheet.create({
   cert: {
     color: '#22c55e',
     fontWeight: '500',
-    fontSize: 11, 
+    fontSize: 11,
   },
-
   user: {
     flexDirection: 'column',
     marginBottom: 10,
@@ -532,15 +490,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     height: 50,
   },
-
   alignment: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   arrowup: {
     borderWidth: 1,
     borderColor: '#4ade80',
-    borderRadius: 5,
+    borderRadius: 6,
     paddingHorizontal: 3,
     paddingVertical: 1,
     flexDirection: 'row',
@@ -549,7 +506,7 @@ const styles = StyleSheet.create({
   arrowdown: {
     borderWidth: 1,
     borderColor: '#f47357',
-    borderRadius: 5,
+    borderRadius: 6,
     paddingHorizontal: 3,
     paddingVertical: 1,
     flexDirection: 'row',
@@ -558,15 +515,54 @@ const styles = StyleSheet.create({
   arrowcontainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4
+    gap: 4,
   },
   num: {
     marginLeft: 6,
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-
-  floatingButton: { position: 'relative', width: 40, height: 40, borderRadius: 28, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 }, shadowRadius: 4, elevation: 6, marginTop: 30 },
-  floatingButtonText: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: '400', },
- 
+  floatingButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginLeft: 300,
+    marginBottom: 100,
+  },
+  floatingButton: {
+    position: 'relative',
+    width: 40,
+    height: 40,
+    borderRadius: 28,
+    backgroundColor: '#6366f1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 4,
+    elevation: 6,
+    marginTop: 30,
+  },
+  floatingButtonText: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '400',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+    marginBottom: 13,
+  },
+  sectionTitle: {
+    color: '#44457D',
+    fontWeight: '500',
+    fontSize: 16,
+  },
 });
