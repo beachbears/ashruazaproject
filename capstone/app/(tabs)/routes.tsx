@@ -2,14 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Platform } from "react-native";
-import MapView, { Marker } from "react-native-maps"; // Default for mobile
-
-let WebMapView: any; // Explicitly set type to any
-if (Platform.OS === "web") {
-  WebMapView = require("react-native-web-maps").default;
-}
-
+import { useNavigation } from 'expo-router';
+import { Link } from 'expo-router';
+import MapView, { Marker } from 'react-native-maps';
 
 type CommentItem = {
     id: number;
@@ -52,6 +47,8 @@ const Comment: React.FC<{ comment: CommentItem }> = ({ comment }) => (
       <Text style={styles.comment}>{comment.text}</Text>
     </View>
   ); 
+
+  const navigation = useNavigation();
 
 return (
   <ScrollView style={styles.maincontainer}>
@@ -166,37 +163,24 @@ return (
 
       <View style={[{ borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#EEF2FF', borderRadius: 2, padding: 2, flexDirection: 'column', width: '100%', marginVertical: 15, }]}>
       
+    
       <View style={{ flex: 1 }}>
-  {Platform.OS === "web" ? (
-    // Use react-native-web-maps for web
-    <WebMapView
-      style={{ width: "100%", height: 300 }}
-      initialRegion={{
-        latitude: 14.5896,
-        longitude: 120.9793,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }}
-    />
-  ) : (
-    // Use react-native-maps for Android/iOS
-    <MapView
-      style={{ width: "100%", height: 300 }}
-      initialRegion={{
-        latitude: 14.5896,
-        longitude: 120.9793,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }}
-    >
-      <Marker
-        coordinate={{ latitude: 14.5896, longitude: 120.9793 }}
-        title="Intramuros"
-      />
-    </MapView>
-  )}
-</View>
-
+        {/* Use MapView and Marker directly */}
+        <MapView
+          style={{ width: '100%', height: 300 }}
+          initialRegion={{
+            latitude: 14.5896,
+            longitude: 120.9793,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }}
+        >
+          <Marker
+            coordinate={{ latitude: 14.5896, longitude: 120.9793 }}
+            title="Intramuros"
+          />
+        </MapView>
+      </View>
 
       </View>
 
@@ -264,13 +248,17 @@ return (
       </ScrollView>
 
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginVertical: 25 }}>
+
+          <Link href="/routedropdown" asChild>
           <TouchableOpacity
               style={{
                   backgroundColor: '#E0E7FF',
                   borderRadius: 10,
-                  padding: 11
-              }}
-              onPress={() => console.log('Button Pressed!')}
+                  padding: 11}}
+                  onPress={() => {
+                    // Add your function logic here
+                    console.log('Button Pressed');
+                }}
           >
               <Text style={{
                   color: '#6366F1',
@@ -278,6 +266,7 @@ return (
                   fontWeight: '600'
               }}>Close</Text>
           </TouchableOpacity>
+          </Link>
       </View>
 
      

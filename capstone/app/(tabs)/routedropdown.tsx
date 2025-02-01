@@ -4,6 +4,7 @@ import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import PostModal from '../(tabs)/postmodal';
+import { Link } from 'expo-router';
 
 // Dropdown Component
 interface DropdownProps {
@@ -139,27 +140,29 @@ export default function TabTwoScreen() {
 
         <Text style={styles.sectionTitle}>Best Way</Text>
 
-        <View style={styles.bestwaycard}>
-          <View style={styles.bestwayHeader}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarinitial}>KT</Text>
-            </View>
-            <Text style={styles.appname}>Kommutsera</Text>
+        <Link href="/routes" asChild>
+      <TouchableOpacity style={styles.bestwaycard}>
+        <View style={styles.bestwayHeader}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarinitial}>KT</Text>
           </View>
-          <Text style={styles.bestwaydestination}>Destination: Intramuros, Manila</Text>
-          <Text style={styles.bestwaydescription}>Tourist Spot Description</Text>
-          <Text style={styles.bestway}>
-            Intramuros represents the Philippines' colonial past, where the Spanish influence is deeply woven into the country's culture, architecture, and traditions. It is a symbol of both the glory and the struggles during the Spanish colonization. Today, it serves as a popular tourist destination that offers a look back in time, showcasing historical landmarks, museums, and the enduring spirit of the Filipino people.
-          </Text>
-          <View style={styles.bestwayStatus}>
-            <Octicons name="shield-check" size={16} color="#6366F1" />
-            <Text style={styles.status}>Status</Text>
-            <View style={styles.badge}>
-              <Entypo name="check" size={14} color="#22C55E" />
-              <Text style={styles.certified}>Certified Kommutsera</Text>
-            </View>
+          <Text style={styles.appname}>Kommutsera</Text>
+        </View>
+        <Text style={styles.bestwaydestination}>Destination: Intramuros, Manila</Text>
+        <Text style={styles.bestwaydescription}>Tourist Spot Description</Text>
+        <Text style={styles.bestway}>
+          Intramuros represents the Philippines' colonial past, where the Spanish influence is deeply woven into the country's culture, architecture, and traditions. It is a symbol of both the glory and the struggles during the Spanish colonization. Today, it serves as a popular tourist destination that offers a look back in time, showcasing historical landmarks, museums, and the enduring spirit of the Filipino people.
+        </Text>
+        <View style={styles.bestwayStatus}>
+          <Octicons name="shield-check" size={16} color="#6366F1" />
+          <Text style={styles.status}>Status</Text>
+          <View style={styles.badge}>
+            <Entypo name="check" size={14} color="#22C55E" />
+            <Text style={styles.certified}>Certified Kommutsera</Text>
           </View>
         </View>
+      </TouchableOpacity>
+      </Link>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
