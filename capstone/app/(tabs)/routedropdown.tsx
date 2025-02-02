@@ -1,10 +1,35 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+} from 'react-native';
 import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import PostModal from '../(tabs)/postmodal';
 import { Link } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import ModalComponent from './custommodal';
+import AntDesign from '@expo/vector-icons/AntDesign';
+
+// Define the PostItem type
+type PostItem = {
+  id: number;
+  upvotes: number;
+  downvotes: number;
+  userinitial: string;
+  loginusername: string;
+  username: string;
+  location: string;
+  fare: number;
+  destination: string;
+  description: string;
+  suggestiontextbox: string;
+};
 
 // Dropdown Component
 interface DropdownProps {
@@ -44,7 +69,59 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   );
 };
 
-// UserCard Component (Refactored to avoid duplication)
+// PostCard Component
+const PostCard: React.FC<{ Post: PostItem; handleUpvote: (id: number) => void; handleDownvote: (id: number) => void }> = ({
+  Post,
+  handleUpvote,
+  handleDownvote,
+}) => (
+  <View style={styles.feedbackcontainer}>
+    <View style={styles.suggestordetails}>
+      <View style={styles.profile}>
+        <Text style={styles.initial}>{Post.userinitial}</Text>
+      </View>
+      <View style={styles.suggestor}>
+        <Text style={styles.suggestorname}>{Post.loginusername}</Text>
+        <Text style={styles.suggestorusername}>{Post.username}</Text>
+      </View>
+    </View>
+
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7,}}>
+      <Text style={styles.dest}>Destination: </Text>
+      <Text style={styles.suggestordestination}>{Post.destination}</Text>
+    </View>
+
+    <View>
+      <Text style={styles.usersuggestion}>Tourist Experience: </Text>
+      <Text style={styles.suggestion}>{Post.suggestiontextbox}</Text>
+    </View>
+
+    <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={styles.content}>
+        <Octicons name="shield-check" size={18} color="#6366F1" />
+        <Text style={styles.status}>Status</Text>
+        <View style={styles.badge}>
+          <Entypo name="check" size={14} color="#03C04A" />
+          <Text style={styles.cert}>Certified Kommutsera</Text>
+        </View>
+      </View>
+
+      <View style={styles.arrowcontainer}>
+        <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(Post.id)}>
+          <AntDesign name="arrowup" size={12} color="#22C55E" />
+          <Text style={[styles.num, { color: '#22C55E' }]}>{Post.upvotes}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(Post.id)}>
+          <AntDesign name="arrowdown" size={12} color="#C52222" />
+          <Text style={[styles.num, { color: '#C52222' }]}>{Post.downvotes}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+);
+
+// UserCard Component
 interface UserCardProps {
   name: string;
   username: string;
@@ -53,19 +130,18 @@ interface UserCardProps {
 }
 
 const UserCard: React.FC<UserCardProps> = ({ name, username, timedate, suggestion }) => {
-  
   return (
     <View style={styles.usercard}>
       <View style={styles.id}>
         <View style={styles.alignment}>
           <View style={styles.profile}>
-          <Text style={styles.nn}>
-  {name
-    .split(' ') // Split name into words
-    .map(word => word[0]) // Get first letter of each word
-    .join('')} {/* Join the initials */}
-</Text>
-
+            <Text style={styles.nn}>
+              {name
+                .split(' ') // Split name into words
+                .map((word) => word[0]) // Get first letter of each word
+                .join('')}{' '}
+              {/* Join the initials */}
+            </Text>
           </View>
           <View style={styles.user}>
             <Text style={styles.name}>{name}</Text>
@@ -75,7 +151,7 @@ const UserCard: React.FC<UserCardProps> = ({ name, username, timedate, suggestio
         <Text style={styles.timedate}>{timedate}</Text>
       </View>
       <Text style={styles.suggestorsdestination}>Destination: Intramuros, Manila</Text>
-      <Text style={styles.touristexp}>Tourist Experience:</Text>
+      <Text style={styles.usersuggestion}>Tourist Experience:</Text>
       <Text style={styles.suggestion}>{suggestion}</Text>
       <View style={styles.iconStatus}>
         <View style={styles.content}>
@@ -91,9 +167,6 @@ const UserCard: React.FC<UserCardProps> = ({ name, username, timedate, suggestio
             <AntDesign name="arrowup" size={15} color="#03C04A" />
             <Text style={[styles.num, { color: '#22c55e' }]}>11</Text>
           </View>
-
-  
-
           <View style={styles.arrowdown}>
             <AntDesign name="arrowdown" size={15} color="red" />
             <Text style={[styles.num, { color: 'red' }]}>4</Text>
@@ -106,108 +179,153 @@ const UserCard: React.FC<UserCardProps> = ({ name, username, timedate, suggestio
 
 // Main Screen Component
 export default function TabTwoScreen() {
-  const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
+  const [PostData, setPostData] = useState<PostItem[]>([
+    {
+      id: 1,
+      upvotes: 0,
+      downvotes: 0,
+      userinitial: 'AR',
+      loginusername: 'Ashley Ruaza',
+      username: '@ashruaza',
+      location: 'North Olympus',
+      fare: 500,
+      destination: 'National Museum',
+      description: 'Good',
+      suggestiontextbox: 'Some suggestion text here.',
+    },
+  ]);
+
   const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [submittedTexts, setSubmittedTexts] = useState<string[]>([]);
+
+  const handleUpvote = (id: number): void => {
+    setPostData((prevData) =>
+      prevData.map((item) =>
+        item.id === id ? { ...item, upvotes: item.upvotes + 1 } : item
+      )
+    );
+  };
+
+  const handleDownvote = (id: number): void => {
+    setPostData((prevData) =>
+      prevData.map((item) =>
+        item.id === id ? { ...item, downvotes: item.downvotes + 1 } : item
+      )
+    );
+  };
+
+  const handleSubmit = async (text: string) => {
+    try {
+      const updatedTexts = [...submittedTexts, text];
+      await AsyncStorage.setItem('submittedTexts', JSON.stringify(updatedTexts));
+      setSubmittedTexts(updatedTexts);
+    } catch (error) {
+      console.error('Failed to save text:', error);
+    }
+  };
+
+  const handleNewPost = (newPost: PostItem) => {
+    setPostData((prevPostData) => [...prevPostData, newPost]);
+  };
+
+  const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
 
   const handleOptionSelect = (option: string) => {
     console.log('Selected option:', option);
   };
 
   return (
-    <>
-      <ScrollView style={styles.maincontainer}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Details</Text>
-          <TouchableOpacity style={styles.postbutton} onPress={() => setModalVisible(true)}>
-            <Text style={styles.postButtonText}>Post</Text>
-          </TouchableOpacity>
-        </View>
+    <ScrollView style={styles.maincontainer}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Details</Text>
+        <TouchableOpacity style={styles.postbutton} onPress={() => setModalVisible(true)}>
+          <Text style={styles.postButtonText}>Post</Text>
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.container}>
-          <Text style={styles.label}>Location</Text>
-          <TextInput
-            style={styles.userlocation}
-            placeholder="Novaliches, Bayan Glori"
-            placeholderTextColor="#666"
-          />
-          <Text style={styles.label}>Destination</Text>
-          <TextInput
-            style={styles.userdestination}
-            placeholder="Intramuros, Manila City"
-            placeholderTextColor="#666"
-          />
-        </View>
+      <View style={styles.container}>
+        <Text style={styles.label}>Location</Text>
+        <TextInput
+          style={styles.userlocation}
+          placeholder="Novaliches, Bayan Glori"
+          placeholderTextColor="#666"
+        />
+        <Text style={styles.label}>Destination</Text>
+        <TextInput
+          style={styles.userdestination}
+          placeholder="Intramuros, Manila City"
+          placeholderTextColor="#666"
+        />
+      </View>
 
-        <Text style={styles.sectionTitle}>Best Way</Text>
+      <Text style={styles.sectionTitle}>Best Way</Text>
 
-        <Link href="/routes" asChild>
-      <TouchableOpacity style={styles.bestwaycard}>
-        <View style={styles.bestwayHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarinitial}>KT</Text>
+      <Link href="/routes" asChild>
+        <TouchableOpacity style={styles.bestwaycard}>
+          <View style={styles.bestwayHeader}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarinitial}>KT</Text>
+            </View>
+            <Text style={styles.appname}>Kommutsera</Text>
           </View>
-          <Text style={styles.appname}>Kommutsera</Text>
-        </View>
-        <Text style={styles.bestwaydestination}>Destination: Intramuros, Manila</Text>
-        <Text style={styles.bestwaydescription}>Tourist Spot Description</Text>
-        <Text style={styles.bestway}>
-          Intramuros represents the Philippines' colonial past, where the Spanish influence is deeply woven into the country's culture, architecture, and traditions. It is a symbol of both the glory and the struggles during the Spanish colonization. Today, it serves as a popular tourist destination that offers a look back in time, showcasing historical landmarks, museums, and the enduring spirit of the Filipino people.
-        </Text>
-        <View style={styles.bestwayStatus}>
-          <Octicons name="shield-check" size={16} color="#6366F1" />
-          <Text style={styles.status}>Status</Text>
-          <View style={styles.badge}>
-            <Entypo name="check" size={14} color="#22C55E" />
-            <Text style={styles.certified}>Certified Kommutsera</Text>
+          <Text style={styles.bestwaydestination}>Destination: Intramuros, Manila</Text>
+          <Text style={styles.bestwaydescription}>Tourist Spot Description</Text>
+          <Text style={styles.bestway}>
+            Intramuros represents the Philippines' colonial past, where the Spanish influence is deeply woven into the country's culture, architecture, and traditions. It is a symbol of both the glory and the struggles during the Spanish colonization. Today, it serves as a popular tourist destination that offers a look back in time, showcasing historical landmarks, museums, and the enduring spirit of the Filipino people.
+          </Text>
+          <View style={styles.bestwayStatus}>
+            <Octicons name="shield-check" size={16} color="#6366F1" />
+            <Text style={styles.status}>Status</Text>
+            <View style={styles.badge}>
+              <Entypo name="check" size={14} color="#22C55E" />
+              <Text style={styles.certified}>Certified Kommutsera</Text>
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
       </Link>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
-          <View style={{ zIndex: 1000 }}>
-            <Dropdown
-              options={dropdownOptions}
-              onSelect={handleOptionSelect}
-              defaultValue="Select Option"
-            />
-          </View>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
+        <View style={{ zIndex: 1000 }}>
+          <Dropdown
+            options={dropdownOptions}
+            onSelect={handleOptionSelect}
+            defaultValue="Select Option"
+          />
         </View>
+      </View>
 
-        {/* User Cards */}
-        <UserCard
-          name="Ash Ruaza"
-          username="ashruaza"
-          timedate="12 Hours ago"
-          suggestion="Intramuros represents the Philippines' colonial past..."
+      {/* User Cards */}
+      <UserCard
+        name="Ash Ruaza"
+        username="ashruaza"
+        timedate="12 Hours ago"
+        suggestion="Intramuros represents the Philippines' colonial past..."
+      />
+
+      {/* Post Cards */}
+      {PostData.map((post) => (
+        <PostCard
+          key={post.id}
+          Post={post}
+          handleUpvote={handleUpvote}
+          handleDownvote={handleDownvote}
         />
-        <UserCard
-          name="Jane Doe"
-          username="janedoe"
-          timedate="1 Day ago"
-          suggestion="A wonderful place to explore history and culture."
-        />
+      ))}
 
-        <View style={styles.floatingButtonContainer}>
-          <TouchableOpacity style={styles.floatingButton}>
-            <Text style={styles.floatingButtonText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      <View style={styles.floatingButtonContainer}>
+        <TouchableOpacity style={styles.floatingButton}>
+          <Text style={styles.floatingButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <ModalComponent
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        
-        <PostModal closeModal={() => setModalVisible(false)} visible={modalVisible} />
-
-      </Modal>
-    </>
+        onClose={() => setModalVisible(false)}
+        onSubmit={handleSubmit}
+        onNewPost={handleNewPost}
+      />
+    </ScrollView>
   );
 }
 
@@ -250,6 +368,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 8,
+    marginBottom: 20
   },
   label: {
     fontSize: 12,
@@ -568,4 +687,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: 16,
   },
+
+  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2 },
+  feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 10, width: '100%'},
+   suggestor: { flexDirection: 'column' },
+  initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
+  suggestorusername: { fontSize: 11, color: '#6B7280' },
+  usersuggestion: {  fontSize: 12,
+    marginVertical: 4,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginLeft: 50,
+    },
+  suggestordestination: {  fontSize: 11, color: '#6B7280', flexWrap: 'wrap', marginLeft: 0 },
+  
+  dest: { fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginLeft: 50, },
+    
+   suggestorexp: {fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginLeft: 50,
+    marginVertical: 16,},
 });

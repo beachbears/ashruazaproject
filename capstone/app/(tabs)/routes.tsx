@@ -163,9 +163,7 @@ return (
 
       <View style={[{ borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#EEF2FF', borderRadius: 2, padding: 2, flexDirection: 'column', width: '100%', marginVertical: 15, }]}>
       
-    
-      <View style={{ flex: 1 }}>
-        {/* Use MapView and Marker directly */}
+    {/* <View style={{ flex: 1 }}>
         <MapView
           style={{ width: '100%', height: 300 }}
           initialRegion={{
@@ -180,7 +178,10 @@ return (
             title="Intramuros"
           />
         </MapView>
-      </View>
+      </View>  */}
+      
+      
+     
 
       </View>
 
