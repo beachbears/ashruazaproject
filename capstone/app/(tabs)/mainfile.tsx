@@ -13,6 +13,9 @@ type PostItem = {
   description: string;
   suggestiontextbox: string;
 };
+
+
+
 import { View, Button, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ModalComponent from './custommodal';
@@ -37,8 +40,13 @@ const App: React.FC = () => {
      },
   ]);
 
+
+
+
  const [modalVisible, setModalVisible] = useState<boolean>(false);
  const [submittedTexts, setSubmittedTexts] = useState<string[]>([]);
+
+
 
  const handleUpvote = (id: number): void => {
   setPostData((prevData) =>
@@ -55,6 +63,8 @@ const handleDownvote = (id: number): void => {
     )
   );
 };
+
+
 
  const handleSubmit = async (text: string) => {
    try {

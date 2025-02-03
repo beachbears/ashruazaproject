@@ -1,66 +1,66 @@
 import React, { useState } from 'react';
-import { Text, StyleSheet, ScrollView, View, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { Text, StyleSheet, ScrollView, View, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform} from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ModalComponent from './feedbackmodal';
 
 type FeedbackItem = {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  text: string;
-  userName: string;
-  userHandle: string;
-  initials: string;
-};
-
-const Feedback: React.FC = () => {
-  const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([
-    {
-      id: 1,
-      upvotes: 6,
-      downvotes: 4,
-      text: "Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to national hero José Rizal. Apaka angas bbossing!",
-      userName: "Ashley",
-      userHandle: "@ashruaza",
-      initials: "AR"
-    },
-    // Add other initial feedback items here...
-  ]);
-
-  const [submittedTexts, setSubmittedTexts] = useState<string[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [text, setText] = useState(''); // Add this line to handle input text
-
-  const handleUpvote = (id: number): void => {
-    setFeedbackData((prevData) =>
-      prevData.map((item) =>
-        item.id === id ? { ...item, upvotes: item.upvotes + 1 } : item
-      )
-    );
+    id: number;
+    upvotes: number;
+    downvotes: number;
+    text: string;
+    userName: string;
+    userHandle: string;
+    initials: string;
   };
 
-  const handleDownvote = (id: number): void => {
-    setFeedbackData((prevData) =>
-      prevData.map((item) =>
-        item.id === id ? { ...item, downvotes: item.downvotes + 1 } : item
-      )
-    );
-  };
-
-  const handleSubmit = async () => { // Add async keyword
-    try {
-      const updatedTexts = [...submittedTexts, text]; // Append new text
-      await AsyncStorage.setItem('submittedTexts', JSON.stringify(updatedTexts));
-      setSubmittedTexts(updatedTexts); // Update state
-    } catch (error) {
-      console.error('Failed to save text:', error);
-    }
-  }; // Remove extra closing brace
-
-  const handleNewFeedback = (newFeedback: FeedbackItem) => {
-    setFeedbackData((prevFeedbackData) => [...prevFeedbackData, newFeedback]);
-  };
+  const Feedback: React.FC = () => {
+    const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([
+      {
+        id: 1,
+        upvotes: 6,
+        downvotes: 4,
+        text: "Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to national hero José Rizal. Apaka angas bbossing!",
+        userName: "Ashley",
+        userHandle: "@ashruaza",
+        initials: "AR"
+      },
+      // Add other initial feedback items here...
+    ]);
+  
+    const [submittedTexts, setSubmittedTexts] = useState<string[]>([]);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [text, setText] = useState(''); // Add this line to handle input text
+  
+    const handleUpvote = (id: number): void => {
+      setFeedbackData((prevData) =>
+        prevData.map((item) =>
+          item.id === id ? { ...item, upvotes: item.upvotes + 1 } : item
+        )
+      );
+    };
+  
+    const handleDownvote = (id: number): void => {
+      setFeedbackData((prevData) =>
+        prevData.map((item) =>
+          item.id === id ? { ...item, downvotes: item.downvotes + 1 } : item
+        )
+      );
+    };
+  
+    const handleSubmit = async () => { // Add async keyword
+      try {
+        const updatedTexts = [...submittedTexts, text]; // Append new text
+        await AsyncStorage.setItem('submittedTexts', JSON.stringify(updatedTexts));
+        setSubmittedTexts(updatedTexts); // Update state
+      } catch (error) {
+        console.error('Failed to save text:', error);
+      }
+    }; // Remove extra closing brace
+  
+    const handleNewFeedback = (newFeedback: FeedbackItem) => {
+      setFeedbackData((prevFeedbackData) => [...prevFeedbackData, newFeedback]);
+    };
 
   const FeedbackCard: React.FC<{ feedback: FeedbackItem }> = ({ feedback }) => (
     <View style={styles.feedbackcontainer}>
@@ -78,12 +78,12 @@ const Feedback: React.FC = () => {
 
       <View style={styles.arrowcontainer}>
         <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(feedback.id)}>
-          <AntDesign name="arrowup" size={15} color="#22C55E" /> {/* Correct icon name */}
+          <AntDesign name="arrowup" size={15} color="#22C55E" />
           <Text style={[styles.num, { color: '#22C55E' }]}>{feedback.upvotes}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(feedback.id)}>
-          <AntDesign name="arrowdown" size={15} color="#C52222" /> {/* Correct icon name */}
+          <AntDesign name="arrowdown" size={15} color="#C52222" />
           <Text style={[styles.num, { color: '#C52222' }]}>{feedback.downvotes}</Text>
         </TouchableOpacity>
       </View>
@@ -92,22 +92,27 @@ const Feedback: React.FC = () => {
 
   return (
     <ScrollView style={styles.maincontainer}>
-      
+      <Text style={styles.headerText}>Our Feedback</Text>
+      <Text style={styles.descriptionText}>
+        We value your input on <Text style={styles.boldText}>Kommutsera</Text>. Your feedback will help us to improve. Please
+        share your thoughts and suggestions to make <Text style={styles.boldText}>Kommutsera</Text> even better!
+      </Text>
+
       {feedbackData.map((feedback) => (
         <FeedbackCard key={feedback.id} feedback={feedback} />
       ))}
 
-      {/* Floating button to open modal */}
-      <View style={styles.floatingButtonContainer}>
-        <TouchableOpacity
-          style={styles.floatingButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.floatingButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
+     {/* Floating button to open modal */}
+           <View style={styles.floatingButtonContainer}>
+             <TouchableOpacity
+               style={styles.floatingButton}
+               onPress={() => setModalVisible(true)}
+             >
+               <Text style={styles.floatingButtonText}>+</Text>
+             </TouchableOpacity>
+           </View>
 
-      {/* Modal for submitting feedback */}
+           {/* Modal for submitting feedback */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"} // Adjust layout for iOS/Android
@@ -119,9 +124,14 @@ const Feedback: React.FC = () => {
           onNewFeedback={handleNewFeedback} 
         />
       </KeyboardAvoidingView>
+
+     
+      
     </ScrollView>
   );
 };
+
+
 const styles = StyleSheet.create({
   maincontainer: {flexDirection: 'column', padding: 30, backgroundColor: '#F9FAFB', width: '100%'},
   
