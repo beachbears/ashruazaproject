@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Text, StyleSheet, ScrollView, View, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform} from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import FeedbackComponent from '../feedbackmodal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type FeedbackItem = {
   id: number;
@@ -62,6 +64,10 @@ const GuestFeedback: React.FC = () => {
     }
   };
 
+  const handleNewFeedback = (newFeedback: FeedbackItem) => {
+    setFeedbackData((prevFeedbackData) => [...prevFeedbackData, newFeedback]);
+  };
+
   const FeedbackCard: React.FC<{ feedback: FeedbackItem }> = ({ feedback }) => (
     <View style={styles.feedbackcontainer}>
       <View style={styles.suggestordetails}>
@@ -112,58 +118,16 @@ const GuestFeedback: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Modal for submitting feedback */}
       <KeyboardAvoidingView
-      style={{flex: 1,}}
-      behavior={Platform.OS === "ios" ? "padding" : "height"} // Adjust layout for iOS/Android
-    >
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"} // Adjust layout for iOS/Android
       >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <View style={styles.userdetails}>
-              <View style={styles.userprofile}>
-                <Text style={styles.userinitial}>AR</Text>
-              </View>
-              <View style={styles.user}>
-                <Text style={styles.loginusername}>Ash Ruaza</Text>
-                <Text style={styles.username}>@ashleyruaza</Text>
-              </View>
-            </View>
-
-            <Text style={styles.modalText}>Tell us your experience using Kommutsera</Text>
-
-            <TextInput
-              style={styles.suggestiontextbox}
-              placeholder="Type here..."
-              placeholderTextColor="#666"
-              multiline
-              value={inputText}
-              onChangeText={setInputText}
-            />
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                style={styles.cancelButton}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleSubmit}
-                style={styles.submitButton}
-              >
-                <Text style={styles.submitText}>Submit</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        <FeedbackComponent
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onSubmit={handleSubmit}
+          onNewFeedback={handleNewFeedback} 
+        />
       </KeyboardAvoidingView>
     </ScrollView>
   );
@@ -172,8 +136,7 @@ const GuestFeedback: React.FC = () => {
 
 const styles = StyleSheet.create({
   maincontainer: {flexDirection: 'column', padding: 30, backgroundColor: '#F9FAFB', width: '100%'},
-  
-  feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 10},
+  feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 15},
   suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 11 },
   profile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' },
   initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
@@ -186,11 +149,11 @@ const styles = StyleSheet.create({
   arrowdown: { borderWidth: 1, borderColor: '#EBA2A2', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, flexDirection: 'row', alignItems: 'center' },
   arrowcontainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   
-  headerText: { fontSize: 20, fontWeight: '600', color: '#44457D', marginTop: 30, textAlign: 'center' },
+  headerText: { fontSize: 20, fontWeight: '600', color: '#44457D', textAlign: 'center', marginTop: -10},
   descriptionText: { color: '#44457D', textAlign: 'center', marginBottom: 30, fontSize: 13 },
   boldText: { fontWeight: 'bold' },
 
-  floatingButtonContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginLeft: 300, marginBottom: 10, marginTop: 'auto'},
+  floatingButtonContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginLeft: 300, marginBottom: 80, marginTop: 'auto'},
   floatingButton: { width: 40, height: 40, borderRadius: 28, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 }, shadowRadius: 4, elevation: 6 },
   floatingButtonText: { color: '#fff', fontSize: 20, fontWeight: '400' },
   modalBackground: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },

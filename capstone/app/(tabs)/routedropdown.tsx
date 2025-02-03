@@ -13,7 +13,8 @@ import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Link } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import ModalComponent from './custommodal';
+import ModalComponent from '../postmodal';
+import FeedbackModal from '../feedbackmodal';
 import AntDesign from '@expo/vector-icons/AntDesign';
 
 // Define the PostItem type
@@ -30,13 +31,14 @@ type PostItem = {
   description: string;
   suggestiontextbox: string;
 };
-
 // Dropdown Component
 interface DropdownProps {
   options: string[];
   onSelect?: (option: string) => void;
   defaultValue?: string;
 }
+
+
 
 const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -68,6 +70,7 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
     </View>
   );
 };
+
 
 // PostCard Component
 const PostCard: React.FC<{ Post: PostItem; handleUpvote: (id: number) => void; handleDownvote: (id: number) => void }> = ({
@@ -234,6 +237,7 @@ export default function TabTwoScreen() {
     console.log('Selected option:', option);
   };
 
+  
   return (
     <ScrollView style={styles.maincontainer}>
       <View style={styles.header}>
@@ -329,7 +333,6 @@ export default function TabTwoScreen() {
   );
 }
 
-// Styles
 const styles = StyleSheet.create({
   maincontainer: {
     flexDirection: 'column',
@@ -342,7 +345,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
-    marginTop: 30,
   },
   content: {
     flexDirection: 'row',

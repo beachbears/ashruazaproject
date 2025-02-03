@@ -10,9 +10,6 @@ interface FeedbackItem {
         userHandle: string;
         initials: string;
 }
-
-
-
 interface ModalComponentProps {
   visible: boolean;
   onClose: () => void;
@@ -253,7 +250,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: 80,
   },
-  modalText: { fontSize: 11, color: '#6B7280', flexWrap: 'wrap', paddingTop: 20, paddingBottom: 6 },
+  modalText: { fontSize: 11, color: '#6B7280', flexWrap: 'wrap', paddingBottom: 6 },
   
   getOnText: {
     color: '#44457D',

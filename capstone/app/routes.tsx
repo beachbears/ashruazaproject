@@ -179,16 +179,13 @@ return (
           />
         </MapView>
       </View>  */}
-      
-      
-     
 
       </View>
 
       <View style={styles.picturecontainer}>
           <View style={styles.imageWrapper}>
               <Image
-                  source={require('../../assets/images/intramuros.jpg')}
+                  source={require('../assets/images/intramuros.jpg')}
                   style={styles.image}
               />
               <View style={{ flexDirection: 'column', gap: 6 }}>
@@ -255,9 +252,9 @@ return (
               style={{
                   backgroundColor: '#E0E7FF',
                   borderRadius: 10,
+                  marginBottom: 80,
                   padding: 11}}
                   onPress={() => {
-                    // Add your function logic here
                     console.log('Button Pressed');
                 }}
           >
@@ -279,7 +276,7 @@ return (
 const styles = StyleSheet.create({
 
   maincontainer: {flexDirection: 'column', padding: 30, backgroundColor: '#F9FAFB', width: '100%' },
-  userDetails: {flexDirection: 'row', alignItems: 'center', marginBottom:14, marginTop: 30},
+  userDetails: {flexDirection: 'row', alignItems: 'center', marginBottom:14,},
   circle: {width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
   userinitial: { color: '#fff', fontSize: 11, fontWeight: 'bold',},
   username: {fontSize: 13, color: '#6B7280', fontWeight: '700',},

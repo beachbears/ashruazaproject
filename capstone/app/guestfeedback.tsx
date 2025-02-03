@@ -75,7 +75,7 @@ const guestfeedback: React.FC = () => {
     alignItems: 'center',
   }}> 
               <Image
-                source={require('../../assets/images/feedback.png')}  
+                source={require('../assets/images/feedback.png')}  
                 style={{
                     width: 200,
                     height: 200,
