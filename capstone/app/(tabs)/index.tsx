@@ -11,6 +11,10 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
+import { APP_NAME} from "../../constants";
+
+
+
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,11 +65,11 @@ const Home = () => {
                 <Text style={styles.badgeText}>Official application</Text>
               </View>
               <Text style={styles.title}>
-                Simply Travel with <Text style={styles.highlight}>Lokacion</Text>
+                Simply Travel with <Text style={styles.highlight}>{APP_NAME}</Text>
               </Text>
-              <Text style={styles.description}>
-                Conquer the Metro with ease! <Text style={styles.boldText}>Lokacion: Gabay ko, Byahe Mo!!!</Text> your companion for hassle-free commuting, offering clear routes, and navigation to make every journey stress-free.
-              </Text>
+                <Text style={styles.description}>
+                  Conquer the Metro with ease! <Text style={styles.boldText}>{APP_NAME}</Text> your companion for hassle-free commuting, offering clear routes, and navigation to make every journey stress-free.
+                </Text>
 
               <Image source={require('../../assets/images/intramuros.jpg')} style={styles.conquerImage} />
 

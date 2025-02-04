@@ -3,6 +3,8 @@ import { Text, StyleSheet, ScrollView, View, TouchableOpacity, Modal, TextInput,
 import AntDesign from '@expo/vector-icons/AntDesign';
 import FeedbackComponent from '../feedbackmodal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { APP_NAME } from '@/constants';
+
 
 type FeedbackItem = {
   id: number;
@@ -100,8 +102,8 @@ const GuestFeedback: React.FC = () => {
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.headerText}>Our Feedback</Text>
       <Text style={styles.descriptionText}>
-        We value your input on <Text style={styles.boldText}>Kommutsera</Text>. Your feedback will help us to improve. Please
-        share your thoughts and suggestions to make <Text style={styles.boldText}>Kommutsera</Text> even better!
+        We value your input on <Text style={styles.boldText}>{APP_NAME}</Text>. Your feedback will help us to improve. Please
+        share your thoughts and suggestions to make <Text style={styles.boldText}>{APP_NAME}</Text> even better!
       </Text>
 
       {feedbackData.map((feedback) => (

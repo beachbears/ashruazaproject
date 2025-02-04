@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Modal, View, TextInput, Button, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons';
+import Entypo from '@expo/vector-icons/Entypo';
 
 interface PostItem {
   id: number;
@@ -64,6 +65,50 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
       }, 100);
     }
   }, [visible]);
+
+  // Dropdown Component
+interface DropdownProps {
+  options: string[];
+  onSelect?: (option: string) => void;
+  defaultValue?: string;
+}
+
+const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
+
+  const toggleDropdown = () => setIsOpen(!isOpen);
+
+  const selectOption = (option: string) => {
+    setSelectedOption(option);
+    setIsOpen(false);
+    if (onSelect) onSelect(option);
+  };
+
+  return (
+    <View style={styles.dropdowncontainer}>
+      <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
+        <Text style={styles.buttonText}>{selectedOption}</Text>
+        <Entypo name="chevron-down" size={20} color="#44457D" />
+      </TouchableOpacity>
+      {isOpen && (
+        <View style={styles.dropdownList}>
+          {options.map((option, index) => (
+            <TouchableOpacity key={index} onPress={() => selectOption(option)} style={styles.option}>
+              <Text style={styles.optionText}>{option}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
+const dropdownOptions = ['Get On', 'Get Off'];
+
+const handleOptionSelect = (option: string) => {
+  console.log('Selected option:', option);
+};
 
   return (
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
@@ -135,10 +180,16 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
 
   <Text style={styles.routeOverviewText}>Route Overview</Text>
   
-                  <View style={styles.getOnContainer}>
-                    <View style={styles.geton}>
-                      <Text style={styles.getOnText}>Get On</Text>
-                    </View>
+                  <View style={styles.getonoffContainer}>
+                    
+                      <View style={{ zIndex: 1000 }}>
+                                <Dropdown
+                                  options={dropdownOptions}
+                                  onSelect={handleOptionSelect}
+                                  defaultValue="Select Option"
+                                />
+                              </View>
+                   
                     <TouchableOpacity style={styles.floatingButton}>
                       <Text style={styles.floatingButtonText}>+</Text>
                     </TouchableOpacity>
@@ -319,25 +370,12 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     fontSize: 14,
   },
-  getOnContainer: {
+  getonoffContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
     justifyContent: 'space-between',
     marginVertical: 10,
-  },
-  geton: {
-    backgroundColor: '#F5F7FF',
-    borderRadius: 8,
-    padding: 4,
-    borderColor: '#C7D2FE',
-    borderWidth: 1,
-    width: 80,
-  },
-  getOnText: {
-    color: '#44457D',
-    fontSize: 13,
-    fontWeight: '400',
   },
   floatingButton: {
     width: 30,
@@ -381,6 +419,51 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  dropdowncontainer: {
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  dropdownButton: {
+    backgroundColor: '#F5F7FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 8,
+    width: 125,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 6,
+  },
+  buttonText: {
+    color: '#44457D',
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  dropdownList: {
+    position: 'absolute',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    zIndex: 1000,
+    width: 125,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    top: 40,
+  },
+  option: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    padding: 4,
+    alignItems: 'center',
+  },
+  optionText: {
+    fontSize: 13,
+    color: '#44457D',
   },
 });
 

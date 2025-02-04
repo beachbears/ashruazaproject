@@ -1,5 +1,7 @@
+import { APP_NAME } from '@/constants';
 import React, { useState, useRef, useEffect } from 'react';
 import { Modal, View, TextInput,  StyleSheet, TouchableOpacity, Text,} from 'react-native';
+
 
 interface FeedbackItem {
         id: number;
@@ -65,7 +67,7 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
                           </View>
                         </View>
             
-                        <Text style={styles.modalText}>Tell us your experience using Kommutsera</Text>
+                        <Text style={styles.modalText}>Tell us your experience using {APP_NAME}</Text>
             
                         <TextInput
                           style={styles.suggestiontextbox}

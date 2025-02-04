@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { FontAwesome5 } from '@expo/vector-icons'; // Importing FontAwesome5 for icons
 
-export default function AboutScreen() {
+const About = () => {
   return (
     <ScrollView style={styles.container}>
       {/* Header Section */}
@@ -303,3 +303,4 @@ footerCopyright: {
 
 });
 
+export default About;

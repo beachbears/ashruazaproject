@@ -4,6 +4,7 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { StyleSheet, View, Image, Text} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
+import { APP_NAME } from '@/constants';
 
 export default function TabLayout() {
   return (
@@ -19,7 +20,7 @@ export default function TabLayout() {
               style={styles.logo}
             />
           </View>
-          <Text style={{fontSize: 16, fontWeight: 800, color: '#424368', left: -90}}>Kommutsera</Text>
+          <Text style={{fontSize: 16, fontWeight: 800, color: '#424368', left: -90}}>{APP_NAME}</Text>
           <View style={styles.circle}>
             <View style={styles.account}>
               <Text style={{fontSize: 12, fontWeight: 800, color: '#FFFFFF',}}>A</Text>
@@ -45,11 +46,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="routedropdown"
         options={{
-          title: 'Routes',
+          title: ' ',
           tabBarIcon: ({ focused }) => (
             <View style={[styles.iconContainer, focused && styles.iconContainerFocused]}>
             <FontAwesome5 name="route" size={16} color={focused ? '#fff' : '#6366F1'} />
             </View>
+            
           ),
           tabBarItemStyle: styles.tabBarItem,
         }}
@@ -80,6 +82,7 @@ export default function TabLayout() {
      
       }}
     />
+
     </Tabs>
       
 

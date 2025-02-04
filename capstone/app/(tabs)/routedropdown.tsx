@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Modal,
-} from 'react-native';
+import {View,Text,StyleSheet,ScrollView,TouchableOpacity,TextInput,} from 'react-native';
 import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Link } from 'expo-router';
@@ -16,28 +7,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ModalComponent from '../postmodal';
 import FeedbackModal from '../feedbackmodal';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import { APP_NAME} from "../../constants";
 
-// Define the PostItem type
-type PostItem = {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  userinitial: string;
-  loginusername: string;
-  username: string;
-  location: string;
-  fare: number;
-  destination: string;
-  description: string;
-  suggestiontextbox: string;
-};
+
+
 // Dropdown Component
 interface DropdownProps {
   options: string[];
   onSelect?: (option: string) => void;
   defaultValue?: string;
 }
-
 
 
 const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
@@ -53,7 +32,7 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   };
 
   return (
-    <View style={styles.newcontainer}>
+    <View style={styles.dropdowncontainer}>
       <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
         <Text style={styles.buttonText}>{selectedOption}</Text>
         <Entypo name="chevron-down" size={20} color="#44457D" />
@@ -71,6 +50,20 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   );
 };
 
+// Post Item
+type PostItem = {
+  id: number;
+  upvotes: number;
+  downvotes: number;
+  userinitial: string;
+  loginusername: string;
+  username: string;
+  location: string;
+  fare: number;
+  destination: string;
+  description: string;
+  suggestiontextbox: string;
+};
 
 // PostCard Component
 const PostCard: React.FC<{ Post: PostItem; handleUpvote: (id: number) => void; handleDownvote: (id: number) => void }> = ({
@@ -105,16 +98,14 @@ const PostCard: React.FC<{ Post: PostItem; handleUpvote: (id: number) => void; h
         <Text style={styles.status}>Status</Text>
         <View style={styles.badge}>
           <Entypo name="check" size={14} color="#03C04A" />
-          <Text style={styles.cert}>Certified Kommutsera</Text>
+          <Text style={styles.cert}>Certified {APP_NAME}</Text>
         </View>
       </View>
-
       <View style={styles.arrowcontainer}>
         <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(Post.id)}>
           <AntDesign name="arrowup" size={12} color="#22C55E" />
           <Text style={[styles.num, { color: '#22C55E' }]}>{Post.upvotes}</Text>
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(Post.id)}>
           <AntDesign name="arrowdown" size={12} color="#C52222" />
           <Text style={[styles.num, { color: '#C52222' }]}>{Post.downvotes}</Text>
@@ -124,61 +115,12 @@ const PostCard: React.FC<{ Post: PostItem; handleUpvote: (id: number) => void; h
   </View>
 );
 
-// UserCard Component
-interface UserCardProps {
-  name: string;
-  username: string;
-  timedate: string;
-  suggestion: string;
-}
+const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time',];
 
-const UserCard: React.FC<UserCardProps> = ({ name, username, timedate, suggestion }) => {
-  return (
-    <View style={styles.usercard}>
-      <View style={styles.id}>
-        <View style={styles.alignment}>
-          <View style={styles.profile}>
-            <Text style={styles.nn}>
-              {name
-                .split(' ') // Split name into words
-                .map((word) => word[0]) // Get first letter of each word
-                .join('')}{' '}
-              {/* Join the initials */}
-            </Text>
-          </View>
-          <View style={styles.user}>
-            <Text style={styles.name}>{name}</Text>
-            <Text style={styles.username}>@{username}</Text>
-          </View>
-        </View>
-        <Text style={styles.timedate}>{timedate}</Text>
-      </View>
-      <Text style={styles.suggestorsdestination}>Destination: Intramuros, Manila</Text>
-      <Text style={styles.usersuggestion}>Tourist Experience:</Text>
-      <Text style={styles.suggestion}>{suggestion}</Text>
-      <View style={styles.iconStatus}>
-        <View style={styles.content}>
-          <Octicons name="shield-check" size={18} color="#6366F1" />
-          <Text style={styles.status}>Status</Text>
-          <View style={styles.badge}>
-            <Entypo name="check" size={14} color="#03C04A" />
-            <Text style={styles.cert}>Certified Kommutsera</Text>
-          </View>
-        </View>
-        <View style={styles.arrowcontainer}>
-          <View style={styles.arrowup}>
-            <AntDesign name="arrowup" size={15} color="#03C04A" />
-            <Text style={[styles.num, { color: '#22c55e' }]}>11</Text>
-          </View>
-          <View style={styles.arrowdown}>
-            <AntDesign name="arrowdown" size={15} color="red" />
-            <Text style={[styles.num, { color: 'red' }]}>4</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
+const handleOptionSelect = (option: string) => {
+  console.log('Selected option:', option);
 };
+
 
 // Main Screen Component
 export default function TabTwoScreen() {
@@ -231,11 +173,6 @@ export default function TabTwoScreen() {
     setPostData((prevPostData) => [...prevPostData, newPost]);
   };
 
-  const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
-
-  const handleOptionSelect = (option: string) => {
-    console.log('Selected option:', option);
-  };
 
   
   return (
@@ -270,7 +207,7 @@ export default function TabTwoScreen() {
             <View style={styles.avatar}>
               <Text style={styles.avatarinitial}>KT</Text>
             </View>
-            <Text style={styles.appname}>Kommutsera</Text>
+            <Text style={styles.appname}>{APP_NAME}</Text>
           </View>
           <Text style={styles.bestwaydestination}>Destination: Intramuros, Manila</Text>
           <Text style={styles.bestwaydescription}>Tourist Spot Description</Text>
@@ -282,7 +219,7 @@ export default function TabTwoScreen() {
             <Text style={styles.status}>Status</Text>
             <View style={styles.badge}>
               <Entypo name="check" size={14} color="#22C55E" />
-              <Text style={styles.certified}>Certified Kommutsera</Text>
+              <Text style={styles.certified}>Certified {APP_NAME}</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -298,14 +235,6 @@ export default function TabTwoScreen() {
           />
         </View>
       </View>
-
-      {/* User Cards */}
-      <UserCard
-        name="Ash Ruaza"
-        username="ashruaza"
-        timedate="12 Hours ago"
-        suggestion="Intramuros represents the Philippines' colonial past..."
-      />
 
       {/* Post Cards */}
       {PostData.map((post) => (
@@ -487,7 +416,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
   },
-  newcontainer: {
+  dropdowncontainer: {
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
@@ -532,16 +461,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#44457D',
   },
-  usercard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 16,
-    marginVertical: 2,
-    zIndex: -1,
-    marginBottom: 20,
-  },
   profile: {
     width: 36,
     height: 36,
@@ -550,13 +469,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
-  },
-  nn: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   username: {
     fontSize: 12,
@@ -576,48 +488,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 6,
   },
-  iconStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 2,
-    marginTop: 16,
-  },
   cert: {
     color: '#22c55e',
     fontWeight: '500',
     fontSize: 11,
   },
-  user: {
-    flexDirection: 'column',
-    marginBottom: 10,
-  },
-  name: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '700',
-  },
-  touristexp: {
-    marginVertical: 10,
-    marginLeft: 50,
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  timedate: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  id: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 50,
-  },
-  alignment: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  
+   
   arrowup: {
     borderWidth: 1,
     borderColor: '#4ade80',
@@ -689,29 +566,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: 16,
   },
-
-  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2 },
-  feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 10, width: '100%'},
-   suggestor: { flexDirection: 'column' },
-  initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
-  suggestorusername: { fontSize: 11, color: '#6B7280' },
-  usersuggestion: {  fontSize: 12,
-    marginVertical: 4,
-    color: '#6B7280',
-    fontWeight: '500',
-    marginLeft: 50,
-    },
-  suggestordestination: {  fontSize: 11, color: '#6B7280', flexWrap: 'wrap', marginLeft: 0 },
-  
   dest: { fontSize: 12,
     color: '#6B7280',
     fontWeight: '500',
     marginLeft: 50, },
+    usersuggestion: {  fontSize: 12,
+      marginVertical: 4,
+      color: '#6B7280',
+      fontWeight: '500',
+      marginLeft: 50,
+      },
+  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2 },
+  feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 10, width: '100%'},
+  suggestor: { flexDirection: 'column' },
+  initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
+  suggestorusername: { fontSize: 11, color: '#6B7280' },
+  suggestordestination: {  fontSize: 11, color: '#6B7280', flexWrap: 'wrap', marginLeft: 0 },
     
-   suggestorexp: {fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-    marginLeft: 50,
-    marginVertical: 16,},
+    
 });
