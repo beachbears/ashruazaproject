@@ -5,6 +5,7 @@ import { StyleSheet, View, Image, Text} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { APP_NAME } from '@/constants';
+import { flatMap, wrap } from 'lodash';
 
 export default function TabLayout() {
   return (
@@ -15,12 +16,14 @@ export default function TabLayout() {
         header: () => (
         <View style={styles.header}>
           <View style={styles.headerContainer}>
+            
             <Image
               source={require('../../assets/images/logo.png')}
               style={styles.logo}
             />
-          </View>
+         
           <Text style={{fontSize: 16, fontWeight: 800, color: '#424368', left: -90}}>{APP_NAME}</Text>
+          </View>
           <View style={styles.circle}>
             <View style={styles.account}>
               <Text style={{fontSize: 12, fontWeight: 800, color: '#FFFFFF',}}>A</Text>
@@ -28,6 +31,8 @@ export default function TabLayout() {
           </View>
         </View>
         ),
+        
+        
         tabBarStyle: styles.tabBar,
       }}
     >
@@ -91,7 +96,7 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   headerStyle: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#F9FAFB',
     position: 'absolute'
   },
   header: {
@@ -99,13 +104,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#F9FAFB',
-    marginHorizontal: 10
+    paddingHorizontal: 10
   },
   headerContainer: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     height: 60,
-    backgroundColor: '#F9FAFB'
+    backgroundColor: '#F9FAFB',
+    gap: 100
   },
   logo: {
     width: 50,
@@ -118,40 +125,40 @@ const styles = StyleSheet.create({
   circle: {
     width: 40, height: 40, borderRadius: 24, backgroundColor: '#E0E7FF', alignItems: 'center', justifyContent: 'center'
   },
-    tabBar: {
-      backgroundColor: '#FFFFFF',
-      borderRadius: 40,
-      borderColor: '#C7D2FE',
-      position: 'absolute',
-      bottom: 10,
-      left: 20,
-      right: 20,
-      height: 60,  
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.8,
-      shadowRadius: 2,
-      elevation: 5,
-      marginHorizontal: 90,
-      marginVertical: 0,
-      justifyContent: 'center',   
-    },
-    tabBarItem: {
-      borderRadius: 15,
-      backgroundColor: 'transparent',
-      padding: 5,  
-    },
-    iconContainer: {
-      width: 46,
-      height: 46,
-      borderRadius: 25,
-      backgroundColor: '#E0E7FF',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: -12, 
-    },
-    iconContainerFocused: {
-      backgroundColor: '#6366F1',
-    },
-  });
-  
+  tabBar: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 40,
+    borderColor: '#C7D2FE',
+    position: 'absolute',
+    bottom: 10,
+    left: 20,
+    right: 20,
+    height: 60,  
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
+    marginHorizontal: 90,
+    marginVertical: 0,
+    justifyContent: 'center',   
+  },
+  tabBarItem: {
+    borderRadius: 15,
+    backgroundColor: 'transparent',
+    padding: 5,  
+  },
+  iconContainer: {
+    width: 46,
+    height: 46,
+    borderRadius: 25,
+    backgroundColor: '#E0E7FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: -10, 
+  },
+  iconContainerFocused: {
+    backgroundColor: '#6366F1',
+  },
+});
+

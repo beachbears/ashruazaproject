@@ -150,20 +150,27 @@ return (
         <Comment key={comment.id} comment={comment} />
       ))}
       
-       <View style={[{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, gap: 2, width: '100%',  }]}>
-                
-                <TextInput style={styles.commenttextbox} placeholder="Write a comment" placeholderTextColor="#666" multiline={true} value={inputText}
-                     onChangeText={setInputText} />
-                
-                <TouchableOpacity style={styles.button} onPress={handlePost}>
-                    <Text style={styles.buttonText}>Post</Text>
-                </TouchableOpacity>
-      
-            </View>
+      <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, width: '100%', gap: 4 }]}>
+  <View style={{ width: '90%' }}>  
+    <TextInput
+      style={styles.commenttextbox}
+      placeholder="Write a comment"
+      placeholderTextColor="#666"
+      multiline={true}
+      value={inputText}
+      onChangeText={setInputText}
+    />
+  </View>
+
+  <TouchableOpacity style={[styles.button]} onPress={handlePost}>
+    <Text style={styles.buttonText}>Post</Text>
+  </TouchableOpacity>
+</View>
+
 
       <View style={[{ borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#EEF2FF', borderRadius: 2, padding: 2, flexDirection: 'column', width: '100%', marginVertical: 15, }]}>
       
-     <View style={{ flex: 1 }}>
+    {/* <View style={{ flex: 1 }}>
         <MapView
           style={{ width: '100%', height: 300 }}
           initialRegion={{
@@ -178,7 +185,7 @@ return (
             title="Intramuros"
           />
         </MapView>
-      </View>  
+      </View>  */}
 
       </View>
 
@@ -315,7 +322,7 @@ const styles = StyleSheet.create({
   commenteremail: { fontSize: 12, color: '#6B7280',},
   comment: { fontSize: 12, color: '#6B7280',},
 
-  commenttextbox: {backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 6,fontSize: 11, color: '#374151', width: '85%'}, 
+  commenttextbox: {backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 6,fontSize: 11, color: '#374151',}, 
   button: {backgroundColor: '#6366F1', paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center', height: 30},
   buttonText: {color: 'white', fontSize: 11, paddingVertical: 2},
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Image } from "react-native";
 import { FontAwesome5 } from '@expo/vector-icons'; // Importing FontAwesome5 for icons
 
 const About = () => {
@@ -7,10 +7,12 @@ const About = () => {
     <ScrollView style={styles.container}>
       {/* Header Section */}
       <View style={styles.header}>
-        <View style={styles.avatar}></View>
         <Text style={styles.headerTitle}>
           Your Travel, Your Way, it's <Text style={styles.highlight}>Kommutsera!!</Text>
         </Text>
+        <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
+        <Text style={styles.nameApp}>Kommutsera</Text>
+
         <Text style={styles.subtitle}>Founded by</Text>
         <View style={styles.avatar}></View>
         <Text style={styles.teamName}>Group Name</Text>
@@ -19,7 +21,7 @@ const About = () => {
 
       {/* About Section */}
       <View style={styles.aboutSection}>
-        <Text style={styles.aboutTitle}>Kommutsera: Your Ultimate Metro Companion</Text>
+        <Text style={styles.aboutTitle}>Kommutsera</Text>
         <Text style={styles.aboutText}>
           Say goodbye to stress and confusion with Kommutsera, your go-to tool for hassle-free commuting.
           Whether you're a daily commuter or an occasional traveler, Kommutsera simplifies your journey by offering
@@ -33,62 +35,110 @@ const About = () => {
         <Text style={styles.teamTitle}>Meet Our Talented Team</Text>
         <View style={styles.teamGrid}>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Johana Eunice Abellana</Text>
             <Text style={styles.memberRole}>Project Manager {"\n"} Head Researcher</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')} // Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Joanah Marie L. Aldave</Text>
             <Text style={styles.memberRole}>Assistant Project Manager {"\n"} UI/UX Designer {"\n"} Head Researcher</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Gabriel Q. Bruzula</Text>
             <Text style={styles.memberRole}>Programmer</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Gerson A. Boyboy</Text>
             <Text style={styles.memberRole}>UI/UX Designer / Researcher</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Marc Jerald B. De Guzman</Text>
             <Text style={styles.memberRole}>Researcher</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Sean Zidane L. Dumlao</Text>
             <Text style={styles.memberRole}>Programmer</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Icko Cristian M. Llanillo</Text>
             <Text style={styles.memberRole}>Researcher</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Patricia Mae R. Romillo</Text>
             <Text style={styles.memberRole}>UI/UX Designer / Researcher</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')} // Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Ashley A. Ruaza</Text>
             <Text style={styles.memberRole}>Programmer</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')} // Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>John Paul J. Saavedra</Text>
             <Text style={styles.memberRole}>Programmer</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')}  // Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>John Cedric G. Salinas</Text>
             <Text style={styles.memberRole}>Programmer</Text>
           </View>
           <View style={styles.teamMember}>
-            <View style={styles.memberAvatar}></View>
+            <Image
+              style={styles.memberAvatar}
+              source={require('../../assets/images/logo.png')} // Replace with actual image URL
+              resizeMode="cover"
+            />
             <Text style={styles.memberName}>Joshua Emmanuel P. Valeza</Text>
             <Text style={styles.memberRole}>Programmer</Text>
           </View>
@@ -121,21 +171,21 @@ const About = () => {
           </View>
         </View>
 
-<View style={styles.footerBottom}>
-  <View style={styles.footerBrand}>
-    <View style={styles.brandIcon}></View>
-    <View>
-      <Text style={styles.brandTitle}>Kommutsera</Text>
-      <Text style={styles.brandDescription}>
-        Conquer the Metro with ease!{"\n"}Kommutsera is your{"\n"}ultimate companion for{"\n"}hassle-free commuting.
-      </Text>
-    </View>
-  </View>
-  <Text style={styles.footerCopyright}>
-    2024 © Kommutsera
-  </Text>
-</View>
-</View>
+        <View style={styles.footerBottom}>
+          <View style={styles.footerBrand}>
+            <View style={styles.brandIcon}></View>
+            <View>
+              <Text style={styles.brandTitle}>Kommutsera</Text>
+              <Text style={styles.brandDescription}>
+                Conquer the Metro with ease!{"\n"}Kommutsera is your{"\n"}ultimate companion for{"\n"}hassle-free commuting.
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.footerCopyright}>
+            2024 © Kommutsera
+          </Text>
+        </View>
+      </View>
     </ScrollView>
   );
 };
@@ -150,23 +200,34 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   avatar: {
-    width: 80,
-    height: 80,
+    width: 40,
+    height: 40,
     backgroundColor: "#3182ce",
     borderRadius: 40,
-    marginBottom: 10,
+    marginBottom: 5,
+  },
+  logo:{
+    width: 80,
+    height: 80,
   },
   headerTitle: {
-    fontSize: 30,
+    marginTop: 30,
+    fontSize: 40,
     fontWeight: "bold",
     color: "#4A5568",
-    textAlign: "center",
+    textAlign: "justify",
   },
   highlight: {
-    color: "#3182ce",
+    color: "#6A5AE0",
+  },
+  nameApp:{
+  fontSize: 25,
+  fontWeight:'semibold',
+     color:'#424368',
   },
   subtitle: {
-    marginTop: 5,
+    marginTop: 10,
+    marginBottom:5,
     fontSize: 14,
     color: "#A0AEC0",
   },
@@ -188,7 +249,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     color: "#4A5568",
-    marginBottom: 10,
+    marginBottom: 15,
+    textAlign:"center",
   },
   aboutText: {
     fontSize: 16,
@@ -208,7 +270,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   teamGrid: {
-    flexDirection: "column", // Stack the items vertically
+    flexDirection: "column",
     alignItems: "center",
   },
   teamMember: {
@@ -216,11 +278,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   memberAvatar: {
-    width: 80,
-    height: 80,
-    backgroundColor: "#3182ce",
+    width: 50,
+    height: 50,
     borderRadius: 40,
     marginBottom: 10,
+    overflow: 'hidden', // Ensures the image stays within the rounded bounds
   },
   memberName: {
     fontSize: 18,
@@ -236,33 +298,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9FAFB",
     paddingVertical: 40,
   },
-footerGrid: {
-  flexDirection: "column", // Stack the items vertically
-  paddingHorizontal: 30,
-  alignItems: "flex-start", // Align items to the left
-  width: "100%", // Ensure full-width alignment
-},
-footerItem: {
-  alignItems: "flex-start", // Align text and icons to the left
-  marginBottom: 20,
-  width: "100%", // Ensure items span the width
-},
-footerIcon: {
-  fontSize: 30,
-  color: "#3182ce",
-  marginBottom: 10,
-},
-footerTitle: {
-  fontWeight: "700",
-  color: "#4A5568",
-  fontSize: 16,
-  textAlign: "left", // Align text to the left
-},
-footerDescription: {
-  fontSize: 12,
-  color: "#A0AEC0",
-  textAlign: "left", // Align text to the left
-},
+  footerGrid: {
+    flexDirection: "column",
+    paddingHorizontal: 30,
+    alignItems: "flex-start",
+    width: "100%",
+  },
+  footerItem: {
+    alignItems: "flex-start",
+    marginBottom: 20,
+    width: "100%",
+  },
+  footerIcon: {
+    fontSize: 30,
+    color: "#6366F1",
+    marginBottom: 10,
+  },
+  footerTitle: {
+    fontWeight: "700",
+    color: "#4A5568",
+    fontSize: 16,
+    textAlign: "left",
+  },
+  footerDescription: {
+    fontSize: 12,
+    color: "#A0AEC0",
+    textAlign: "left",
+  },
   footerBottom: {
     marginTop: 30,
     flexDirection: "row",
@@ -277,7 +339,7 @@ footerDescription: {
   brandIcon: {
     width: 50,
     height: 50,
-    backgroundColor: "#3182ce",
+    backgroundColor: "#6366F1",
     borderRadius: 8,
     marginRight: 10,
   },
@@ -286,21 +348,19 @@ footerDescription: {
     fontSize: 18,
     color: "#4A5568",
   },
-brandDescription: {
-  fontSize: 12,
-  color: "#A0AEC0",
-  textAlign: "left", // Align to the left for a clean column look
-  lineHeight: 16, // Add some space between the lines
-  marginTop: 5,
-},
-
-footerCopyright: {
-  fontSize: 12,
-  color: "#A0AEC0",
-  textAlign: "center",
-  marginTop: 10,
-},
-
+  brandDescription: {
+    fontSize: 12,
+    color: "#A0AEC0",
+    textAlign: "left",
+    lineHeight: 16,
+    marginTop: 5,
+  },
+  footerCopyright: {
+    fontSize: 12,
+    color: "#A0AEC0",
+    textAlign: "center",
+    marginTop: 10,
+  },
 });
 
 export default About;

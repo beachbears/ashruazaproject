@@ -1,16 +1,126 @@
-import React, { useState } from 'react';
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,TextInput, FlatList} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Link } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import ModalComponent from '../postmodal';
+//import ModalComponent from '../postmodal';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { APP_NAME} from "../../constants";
+//import { APP_NAME } from '../../constants';
+import { APP_NAME} from "../constants";
+
+const timeAgo = (timestamp: number | string): string => {
+  if (!timestamp) return 'Unknown time';
+
+  // Ensure timestamp is a number
+  const postDate = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp);
+  const now = new Date();
+
+  const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  const diffInHours = Math.floor(diffInSeconds / 3600);
+  const diffInDays = Math.floor(diffInSeconds / 86400);
+
+  if (diffInMinutes < 1) return 'Just now';
+  if (diffInHours < 1) return `${diffInMinutes} minute(s) ago`;
+  if (diffInHours < 24) return `${diffInHours} hour(s) ago`;
+  if (diffInDays < 7) return `${diffInDays} day(s) ago`;
+  if (diffInDays === 7) return '1 week ago';
+  return '1 month ago';
+};
 
 
+interface PostItem {
+  id: number;
+  upvotes: number;
+  downvotes: number;
+  userinitial: string;
+  loginusername: string;
+  username: string;
+  location: string;
+  fare: number;
+  destination: string;
+  description: string;
+  suggestiontextbox: string;
+  timestamp?: number;
+}
 
-// Dropdown Component
+
+interface PostCardProps {
+  Post: PostItem;
+  handleUpvote: (id: number) => void;
+  handleDownvote: (id: number) => void;
+}
+
+const PostCard: React.FC<PostCardProps> = ({ Post, handleUpvote, handleDownvote }) => {
+  const [timeString, setTimeString] = useState<string>(timeAgo(Post.timestamp || Date.now()));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeString(timeAgo(Post.timestamp || Date.now()));
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, [Post.timestamp]);
+
+
+  return (
+    <View style={styles.feedbackcontainer}>
+      <View style={styles.suggestordetails}>
+        <View style={styles.profile}>
+          <Text style={styles.initial}>{Post.userinitial}</Text>
+        </View>
+        <View style={styles.suggestor}>
+          <Text style={styles.suggestorname}>{Post.loginusername}</Text>
+          <Text style={styles.suggestorusername}>{Post.username}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <Text style={styles.dest}>Posted: </Text>
+          <Text style={styles.suggestordestination}>{timeString}</Text>
+        </View>
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7 }}>
+        <Text style={styles.dest}>Destination: </Text>
+        <Text style={styles.suggestordestination}>{Post.destination}</Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7 }}>
+        <Text style={styles.dest}>Fare: </Text>
+        <Text style={styles.suggestordestination}>{Post.fare}</Text>
+      </View>
+
+      <View>
+        <Text style={styles.usersuggestion}>Tourist Experience: </Text>
+        <Text style={styles.suggestion}>{Post.suggestiontextbox}</Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={styles.content}>
+          <Octicons name="shield-check" size={18} color="#6366F1" />
+          <Text style={styles.status}>Status</Text>
+          <View style={styles.badge}>
+            <Entypo name="check" size={14} color="#03C04A" />
+            <Text style={styles.cert}>Certified {APP_NAME}</Text>
+          </View>
+        </View>
+        <View style={styles.arrowcontainer}>
+          <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(Post.id)}>
+            <AntDesign name="arrowup" size={12} color="#22C55E" />
+            <Text style={[styles.num, { color: '#22C55E' }]}>{Post.upvotes}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(Post.id)}>
+            <AntDesign name="arrowdown" size={12} color="#C52222" />
+            <Text style={[styles.num, { color: '#C52222' }]}>{Post.downvotes}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
+
 interface DropdownProps {
   options: string[];
   onSelect?: (option: string) => void;
@@ -48,84 +158,7 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   );
 };
 
-const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time',];
-
-const handleOptionSelect = (option: string) => {
-  console.log('Selected option:', option);
-};
-
-
-
-// Post Item
-type PostItem = {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  userinitial: string;
-  loginusername: string;
-  username: string;
-  location: string;
-  fare: number;
-  destination: string;
-  description: string;
-  suggestiontextbox: string;
-};
-
-// PostCard Component
-const PostCard: React.FC<{ Post: PostItem; handleUpvote: (id: number) => void; handleDownvote: (id: number) => void }> = ({
-  Post,
-  handleUpvote,
-  handleDownvote,
-}) => (
-
-  <View style={styles.containerpost}>
-    <View style={styles.suggestordetails}>
-      <View style={styles.profile}>
-        <Text style={styles.initial}>{Post.userinitial}</Text>
-      </View>
-      <View style={styles.suggestor}>
-        <Text style={styles.suggestorname}>{Post.loginusername}</Text>
-        <Text style={styles.suggestorusername}>{Post.username}</Text>
-      </View>
-    </View>
-
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7,}}>
-      <Text style={styles.dest}>Destination: </Text>
-      <Text style={styles.suggestordestination}>{Post.destination}</Text>
-    </View>
-
-    <View>
-      <Text style={styles.usersuggestion}>Tourist Experience: </Text>
-      <Text style={styles.suggestion}>{Post.suggestiontextbox}</Text>
-    </View>
-
-    <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-      <View style={styles.content}>
-        <Octicons name="shield-check" size={18} color="#6366F1" />
-        <Text style={styles.status}>Status</Text>
-        <View style={styles.badge}>
-          <Entypo name="check" size={14} color="#03C04A" />
-          <Text style={styles.cert}>Certified {APP_NAME}</Text>
-        </View>
-      </View>
-      <View style={styles.arrowcontainer}>
-        <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(Post.id)}>
-          <AntDesign name="arrowup" size={12} color="#22C55E" />
-          <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>{Post.upvotes}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(Post.id)}>
-          <AntDesign name="arrowdown" size={12} color="#C52222" />
-          <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>{Post.downvotes}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-   
-);
-
-// Main Screen Component
 export default function TabTwoScreen() {
-  
   const [PostData, setPostData] = useState<PostItem[]>([
     {
       id: 1,
@@ -139,6 +172,7 @@ export default function TabTwoScreen() {
       destination: 'National Museum',
       description: 'Good',
       suggestiontextbox: 'Some suggestion text here.',
+      timestamp: new Date().setDate(new Date().getDate() - 7),
     },
   ]);
 
@@ -147,17 +181,13 @@ export default function TabTwoScreen() {
 
   const handleUpvote = (id: number): void => {
     setPostData((prevData) =>
-      prevData.map((item) =>
-        item.id === id ? { ...item, upvotes: item.upvotes + 1 } : item
-      )
+      prevData.map((item) => (item.id === id ? { ...item, upvotes: item.upvotes + 1 } : item))
     );
   };
 
   const handleDownvote = (id: number): void => {
     setPostData((prevData) =>
-      prevData.map((item) =>
-        item.id === id ? { ...item, downvotes: item.downvotes + 1 } : item
-      )
+      prevData.map((item) => (item.id === id ? { ...item, downvotes: item.downvotes + 1 } : item))
     );
   };
 
@@ -175,86 +205,55 @@ export default function TabTwoScreen() {
     setPostData((prevPostData) => [...prevPostData, newPost]);
   };
 
+  const handleOptionSelect = (option: string) => {
+    let sortedData = [...PostData];
+    switch (option) {
+      case 'Time':
+        sortedData.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        break;
+      case 'Fare Cost':
+        sortedData.sort((a, b) => a.fare - b.fare);
+        break;
+      case 'Popularity':
+        sortedData.sort((a, b) => b.upvotes - a.upvotes);
+        break;
+      case 'Destination':
+        sortedData.sort((a, b) => a.destination.localeCompare(b.destination));
+        break;
+      default:
+        break;
+    }
 
-  
+    setPostData(sortedData);
+  };
+
   return (
     <ScrollView style={styles.maincontainer}>
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Details</Text>
-        <TouchableOpacity style={styles.postbutton} onPress={() => setModalVisible(true)}>
-          <Text style={styles.postButtonText}>Post</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.container}>
-        <Text style={styles.label}>Location</Text>
-        <TextInput
-          style={styles.userlocation}
-          placeholder="Novaliches, Bayan Glori"
-          placeholderTextColor="#666"
-        />
-        <Text style={styles.label}>Destination</Text>
-        <TextInput
-          style={styles.userdestination}
-          placeholder="Intramuros, Manila City"
-          placeholderTextColor="#666"
-        />
-      </View>
-
-      <Text style={styles.sectionTitle}>Best Way</Text>
-
-      <Link href="/routes" asChild>
-        <TouchableOpacity style={styles.bestwaycard}>
-          <View style={styles.bestwayHeader}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarinitial}>KT</Text>
-            </View>
-            <Text style={styles.appname}>{APP_NAME}</Text>
-          </View>
-          <Text style={styles.bestwaydestination}>Destination: Intramuros, Manila</Text>
-          <Text style={styles.bestwaydescription}>Tourist Spot Description</Text>
-          <Text style={styles.bestway}>
-            Intramuros represents the Philippines' colonial past, where the Spanish influence is deeply woven into the country's culture, architecture, and traditions. It is a symbol of both the glory and the struggles during the Spanish colonization. Today, it serves as a popular tourist destination that offers a look back in time, showcasing historical landmarks, museums, and the enduring spirit of the Filipino people.
-          </Text>
-          <View style={styles.bestwayStatus}>
-            <Octicons name="shield-check" size={16} color="#6366F1" />
-            <Text style={styles.status}>Status</Text>
-            <View style={styles.badge}>
-              <Entypo name="check" size={14} color="#22C55E" />
-              <Text style={styles.certified}>Certified {APP_NAME}</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Link>
+      <TouchableOpacity style={styles.postbutton} onPress={() => setModalVisible(true)}>
+        <Text style={styles.postButtonText}>Post</Text>
+      </TouchableOpacity>
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
-        <View style={{ zIndex: 1000 }}>
-          <Dropdown
-            options={dropdownOptions}
-            onSelect={handleOptionSelect}
-            defaultValue="Select Option"
-          />
-        </View>
+        <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} />
       </View>
 
-      {/* Post Cards */}
       {PostData.map((post) => (
         <PostCard
           key={post.id}
-          
           Post={post}
           handleUpvote={handleUpvote}
           handleDownvote={handleDownvote}
         />
       ))}
 
-      <ModalComponent
+    { /* <ModalComponent
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handleSubmit}
         onNewPost={handleNewPost}
-      />
+      />   */}
+
     </ScrollView>
   );
 }
@@ -515,12 +514,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  arrowupnum: {
-    marginLeft: 6,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  arrowdownnum: {
+  num: {
     marginLeft: 6,
     fontSize: 10,
     fontWeight: '700',
@@ -579,7 +573,7 @@ const styles = StyleSheet.create({
       marginLeft: 50,
       },
   suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2 },
-  containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 200, width: '100%',},
+  feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 20, width: '100%'},
   suggestor: { flexDirection: 'column' },
   initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
   suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
