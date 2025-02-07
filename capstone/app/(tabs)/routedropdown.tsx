@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {View,Text,StyleSheet,ScrollView,TouchableOpacity,TextInput, FlatList} from 'react-native';
 import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
@@ -7,6 +7,49 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ModalComponent from '../postmodal';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { APP_NAME} from "../../constants";
+
+const timeAgo = (timestamp: number | string): string => {
+  if (!timestamp) return 'Unknown time';
+
+  // Ensure timestamp is a number
+  const postDate = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp);
+  const now = new Date();
+
+  const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  const diffInHours = Math.floor(diffInSeconds / 3600);
+  const diffInDays = Math.floor(diffInSeconds / 86400);
+
+  if (diffInMinutes < 1) return 'Just now';
+  if (diffInHours < 1) return `${diffInMinutes} minute(s) ago`;
+  if (diffInHours < 24) return `${diffInHours} hour(s) ago`;
+  if (diffInDays < 7) return `${diffInDays} day(s) ago`;
+  if (diffInDays === 7) return '1 week ago';
+  return '1 month ago';
+};
+
+
+interface PostItem {
+  id: number;
+  upvotes: number;
+  downvotes: number;
+  userinitial: string;
+  loginusername: string;
+  username: string;
+  location: string;
+  fare: number;
+  destination: string;
+  description: string;
+  suggestiontextbox: string;
+  timestamp?: number;
+}
+
+
+interface PostCardProps {
+  Post: PostItem;
+  handleUpvote: (id: number) => void;
+  handleDownvote: (id: number) => void;
+}
 
 
 
@@ -56,43 +99,52 @@ const handleOptionSelect = (option: string) => {
 
 
 
-// Post Item
-type PostItem = {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  userinitial: string;
-  loginusername: string;
-  username: string;
-  location: string;
-  fare: number;
-  destination: string;
-  description: string;
-  suggestiontextbox: string;
-};
-
 // PostCard Component
-const PostCard: React.FC<{ Post: PostItem; handleUpvote: (id: number) => void; handleDownvote: (id: number) => void }> = ({
-  Post,
-  handleUpvote,
-  handleDownvote,
-}) => (
 
-  <View style={styles.containerpost}>
+
+
+const PostCard: React.FC<PostCardProps> = ({ Post, handleUpvote, handleDownvote }) => {
+  const [timeString, setTimeString] = useState<string>(timeAgo(Post.timestamp || Date.now()));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeString(timeAgo(Post.timestamp || Date.now()));
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, [Post.timestamp]);
+
+
+  return (
+  <Link href="/routes" asChild>
+  <TouchableOpacity  style={styles.containerpost}>
     <View style={styles.suggestordetails}>
-      <View style={styles.profile}>
-        <Text style={styles.initial}>{Post.userinitial}</Text>
-      </View>
-      <View style={styles.suggestor}>
-        <Text style={styles.suggestorname}>{Post.loginusername}</Text>
-        <Text style={styles.suggestorusername}>{Post.username}</Text>
-      </View>
+      <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1}}>
+                <View style={styles.profile}>
+                  <Text style={styles.initial}>{Post.userinitial}</Text>
+                </View>
+                <View style={styles.suggestor}>
+                  <Text style={styles.suggestorname}>{Post.loginusername}</Text>
+                  <Text style={styles.suggestorusername}>{Post.username}</Text>
+              </View>
+      
+              </View>
+
+       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={styles.suggestordestination}>{timeString}</Text>
+              </View>
+
     </View>
 
     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7,}}>
       <Text style={styles.dest}>Destination: </Text>
       <Text style={styles.suggestordestination}>{Post.destination}</Text>
     </View>
+
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7 }}>
+            <Text style={styles.dest}>Fare: </Text>
+            <Text style={styles.suggestordestination}>{Post.fare}</Text>
+          </View>
 
     <View>
       <Text style={styles.usersuggestion}>Tourist Experience: </Text>
@@ -119,9 +171,10 @@ const PostCard: React.FC<{ Post: PostItem; handleUpvote: (id: number) => void; h
         </TouchableOpacity>
       </View>
     </View>
-  </View>
-   
-);
+  </TouchableOpacity >
+  </Link>
+  );
+};
 
 // Main Screen Component
 export default function TabTwoScreen() {
@@ -139,6 +192,7 @@ export default function TabTwoScreen() {
       destination: 'National Museum',
       description: 'Good',
       suggestiontextbox: 'Some suggestion text here.',
+      timestamp: new Date().setDate(new Date().getDate() - 7),
     },
   ]);
 
@@ -176,7 +230,28 @@ export default function TabTwoScreen() {
   };
 
 
-  
+  const handleOptionSelect = (option: string) => {
+    let sortedData = [...PostData];
+    switch (option) {
+      case 'Time':
+        sortedData.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        break;
+      case 'Fare Cost':
+        sortedData.sort((a, b) => a.fare - b.fare);
+        break;
+      case 'Popularity':
+        sortedData.sort((a, b) => b.upvotes - a.upvotes);
+        break;
+      case 'Destination':
+        sortedData.sort((a, b) => a.destination.localeCompare(b.destination));
+        break;
+      default:
+        break;
+    }
+
+    setPostData(sortedData);
+  };
+
   return (
     <ScrollView style={styles.maincontainer}>
       <View style={styles.header}>
@@ -203,7 +278,7 @@ export default function TabTwoScreen() {
 
       <Text style={styles.sectionTitle}>Best Way</Text>
 
-      <Link href="/routes" asChild>
+      <Link href="/bestwayroutes" asChild>
         <TouchableOpacity style={styles.bestwaycard}>
           <View style={styles.bestwayHeader}>
             <View style={styles.avatar}>
@@ -255,6 +330,10 @@ export default function TabTwoScreen() {
         onSubmit={handleSubmit}
         onNewPost={handleNewPost}
       />
+
+      <View style={{marginBottom: 100}}>
+        <text>            </text>
+      </View>
     </ScrollView>
   );
 }
@@ -578,8 +657,9 @@ const styles = StyleSheet.create({
       fontWeight: '500',
       marginLeft: 50,
       },
-  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2 },
-  containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 200, width: '100%',},
+      suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2, justifyContent: "space-between" },
+ 
+  containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 20, width: '100%',},
   suggestor: { flexDirection: 'column' },
   initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
   suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },

@@ -11,6 +11,13 @@ export default function RootLayout() {
     headerShown: false, // Hides the default header
   }}
 />
+
+<Stack.Screen
+  name="bestwayroutes"
+  options={{
+    headerShown: false, // Hides the default header
+  }}
+/>
     </Stack>
     
   );

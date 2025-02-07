@@ -4,10 +4,9 @@ import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Link } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-//import ModalComponent from '../postmodal';
+import ModalComponent from './postmodal';
 import AntDesign from '@expo/vector-icons/AntDesign';
-//import { APP_NAME } from '../../constants';
-import { APP_NAME} from "../constants";
+import { APP_NAME } from '../constants';
 
 const timeAgo = (timestamp: number | string): string => {
   if (!timestamp) return 'Unknown time';
@@ -65,17 +64,20 @@ const PostCard: React.FC<PostCardProps> = ({ Post, handleUpvote, handleDownvote 
 
 
   return (
+    <Link href="/routes" asChild>
     <View style={styles.feedbackcontainer}>
       <View style={styles.suggestordetails}>
-        <View style={styles.profile}>
-          <Text style={styles.initial}>{Post.userinitial}</Text>
+        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1}}>
+          <View style={styles.profile}>
+            <Text style={styles.initial}>{Post.userinitial}</Text>
+          </View>
+          <View style={styles.suggestor}>
+            <Text style={styles.suggestorname}>{Post.loginusername}</Text>
+            <Text style={styles.suggestorusername}>{Post.username}</Text>
         </View>
-        <View style={styles.suggestor}>
-          <Text style={styles.suggestorname}>{Post.loginusername}</Text>
-          <Text style={styles.suggestorusername}>{Post.username}</Text>
+
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-          <Text style={styles.dest}>Posted: </Text>
           <Text style={styles.suggestordestination}>{timeString}</Text>
         </View>
       </View>
@@ -116,6 +118,7 @@ const PostCard: React.FC<PostCardProps> = ({ Post, handleUpvote, handleDownvote 
         </View>
       </View>
     </View>
+    </Link>
   );
 };
 
@@ -247,12 +250,12 @@ export default function TabTwoScreen() {
         />
       ))}
 
-    { /* <ModalComponent
+      <ModalComponent
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handleSubmit}
         onNewPost={handleNewPost}
-      />   */}
+      />   
 
     </ScrollView>
   );
@@ -572,7 +575,7 @@ const styles = StyleSheet.create({
       fontWeight: '500',
       marginLeft: 50,
       },
-  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2 },
+  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2, justifyContent: "space-between" },
   feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 20, width: '100%'},
   suggestor: { flexDirection: 'column' },
   initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },

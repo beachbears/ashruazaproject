@@ -1,33 +1,36 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet, Image } from "react-native";
 import { FontAwesome5 } from '@expo/vector-icons'; // Importing FontAwesome5 for icons
+import { APP_NAME} from "../../constants";
 
 const About = () => {
   return (
     <ScrollView style={styles.container}>
       {/* Header Section */}
-      <View style={styles.header}>
+   
         <Text style={styles.headerTitle}>
-          Your Travel, Your Way, it's <Text style={styles.highlight}>Kommutsera!!</Text>
+          Your Travel, Your Way, it's <Text style={styles.highlight}>{ APP_NAME}!!</Text>
         </Text>
+
+        <View style={styles.header}>
         <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
-        <Text style={styles.nameApp}>Kommutsera</Text>
+        
+        <Text style={styles.nameApp}>{ APP_NAME}</Text>
 
         <Text style={styles.subtitle}>Founded by</Text>
         <Image source={require('../../assets/images/group.jpg')} style={styles.avatar} />
-        <Text style={styles.teamName}>Group Name</Text>
+        <Text style={styles.teamName}>Group 1</Text>
         <Text style={styles.teamRole}>CCS IT-3 Students</Text>
-      </View>
+      
 
       {/* About Section */}
       <View style={styles.aboutSection}>
-        <Text style={styles.aboutTitle}>Kommutsera</Text>
+        <Text style={styles.aboutTitle}>{ APP_NAME}:</Text>
         <Text style={styles.aboutText}>
-          Say goodbye to stress and confusion with Kommutsera, your go-to tool for hassle-free commuting.
-          Whether you're a daily commuter or an occasional traveler, Kommutsera simplifies your journey by offering
-          curated routes, reliable schedules, and real-time updates. Navigate with ease and confidence and make every trip enjoyable.
-          Experience a metro system that revolves around YOU.
+          
+Say goodbye to stress and confusion with { APP_NAME}, your perfect guide for hassle-free commuting. Whether you're a daily commuter or a visitor, { APP_NAME} provides route suggestions and detailed maps to help you navigate the metro with ease. With the quickest, most efficient paths, you’ll enjoy smooth, stress-free travel. Experience a faster, smarter commute { APP_NAME} makes every journey simple, efficient, and enjoyable!
         </Text>
+      </View>
       </View>
 
       {/* Team Section */}
@@ -55,7 +58,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/aldave.jpg')}// Replace with actual image URL
+              source={require('../../assets/images/logo.png')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Gabriel Q. Bruzula</Text>
@@ -68,7 +71,7 @@ const About = () => {
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Gerson A. Boyboy</Text>
-            <Text style={styles.memberRole}>UI/UX Designer / Researcher</Text>
+            <Text style={styles.memberRole}>UI/UX Designer {"\n"}  Researcher</Text>
           </View>
           <View style={styles.teamMember}>
             <Image
@@ -86,7 +89,7 @@ const About = () => {
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Sean Zidane L. Dumlao</Text>
-            <Text style={styles.memberRole}>Programmer</Text>
+            <Text style={styles.memberRole}>Main Programmer </Text>
           </View>
           <View style={styles.teamMember}>
             <Image
@@ -104,7 +107,7 @@ const About = () => {
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Patricia Mae R. Romillo</Text>
-            <Text style={styles.memberRole}>UI/UX Designer / Researcher</Text>
+            <Text style={styles.memberRole}>UI/UX Designer {"\n"}  Researcher</Text>
           </View>
           <View style={styles.teamMember}>
             <Image
@@ -175,14 +178,14 @@ const About = () => {
           <View style={styles.footerBrand}>
             <Image source={require('../../assets/images/logo.png')} style={styles.brandIcon} />
             <View>
-              <Text style={styles.brandTitle}>Kommutsera</Text>
+              <Text style={styles.brandTitle}>{ APP_NAME}</Text>
               <Text style={styles.brandDescription}>
-                Conquer the Metro with ease! Kommutsera: Your companion for hassle-free commuting, offering clear routes, and navigation to make every journey stress-free.
+                Conquer the Metro with ease! <Text style={{fontWeight: 900}}>{ APP_NAME}</Text>. Your companion for hassle-free commuting, offering clear routes, and navigation to make every journey stress-free.
               </Text>
             </View>
           </View>
           <Text style={styles.footerCopyright}>
-            2024 © Kommutsera
+            2024 © { APP_NAME}
           </Text>
         </View>
       </View>
@@ -194,10 +197,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",
+ 
   },
   header: {
     alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    marginBottom: 18,
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 40
   },
   avatar: {
     width: 40,
@@ -209,32 +229,36 @@ const styles = StyleSheet.create({
   logo:{
     width: 80,
     height: 80,
-    marginTop:50
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: 'center',
+    zIndex: 1000,
   },
   headerTitle: {
     marginTop: 30,
-    fontSize: 40,
+    fontSize: 35,
     fontWeight: "bold",
     color: "#4A5568",
-    textAlign: "justify",
+    textAlign: 'center',
+    flexWrap: 'wrap'
   },
   highlight: {
     color: "#6A5AE0",
   },
   nameApp:{
   fontSize: 25,
-  fontWeight:'semibold',
-     color:'#424368',
+  fontWeight:'500',
+  color:'#424368',
   },
   subtitle: {
-    marginTop: 10,
+    marginTop: 20,
     marginBottom:5,
     fontSize: 14,
     color: "#A0AEC0",
   },
   teamName: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 18,
+    fontWeight: "400",
     color: "#4A5568",
     marginTop: 5,
   },
@@ -247,28 +271,31 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   aboutTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 18,
+    fontWeight: "600",
     color: "#4A5568",
     marginBottom: 15,
     textAlign:"center",
+    marginTop: 20
   },
   aboutText: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#4A5568",
     lineHeight: 24,
     textAlign: "center",
+    flexWrap: 'wrap'
   },
   teamSection: {
     paddingVertical: 30,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F9FAFB",
+    marginTop: 20
   },
   teamTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#4A5568",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 30,
   },
   teamGrid: {
     flexDirection: "column",
@@ -286,17 +313,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden', 
   },
   memberName: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 14,
+    fontWeight: "400",
     color: "#4A5568",
   },
   memberRole: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#A0AEC0",
     textAlign: "center",
+    marginBottom: 15
   },
   footer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F9FAFB",
     paddingVertical: 40,
   },
   footerGrid: {
@@ -323,8 +351,9 @@ const styles = StyleSheet.create({
   },
   footerDescription: {
     fontSize: 12,
-    color: "#A0AEC0",
+    color: "#404163",
     textAlign: "left",
+    marginBottom: 20
   },
   footerBottom: {
     marginTop: 1,
@@ -338,21 +367,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   brandIcon: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     borderRadius: 8,
     marginRight: 10,
+    marginTop: 20
   },
   brandTitle: {
     fontWeight: "700",
     fontSize: 18,
     color: "#4A5568",
     textAlign: "center",
-    marginTop:20
+    marginTop:10
   },
   brandDescription: {
     fontSize: 12,
-    color: "#A0AEC0",
+    color: "#04163",
     textAlign: "center",
     lineHeight: 16,
     marginTop: 10,
@@ -363,7 +393,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#00000",
     textAlign: "center",
-    marginTop:50,
+    marginTop:20,
     marginBottom:100,
     fontWeight:"500"
   },
