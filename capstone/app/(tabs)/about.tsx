@@ -14,7 +14,7 @@ const About = () => {
         <Text style={styles.nameApp}>Kommutsera</Text>
 
         <Text style={styles.subtitle}>Founded by</Text>
-        <View style={styles.avatar}></View>
+        <Image source={require('../../assets/images/group.jpg')} style={styles.avatar} />
         <Text style={styles.teamName}>Group Name</Text>
         <Text style={styles.teamRole}>CCS IT-3 Students</Text>
       </View>
@@ -37,7 +37,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              source={require('../../assets/images/abellana.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Johana Eunice Abellana</Text>
@@ -46,7 +46,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')} // Replace with actual image URL
+              source={require('../../assets/images/aldave.jpg')} // Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Joanah Marie L. Aldave</Text>
@@ -55,7 +55,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              source={require('../../assets/images/aldave.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Gabriel Q. Bruzula</Text>
@@ -64,7 +64,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              source={require('../../assets/images/boyboy.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Gerson A. Boyboy</Text>
@@ -73,7 +73,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              source={require('../../assets/images/deguzman.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Marc Jerald B. De Guzman</Text>
@@ -82,7 +82,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              source={require('../../assets/images/dumlao.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Sean Zidane L. Dumlao</Text>
@@ -91,7 +91,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              source={require('../../assets/images/llanillo.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Icko Cristian M. Llanillo</Text>
@@ -100,7 +100,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')}// Replace with actual image URL
+              source={require('../../assets/images/romillo.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Patricia Mae R. Romillo</Text>
@@ -109,7 +109,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')} // Replace with actual image URL
+              source={require('../../assets/images/ruaza.jpg')} // Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Ashley A. Ruaza</Text>
@@ -118,7 +118,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')} // Replace with actual image URL
+              source={require('../../assets/images/saavedra.jpg')} // Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>John Paul J. Saavedra</Text>
@@ -127,7 +127,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')}  // Replace with actual image URL
+              source={require('../../assets/images/salinas.jpg')}  // Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>John Cedric G. Salinas</Text>
@@ -136,7 +136,7 @@ const About = () => {
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/logo.png')} // Replace with actual image URL
+              source={require('../../assets/images/valeza.jpg')} // Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Joshua Emmanuel P. Valeza</Text>
@@ -173,11 +173,11 @@ const About = () => {
 
         <View style={styles.footerBottom}>
           <View style={styles.footerBrand}>
-            <View style={styles.brandIcon}></View>
+            <Image source={require('../../assets/images/logo.png')} style={styles.brandIcon} />
             <View>
               <Text style={styles.brandTitle}>Kommutsera</Text>
               <Text style={styles.brandDescription}>
-                Conquer the Metro with ease!{"\n"}Kommutsera is your{"\n"}ultimate companion for{"\n"}hassle-free commuting.
+                Conquer the Metro with ease! Kommutsera: Your companion for hassle-free commuting, offering clear routes, and navigation to make every journey stress-free.
               </Text>
             </View>
           </View>
@@ -202,13 +202,14 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
-    backgroundColor: "#3182ce",
+    backgroundColor: "#6366F1",
     borderRadius: 40,
     marginBottom: 5,
   },
   logo:{
     width: 80,
     height: 80,
+    marginTop:50
   },
   headerTitle: {
     marginTop: 30,
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
   },
   teamSection: {
     paddingVertical: 30,
-    backgroundColor: "#E0E7FF",
+    backgroundColor: "#FFFFFF",
   },
   teamTitle: {
     fontSize: 24,
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 40,
     marginBottom: 10,
-    overflow: 'hidden', // Ensures the image stays within the rounded bounds
+    overflow: 'hidden', 
   },
   memberName: {
     fontSize: 18,
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   footer: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#FFFFFF",
     paddingVertical: 40,
   },
   footerGrid: {
@@ -326,20 +327,19 @@ const styles = StyleSheet.create({
     textAlign: "left",
   },
   footerBottom: {
-    marginTop: 30,
-    flexDirection: "row",
+    marginTop: 1,
+    flexDirection: "column",
     justifyContent: "space-between",
-    paddingHorizontal: 30,
+    paddingHorizontal: 10,
     alignItems: "center",
   },
   footerBrand: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
   },
   brandIcon: {
     width: 50,
     height: 50,
-    backgroundColor: "#6366F1",
     borderRadius: 8,
     marginRight: 10,
   },
@@ -347,19 +347,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 18,
     color: "#4A5568",
+    textAlign: "center",
+    marginTop:20
   },
   brandDescription: {
     fontSize: 12,
     color: "#A0AEC0",
-    textAlign: "left",
+    textAlign: "center",
     lineHeight: 16,
-    marginTop: 5,
+    marginTop: 10,
+    flexWrap: 'wrap'
   },
+  
   footerCopyright: {
     fontSize: 12,
-    color: "#A0AEC0",
+    color: "#00000",
     textAlign: "center",
-    marginTop: 10,
+    marginTop:50,
+    marginBottom:100,
+    fontWeight:"500"
   },
 });
 
