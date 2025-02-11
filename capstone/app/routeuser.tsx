@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { useEffect } from "react";
-import { useNavigation } from "expo-router";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Animated, Keyboard} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
 
@@ -73,15 +72,37 @@ const RouteUserScreen: React.FC<{ post: PostItem; onBack: () => void }> = ({ pos
             <Text style={styles.comment}>{comment.text}</Text>
           </View>
         ); 
-        const navigation = useNavigation();
+       
+        const [keyboardOffset] = useState(new Animated.Value(0));
 
         useEffect(() => {
-          navigation.setOptions({ tabBarStyle: {display: "none"},  headerStyle: { display: "none" } });
-        }, [navigation]);
+          const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
+            Animated.timing(keyboardOffset, {
+              toValue: -100, // Move up when keyboard appears
+              duration: 300,
+              useNativeDriver: false,
+            }).start();
+          });
+      
+          const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+            Animated.timing(keyboardOffset, {
+              toValue: 0, // Move back to center when keyboard hides
+              duration: 300,
+              useNativeDriver: false,
+            }).start();
+          });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   return (
-    <ScrollView style={styles.maincontainer}>
+
     
+    <ScrollView style={styles.maincontainer}>
+     <Animated.View style={[ { transform: [{ translateY: keyboardOffset }] }]}>
       <View style={styles.userDetails}>
         <View style={styles.circle}>
           <Text style={styles.userinitial}>{post.userinitial}</Text>
@@ -155,6 +176,7 @@ const RouteUserScreen: React.FC<{ post: PostItem; onBack: () => void }> = ({ pos
         <Comment key={comment.id} comment={comment} />
       ))}
       
+     
       <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, width: '100%', gap: 4 }]}>
   <View style={{ width: '85%' }}>  
     <TextInput
@@ -166,11 +188,14 @@ const RouteUserScreen: React.FC<{ post: PostItem; onBack: () => void }> = ({ pos
       onChangeText={setInputText}
     />
   </View>
+  
 
   <TouchableOpacity style={[styles.button]} onPress={handlePost}>
     <Text style={styles.buttonText}>Post</Text>
   </TouchableOpacity>
 </View>
+
+</Animated.View>
 
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginVertical: 25, marginBottom: 100 }}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
