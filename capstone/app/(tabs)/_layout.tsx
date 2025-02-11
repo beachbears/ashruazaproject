@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import { StyleSheet, View, Image, Text} from 'react-native';
+import { StyleSheet, View, Image, Text, TouchableOpacity} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { APP_NAME } from '@/constants';
@@ -24,15 +24,11 @@ export default function TabLayout() {
          
           <Text style={{fontSize: 16, fontWeight: 800, color: '#424368', left: -90}}>{APP_NAME}</Text>
           </View>
-          <View style={styles.circle}>
-            <View style={styles.account}>
+          <View style={styles.account}>
               <Text style={{fontSize: 12, fontWeight: 800, color: '#FFFFFF',}}>A</Text>
             </View>
-          </View>
         </View>
         ),
-        
-        
         tabBarStyle: styles.tabBar,
       }}
     >

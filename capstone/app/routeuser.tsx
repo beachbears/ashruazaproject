@@ -1,0 +1,219 @@
+import React, { useState } from 'react';
+import { useEffect } from "react";
+import { useNavigation } from "expo-router";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
+
+type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp.";
+type CommentItem = {
+    id: number;
+    text: string;
+    commenterName: string;
+    userHandle: string;
+    commenterEmail: string;
+  };
+
+interface PostItem {
+  id: number;
+  upvotes: number;
+  downvotes: number;
+  userinitial: string;
+  loginusername: string;
+  username: string;
+  location: string;
+  fare: number;
+  destination: string;
+  description: string;
+  suggestiontextbox: string;
+  timestamp?: number;
+  vehicles: VehicleType[];
+}
+
+const vehicleIcons: Record<VehicleType, JSX.Element> = {
+  "Jeep": <MaterialCommunityIcons name="jeepney" size={24} color="#4F46E5" />,
+  "E-jeep": <FontAwesome5 name="bus" size={20} color="#4F46E5" />,
+  "Bus": <FontAwesome5 name="bus-alt" size={22} color="#4F46E5" />,
+  "UV Exp.": <FontAwesome5 name="car" size={22} color="#4F46E5" />,
+};
+
+
+const RouteUserScreen: React.FC<{ post: PostItem; onBack: () => void }> = ({ post, onBack }) => {
+
+    
+        const [inputText, setInputText] = useState('');
+         const [comments, setComments] = useState<CommentItem[]>([]);
+      
+         const handlePost = () => {
+          if (inputText.trim()) {
+            const newComment: CommentItem = {
+              id: comments.length + 1,
+              text: inputText,
+              commenterName: 'Ash Ruaza',
+              userHandle: '@ashleyruaza',
+              commenterEmail: 'AR',
+            };
+      
+            setComments([...comments, newComment]); // Save new comment to state
+            setInputText(''); // Clear input after posting
+          }
+        };
+      
+      const Comment: React.FC<{ comment: CommentItem }> = ({ comment }) => (
+          <View>
+            <View style={styles.commenterDetails}>
+              <View style={styles.circlecomment}>
+                <Text style={styles.commenterinitial}>{comment.commenterEmail}</Text>
+              </View>
+              <View style={{ flexDirection: 'column' }}>
+                <Text style={styles.commentername}>{comment.commenterName}</Text>
+                <Text style={styles.commenteremail}>{comment.userHandle}</Text>
+              </View>
+            </View>
+            <Text style={styles.comment}>{comment.text}</Text>
+          </View>
+        ); 
+        const navigation = useNavigation();
+
+        useEffect(() => {
+          navigation.setOptions({ tabBarStyle: {display: "none"},  headerStyle: { display: "none" } });
+        }, [navigation]);
+
+  return (
+    <ScrollView style={styles.maincontainer}>
+    
+      <View style={styles.userDetails}>
+        <View style={styles.circle}>
+          <Text style={styles.userinitial}>{post.userinitial}</Text>
+        </View>
+        <View>
+          <Text style={styles.username}>{post.loginusername}</Text>
+          <Text style={styles.email}>{post.username}</Text>
+        </View>
+      </View>
+
+      <View style={styles.detailsContainer}>
+        <Text style={styles.label}>Location</Text>
+        <Text style={styles.locationText}>{post.location}</Text>
+
+        <Text style={styles.label}>Destination</Text>
+        <Text style={styles.locationText}>{post.destination}</Text>
+        </View>
+
+    <View style={styles.routecontainer}>
+     <View style={styles.position}> 
+        <Text style={styles.conlabel}>Types of Vehicles</Text>
+        <Text style={styles.fare}>Fare: ₱{post.fare}.00</Text>
+        </View>
+
+        <View style={styles.vehiclesContainer}>
+        {post.vehicles?.length > 0 ? (
+          post.vehicles.map((vehicle, index) => (
+            <View key={index} style={styles.vehicleItem}>
+              {vehicleIcons[vehicle]}
+              <Text style={styles.vehicleText}>{vehicle}</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.vehicleText}>No vehicles selected</Text>
+        )}
+      </View>
+      <Text style={styles.estimatedTime}>Estimated Time: 45 minutes to 1.5 hours depending on traffic.</Text>
+      <View style={{ marginTop: 20, marginBottom: 10 }}>
+              <Text style={styles.conlabel}>Route Overview</Text>
+          </View>
+
+          <Text style={{fontSize: 12, fontWeight: 400, color: '#44457D'}}>Route Description</Text>
+        <Text style={styles.description}>{post.description}</Text>
+      
+      </View>
+      <View style={{flexDirection: 'column', gap: 8, marginTop: 20}}>
+        <Text style={{fontSize: 14, fontWeight: 500, color: '#44457D'}}>Your Experiences </Text>
+        <Text style={styles.experience}>{post.suggestiontextbox}</Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 }}>
+          <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '700', marginTop: 10 }}>Comments</Text>
+          <View style={styles.commentcircle}>
+              <Text style={styles.numofcomments}>{comments.length + 1}</Text>
+          </View>
+      </View>
+
+      <View style={styles.commenterDetails}>
+          <View style={styles.circlecomment}>
+              <Text style={styles.commenterinitial}>AR</Text>
+          </View>
+          <View style={[{ flexDirection: 'column' }]}>
+              <Text style={styles.commentername}>Ashley Ruaza</Text>
+              <Text style={styles.commenteremail}>@ashruaza</Text>
+          </View>
+      </View>
+
+      <Text style={styles.comment}>We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets.</Text>
+       
+      {comments.map((comment) => (
+        <Comment key={comment.id} comment={comment} />
+      ))}
+      
+      <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, width: '100%', gap: 4 }]}>
+  <View style={{ width: '85%' }}>  
+    <TextInput
+      style={styles.commenttextbox}
+      placeholder="Write a comment"
+      placeholderTextColor="#666"
+      multiline={true}
+      value={inputText}
+      onChangeText={setInputText}
+    />
+  </View>
+
+  <TouchableOpacity style={[styles.button]} onPress={handlePost}>
+    <Text style={styles.buttonText}>Post</Text>
+  </TouchableOpacity>
+</View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginVertical: 25, marginBottom: 100 }}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <Text style={styles.backText}>Close</Text>
+      </TouchableOpacity>
+        </View>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  maincontainer: { flex: 1,   padding: 30, backgroundColor: '#F9FAFB', width: '100%' },
+  backButton: { padding: 10, alignSelf: 'flex-start', backgroundColor: '#E0E7FF', borderRadius: 10, marginBottom: 80,},
+  backText: { color: '#6366F1', fontSize: 13, fontWeight: '600'},
+  userDetails: {flexDirection: 'row', alignItems: 'center', marginBottom:14,},
+  circle: {width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
+  userinitial: { color: '#fff', fontSize: 13, fontWeight: 'bold',},
+  username: {fontSize: 14, color: '#404163', fontWeight: '700',},
+  email: { fontSize: 11, color: '#686A9C',},
+  detailsContainer: { marginBottom: 16 },
+  locationText: {fontSize: 12, fontWeight: '400', color: '#44457D',  marginTop: 10},
+  label: { fontSize: 14, fontWeight: '500', color: '#44457D',  marginTop: 10},
+  routecontainer:{borderWidth: 1, borderColor: '#C7D2FE',borderRadius: 8, padding:10, flexDirection: 'column', width: '100%', },
+  position: { flexDirection: 'row', justifyContent: 'space-between',},
+  fare: {fontSize: 12, fontWeight: '400', color: '#44457D',},
+  estimatedTime: {fontSize: 10,color: '#44457D', textAlign: 'center',},
+  conlabel: {fontSize: 13, fontWeight: '400', color: '#44457D'},
+  vehiclesContainer: {  flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#EEF2FF', borderRadius: 8, padding: 4, marginTop:10},
+  vehicleItem: { alignItems: 'center', marginTop: 4},
+  vehicleText: {fontSize: 11, color: '#44457D', marginVertical: 4,},
+  getOnOff: {fontSize: 12, fontWeight: 'bold',  },
+  description: {fontSize: 12,color: '#44457D', marginBottom: 6},
+  experience: {fontSize: 12,color: '#44457D', fontWeight: 500},
+  commentcircle: {width: 20, height: 20, borderRadius: 24, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
+  numofcomments: {fontSize: 10, color: '#6366f1', fontWeight: 700,},
+  commenterDetails: {flexDirection: 'row', alignItems: 'center', marginBottom:8, marginTop: 18,} ,
+  circlecomment: {width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
+  commenterinitial: { color: '#fff', fontSize: 11, fontWeight: 'bold',},
+  commentername: {fontSize: 13, color: '#6B7280', fontWeight: '700',},
+  commenteremail: { fontSize: 12, color: '#6B7280',},
+  comment: { fontSize: 12, color: '#6B7280',},
+  commenttextbox: {backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 6,fontSize: 11, color: '#374151',}, 
+  button: {backgroundColor: '#6366F1', paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center', height: 30, width: '15%'},
+  buttonText: {color: 'white', fontSize: 11, paddingVertical: 2},
+});
+export default RouteUserScreen;

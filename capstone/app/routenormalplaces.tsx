@@ -1,52 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from 'expo-router';
 import { Link } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
 
-type CommentItem = {
-    id: number;
-    text: string;
-    commenterName: string;
-    userHandle: string;
-    commenterEmail: string;
-  };
-
 export default function TabTwoScreen() {
-  const [inputText, setInputText] = useState('');
-   const [comments, setComments] = useState<CommentItem[]>([]);
-
-   const handlePost = () => {
-    if (inputText.trim()) {
-      const newComment: CommentItem = {
-        id: comments.length + 1,
-        text: inputText,
-        commenterName: 'Ash Ruaza',
-        userHandle: '@ashleyruaza',
-        commenterEmail: 'AR',
-      };
-
-      setComments([...comments, newComment]); // Save new comment to state
-      setInputText(''); // Clear input after posting
-    }
-  };
-
-const Comment: React.FC<{ comment: CommentItem }> = ({ comment }) => (
-    <View>
-      <View style={styles.commenterDetails}>
-        <View style={styles.circlecomment}>
-          <Text style={styles.commenterinitial}>{comment.commenterEmail}</Text>
-        </View>
-        <View style={{ flexDirection: 'column' }}>
-          <Text style={styles.commentername}>{comment.commenterName}</Text>
-          <Text style={styles.commenteremail}>{comment.userHandle}</Text>
-        </View>
-      </View>
-      <Text style={styles.comment}>{comment.text}</Text>
-    </View>
-  ); 
 
   const navigation = useNavigation();
 
@@ -149,68 +108,9 @@ return (
 
       </View>
 
-      <View style={styles.picturecontainer}>
-          <View style={styles.imageWrapper}>
-              <Image
-                  source={require('../assets/images/intramuros.jpg')}
-                  style={styles.image}
-              />
-              <View style={{ flexDirection: 'column', gap: 6 }}>
-                  <Text style={styles.firsttext}>Intramuros</Text>
-                  <Text style={styles.secondtext}>Manila City</Text>
-              </View>
-          </View>
-      </View>
+   
 
-      <Text style={styles.comment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to national hero José Rizal. The ornate Manila Cathedral houses bronze carvings and stained glass windows.</Text>
-
-      <View style={[{ flexDirection: 'column', borderWidth: 1, borderColor: '#21de6b', backgroundColor: '#f0fae5', borderRadius: 8, padding: 8, width: '100%', marginTop: 20, marginBottom: 10 }]}>
-          <View style={[{ flexDirection: 'row', alignItems: 'center' }]}>
-              <Ionicons name="sparkles-sharp" size={14} color='#21de6b' />
-              <Text style={[{ fontWeight: '600', color: '#21de6b' }]}> Trivia & Facts</Text>
-          </View>
-          <Text style={styles.comment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
-      </View>
-
-      <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '700', marginTop: 20, marginBottom: 8 }}>Tourist Attraction Feedbacks</Text>
-
-      <ScrollView 
-      nestedScrollEnabled={true}
-      style={styles.imageScrollBox}
-      contentContainerStyle={[styles.imageScrollContainer, { flexGrow: 1 }]} // Added flexGrow: 1 here
-   >
-
-              <View style={styles.feedbackbox}>
-                  <View style={styles.feedback}>
-                      <Text style={styles.feedbacktitle}>Juan Dela Cruz</Text>
-                      <Text style={styles.feedbackcomment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
-                  </View>
-              </View>
-
-              <View style={styles.feedbackbox}>
-                  <View style={styles.feedback}>
-                      <Text style={styles.feedbacktitle}>Juan Dela Cruz</Text>
-                      <Text style={styles.feedbackcomment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
-                  </View>
-              </View>
-
-              <View style={styles.feedbackbox}>
-                  <View style={styles.feedback}>
-                      <Text style={styles.feedbacktitle}>Juan Dela Cruz</Text>
-                      <Text style={styles.feedbackcomment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
-                  </View>
-              </View>
-
-              <View style={styles.feedbackbox}>
-                  <View style={styles.feedback}>
-                      <Text style={styles.feedbacktitle}>Juan Dela Cruz</Text>
-                      <Text style={styles.feedbackcomment}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to.</Text>
-                  </View>
-              </View>
-
-                
-
-      </ScrollView>
+      
 
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginVertical: 25 }}>
 
@@ -271,58 +171,5 @@ const styles = StyleSheet.create({
   startendroute:{fontSize: 10,color: '#6B7280',marginBottom: 10,marginLeft: 5, flexWrap: 'wrap', flex: 1},
   walkroutes: {fontSize: 10, color: '#6B7280', marginVertical: 6, marginLeft: 3},
 
-  commentcircle: {width: 20, height: 20, borderRadius: 24, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
-  numofcomments: {fontSize: 10, color: '#6366f1', fontWeight: 700,},
 
-  commenterDetails: {flexDirection: 'row', alignItems: 'center', marginBottom:8, marginTop: 18,} ,
-  circlecomment: {width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
-  commenterinitial: { color: '#fff', fontSize: 11, fontWeight: 'bold',},
-  commentername: {fontSize: 13, color: '#6B7280', fontWeight: '700',},
-  commenteremail: { fontSize: 12, color: '#6B7280',},
-  comment: { fontSize: 12, color: '#6B7280',},
-
-  commenttextbox: {backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 6,fontSize: 11, color: '#374151',}, 
-  button: {backgroundColor: '#6366F1', paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center', height: 30},
-  buttonText: {color: 'white', fontSize: 11, paddingVertical: 2},
-
-  picturecontainer: {justifyContent: 'center',alignItems: 'center',marginVertical: 10},
-  imageWrapper: {position: 'relative', width: '100%',height: 200,},
-  image: {width: '100%', height: '100%',borderRadius: 8,},
-  firsttext: {
-    position: 'absolute',
-    bottom: 10,  
-    left: 10,  
-    color: 'white',  
-    fontSize: 19,
-    marginBottom: 20,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)', 
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,},
-
-   secondtext: {
-    position: 'absolute',
-    bottom: 10,      
-    left: 10,  
-    color: 'white', 
-    fontSize: 14,
-    fontWeight: '500',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)', 
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 30,},
-
-    feedbackcontainer: { flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', flex:1, borderWidth: 1, marginVertical: 14},
-    feedback: {flexDirection: 'column', gap: 2 },
-    feedbackbox: {borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#FBFCFF', borderRadius: 14, padding: 10, width: '100%', marginVertical: 5},  
-    feedbacktitle: {fontSize: 12, color: '#6B7280', fontWeight: '700', },
-    feedbackcomment: { fontSize: 11, color: '#6B7280',},
-
-    imageScrollBox: {
-      height: 200,  padding: 6
-    },
-    imageScrollContainer: {
-      paddingBottom: 16, // Optional padding at the bottom for spacing
-    },
-
-      
 })

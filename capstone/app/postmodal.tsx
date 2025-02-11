@@ -1,121 +1,86 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Modal, View, TextInput, Button, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
-import { MaterialCommunityIcons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons';
-import Entypo from '@expo/vector-icons/Entypo';
+  import React, { useState } from 'react';
+  import { View, TextInput, TouchableOpacity, Text, Modal, StyleSheet, ScrollView } from 'react-native';
+  import { MaterialCommunityIcons } from '@expo/vector-icons';
+  import { FontAwesome5 } from '@expo/vector-icons';
 
-interface PostItem {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  userinitial: string;
-  loginusername: string;
-  username: string;
-  location: string;
-  fare: number;
-  destination: string;
-  description: string;
-  suggestiontextbox: string;
-}
+  // Define Vehicle Types
+  const VEHICLE_TYPES: VehicleType[] = ["Jeep", "E-jeep", "Bus", "UV Exp."];
 
-interface ModalComponentProps {
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (inputText: string) => void;
-  onNewPost: (newPost: PostItem) => void;
-}
+  type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp.";
 
-const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSubmit, onNewPost }) => {
-  const [location, setLocation] = useState<string>('');
-  const [fare, setFare] = useState<string>('');
-  const [destination, setDestination] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
-  const [suggestion, setSuggestion] = useState<string>('');
-  const locationInputRef = useRef<TextInput>(null);
+  interface PostItem {
+    id: number;
+    upvotes: number;
+    downvotes: number;
+    userinitial: string;
+    loginusername: string;
+    username: string;
+    location: string;
+    fare: number;
+    destination: string;
+    description: string;
+    suggestiontextbox: string;
+    timestamp: number;
+    vehicles: VehicleType[];
+  }
 
-  const handleSubmit = () => {
-    if (destination.trim()) {
+  interface ModalComponentProps {
+    visible: boolean;
+    onClose: () => void;
+    onSubmit: (newPost: PostItem) => void;
+  }
+
+  const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSubmit }) => {
+    const [location, setLocation] = useState('');
+    const [fare, setFare] = useState('');
+    const [destination, setDestination] = useState('');
+    const [description, setDescription] = useState('');
+    const [suggestion, setSuggestion] = useState('');
+    const [selectedVehicles, setSelectedVehicles] = useState<VehicleType[]>([]);
+
+    const toggleVehicle = (vehicle: VehicleType) => {
+      setSelectedVehicles(prev => prev.includes(vehicle)
+        ? prev.filter(v => v !== vehicle)
+        : [...prev, vehicle]
+      );
+    };
+
+    const handleSubmit = () => {
+      if (!location || !destination || !description) return; // Prevent empty submissions
+
       const newPost: PostItem = {
         id: Date.now(),
         upvotes: 0,
         downvotes: 0,
-        userinitial: "AR",
-        loginusername: "Ashley Ruaza",
-        username: "@ashruza",
-        location: location,
+        userinitial: 'AR',
+        loginusername: 'Ashley Ruaza',
+        username: '@ashruaza',
+        location,
         fare: parseFloat(fare) || 0,
-        destination: destination,
-        description: description,
+        destination,
+        description,
         suggestiontextbox: suggestion,
+        timestamp: Date.now(),
+        vehicles: selectedVehicles,
       };
-      onNewPost(newPost);
+
+      onSubmit(newPost);
       setLocation('');
       setFare('');
       setDestination('');
       setDescription('');
       setSuggestion('');
-      onSubmit(suggestion);
+      setSelectedVehicles([]);
       onClose();
-    }
-  };
+    };
 
-  useEffect(() => {
-    if (visible && locationInputRef.current) {
-      setTimeout(() => {
-        locationInputRef.current?.focus();
-      }, 100);
-    }
-  }, [visible]);
+    return (
+      <Modal visible={visible} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+        <View style={styles.postContainer}>
+        <ScrollView>
 
-  // Dropdown Component
-interface DropdownProps {
-  options: string[];
-  onSelect?: (option: string) => void;
-  defaultValue?: string;
-}
-
-const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
-
-  const toggleDropdown = () => setIsOpen(!isOpen);
-
-  const selectOption = (option: string) => {
-    setSelectedOption(option);
-    setIsOpen(false);
-    if (onSelect) onSelect(option);
-  };
-
-  return (
-    <View style={styles.dropdowncontainer}>
-      <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
-        <Text style={styles.buttonText}>{selectedOption}</Text>
-        <Entypo name="chevron-down" size={20} color="#44457D" />
-      </TouchableOpacity>
-      {isOpen && (
-        <View style={styles.dropdownList}>
-          {options.map((option, index) => (
-            <TouchableOpacity key={index} onPress={() => selectOption(option)} style={styles.option}>
-              <Text style={styles.optionText}>{option}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-};
-
-const dropdownOptions = ['Get On', 'Get Off'];
-
-const handleOptionSelect = (option: string) => {
-  console.log('Selected option:', option);
-};
-
-  return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-      <View style={styles.modalBackground}>
-        <View style={styles.PostContainer}>
-          <ScrollView>
-            <View style={styles.userdetails}>
+        <View style={styles.userdetails}>
               <View style={styles.userprofile}>
                 <Text style={styles.userinitial}>AR</Text>
               </View>
@@ -124,347 +89,172 @@ const handleOptionSelect = (option: string) => {
                 <Text style={styles.username}>@ashleyruaza</Text>
               </View>
             </View>
-            <TextInput
-              ref={locationInputRef}
-              style={styles.location}
-              placeholder="Location: E.g. Glori Bayan"
-              placeholderTextColor="#666"
-              value={location}
-              onChangeText={setLocation}
-            />
-            <TextInput
-              style={styles.fare}
-              placeholder="Fare: E.g. 150.00"
-              placeholderTextColor="#666"
-              keyboardType="numeric"
-              value={fare}
-              onChangeText={setFare}
-            />
-            <TextInput
-              style={styles.destination}
-              placeholder="Destination: E.g. Intramuros"
-              placeholderTextColor="#666"
-              value={destination}
-              onChangeText={setDestination}
-            />
 
-            <View style={styles.vehicleTypes}>
+          <TextInput placeholder="Location: E.g. Glori Bayan" value={location} onChangeText={setLocation} style={styles.input} />
+          <TextInput placeholder="Fare: E.g. 150.00" value={fare} onChangeText={setFare} keyboardType="numeric" style={styles.input} />
+          <TextInput placeholder="Destination: E.g. Intramuros" value={destination} onChangeText={setDestination} style={styles.input} />
 
-                              <TouchableOpacity style={styles.vehicleItem}>
-                                <MaterialCommunityIcons name="jeepney" size={27} color="#4F46E5" />
-                                <Text style={styles.vehicleText}>Jeep</Text>
-                              </TouchableOpacity>
+          <View style={styles.vehicleTypes}>
+             {VEHICLE_TYPES.map(vehicle => (
+               <TouchableOpacity 
+                 key={vehicle} 
+                  style={styles.vehicleItem} 
+                    onPress={() => toggleVehicle(vehicle)}
+                                                >
+                  {/* Display the correct icon based on vehicle type */}
+              {vehicle === "Jeep" ? (
+              <MaterialCommunityIcons name="jeepney" size={26} color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} />
+                     ) : (
+                  <FontAwesome5 
+                  name={vehicle === "UV Exp." ? "car" : vehicle === "Bus" ? "bus-alt" : "bus"} 
+                   size={24} 
+                     color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} 
+                        />
+                        )}
 
-                              <TouchableOpacity style={styles.vehicleItem}>
-                                <View style={styles.modernJeepIcon}>
-                                  <FontAwesome5 name="bus" size={22} color="#4F46E5" />
-                                </View>
-                                <Text style={styles.vehicleText}>E-jeep</Text>
-                              </TouchableOpacity>
+               {/* Vehicle name */}
+                     <Text style={styles.vehicleText}>{vehicle}</Text>
+                  </TouchableOpacity>
+                 ))}
+              </View>
 
-                              <TouchableOpacity style={styles.vehicleItem}>
-                                <FontAwesome5 name="bus-alt" size={24} color="#4F46E5" style={styles.busIcon} />
-                                <Text style={styles.vehicleText}>Bus</Text>
-                              </TouchableOpacity>
+          <Text style={styles.routeOverviewText}>Route Overview</Text>
 
-                              <TouchableOpacity style={styles.vehicleItem}>
-                                <FontAwesome6 name="train-subway" size={22} color="#4F46E5" style={styles.trainIcon} />
-                                <Text style={styles.vehicleText}>Train</Text>
-                              </TouchableOpacity>
-
-                              <TouchableOpacity style={styles.vehicleItem}>
-                                <FontAwesome5 name="car" size={23} color="#4F46E5" style={styles.carIcon} />
-                                <Text style={styles.vehicleText}>UV Exp.</Text>
-                              </TouchableOpacity>
-                            </View>
-
-  <Text style={styles.routeOverviewText}>Route Overview</Text>
-  
-                  <View style={styles.getonoffContainer}>
-                    
-                      <View style={{ zIndex: 1000 }}>
-                                <Dropdown
-                                  options={dropdownOptions}
-                                  onSelect={handleOptionSelect}
-                                  defaultValue="Select Option"
-                                />
-                              </View>
-                   
-                    <TouchableOpacity style={styles.floatingButton}>
-                      <Text style={styles.floatingButtonText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-  
-
-            <TextInput
-              style={styles.description}
-              placeholder="Your description here..."
-              placeholderTextColor="#666"
-              value={description}
-              onChangeText={setDescription}
-            />
-            <TextInput
-              style={styles.suggestiontextbox}
-              placeholder="Your experiences"
-              placeholderTextColor="#666"
-              multiline={true}
-              value={suggestion}
-              onChangeText={setSuggestion}
-            />
-            <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-  <Text style={styles.closeText}>Close</Text>
-</TouchableOpacity>
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-  <Text style={styles.submitText}>Submit</Text>
-</TouchableOpacity>
-
-
-            </View>
+          <TextInput placeholder={"Route Description\n \n \n \n"} value={description} onChangeText={setDescription} multiline style={styles.input} />
+          <TextInput placeholder={"Your Experiences\n\nE.g. We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets were enchanting but tricky to navigate without a map. A tricycle driver offered a short tour, which made it easier to locate iconic spots like Fort Santiago and San Agustin Church. Getting lost led us to a quaint café serving authentic Filipino dishes."}value={suggestion} onChangeText={setSuggestion} multiline style={styles.input} />
+          
+          <View style={styles.buttonContainer}>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Text style={styles.closeText}>Close</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
+            <Text style={styles.buttonText}>Submit</Text>
+          </TouchableOpacity>
+         
+          </View>
           </ScrollView>
+         
+          </View>
         </View>
-      </View>
-    </Modal>
-  );
-};
+      </Modal>
+    );
+  };
 
-const styles = StyleSheet.create({
-  modalBackground: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  PostContainer: {
-    paddingVertical: 16,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    width: '90%',
-    minHeight: '40%',
-    maxHeight: '90%',
-    justifyContent: 'space-between',
-  },
-  userdetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 50,
-    gap: 11,
-    marginBottom: 20,
-  },
-  userprofile: {
-    width: 36,
-    height: 36,
-    borderRadius: 24,
-    backgroundColor: '#6366F1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userinitial: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  user: {
-    flexDirection: 'column',
-  },
-  loginusername: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '700',
-  },
-  username: {
-    fontSize: 11,
-    color: '#6B7280',
-  },
-  location: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
-  fare: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
-  destination: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
-  description: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
-  suggestiontextbox: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-    width: '100%',
-    height: 120,
-    textAlignVertical: 'top',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  vehicleTypes: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#EEF2FF',
-    borderRadius: 8,
-    padding: 4,
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  vehicleItem: {
-    alignItems: 'center',
-  },
-  vehicleText: {
-    fontSize: 9,
-    color: '#6B7280',
-    marginVertical: 4,
-  },
-  modernJeepIcon: {
-    paddingBottom: 2,
-    paddingTop: 2,
-  },
-  busIcon: {
-    paddingTop: 2.5,
-  },
-  trainIcon: {
-    paddingTop: 5,
-  },
-  carIcon: {
-    paddingTop: 4,
-  },
-  routeOverviewText: {
-    color: '#44457D',
-    fontWeight: '400',
-    fontSize: 14,
-  },
-  getonoffContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    justifyContent: 'space-between',
-    marginVertical: 10,
-  },
-  floatingButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 28,
-    backgroundColor: '#6366f1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  floatingButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  closeButton: {
-    borderRadius: 10,
-    width: 70,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  submitButton: {
-    borderRadius: 10,
-    backgroundColor: '#22C55E',
-    width: 80,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeText: {
-    color: '#6366F1',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  submitText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  dropdowncontainer: {
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  dropdownButton: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    width: 125,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 6,
-  },
-  buttonText: {
-    color: '#44457D',
-    fontSize: 13,
-    fontWeight: '400',
-  },
-  dropdownList: {
-    position: 'absolute',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderRadius: 8,
-    borderColor: '#E5E7EB',
-    zIndex: 1000,
-    width: 125,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-    top: 40,
-  },
-  option: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    padding: 4,
-    alignItems: 'center',
-  },
-  optionText: {
-    fontSize: 13,
-    color: '#44457D',
-  },
-});
+  const styles = StyleSheet.create({
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    postContainer: {
+      paddingVertical: 16,
+      backgroundColor: 'white',
+      borderRadius: 10,
+      paddingHorizontal: 20,
+      width: '90%',
+      minHeight: '40%',
+      maxHeight: '90%',
+      justifyContent: 'space-between',
+    },
 
-export default ModalComponent;
+    userdetails: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: 50,
+      gap: 11,
+      marginBottom: 10,
+    },
+    userprofile: {
+      width: 36,
+      height: 36,
+      borderRadius: 24,
+      backgroundColor: '#6366F1',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    userinitial: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    user: {
+      flexDirection: 'column',
+    },
+    loginusername: {
+      fontSize: 13,
+      color: '#6B7280',
+      fontWeight: '700',
+    },
+    username: {
+      fontSize: 11,
+      color: '#6B7280',
+    },
+    input: {
+      backgroundColor: '#F5F7FF',
+      borderWidth: 1,
+      borderColor: '#C7D2FE',
+      borderRadius: 8,
+      padding: 8,
+      fontSize: 11,
+      color: '#374151',
+      marginVertical: 8,
+    },
+    vehicleTypes: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      backgroundColor: '#EEF2FF',
+      borderRadius: 8,
+      padding: 4,
+      marginTop: 10,
+      marginBottom: 10,
+    },
+    vehicleItem: {
+      alignItems: 'center',
+      padding: 10,
+    },
+    vehicleText: {
+      marginTop: 5,
+      fontSize: 9,
+      color: '#6B7280',
+    },
+    routeOverviewText: {
+      color: '#44457D',
+      fontWeight: '400',
+      fontSize: 14,
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 8,
+    },
+    submitButton: {
+      padding: 6,
+      marginTop: 10,
+      width: '22%',
+      alignItems: 'center',
+      borderRadius: 10,
+      backgroundColor: '#22C55E',
+      justifyContent: 'center',
+    },
+    closeButton: {      
+      padding: 3,
+      marginTop: 10,
+      width: '20%',
+      alignItems: 'center',
+      borderRadius: 10,
+      justifyContent: 'center',
+    },
+    buttonText: {
+      color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    },
+    closeText: {
+      color: '#6366F1',
+      fontSize: 13,
+      fontWeight: '700',
+    },
+  });
+
+  export default ModalComponent;

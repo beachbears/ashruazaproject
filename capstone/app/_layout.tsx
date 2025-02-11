@@ -13,9 +13,17 @@ export default function RootLayout() {
 />
 
 <Stack.Screen
-  name="bestwayroutes"
+  name="routetouristspots"
   options={{
     headerShown: false, // Hides the default header
+  }}
+/>
+
+<Stack.Screen
+  name="routeuser"
+  options={{
+    headerShown: false, // Hides the default header
+    
   }}
 />
     </Stack>

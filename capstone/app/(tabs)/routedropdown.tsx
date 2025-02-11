@@ -1,57 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,TextInput, FlatList} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  FlatList
+} from 'react-native';
 import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Link } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import ModalComponent from '../postmodal';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { APP_NAME} from "../../constants";
+import { APP_NAME } from "../../constants";
+import RouteUserScreen from '../routeuser';
+import ModalComponent from '../postmodal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const timeAgo = (timestamp: number | string): string => {
-  if (!timestamp) return 'Unknown time';
-
-  // Ensure timestamp is a number
-  const postDate = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp);
-  const now = new Date();
-
-  const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  const diffInHours = Math.floor(diffInSeconds / 3600);
-  const diffInDays = Math.floor(diffInSeconds / 86400);
-
-  if (diffInMinutes < 1) return 'Just now';
-  if (diffInHours < 1) return `${diffInMinutes} minute(s) ago`;
-  if (diffInHours < 24) return `${diffInHours} hour(s) ago`;
-  if (diffInDays < 7) return `${diffInDays} day(s) ago`;
-  if (diffInDays === 7) return '1 week ago';
-  return '1 month ago';
-};
-
-
-interface PostItem {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  userinitial: string;
-  loginusername: string;
-  username: string;
-  location: string;
-  fare: number;
-  destination: string;
-  description: string;
-  suggestiontextbox: string;
-  timestamp?: number;
-}
-
-
-interface PostCardProps {
-  Post: PostItem;
-  handleUpvote: (id: number) => void;
-  handleDownvote: (id: number) => void;
-}
-
-
+type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp.";
 
 // Dropdown Component
 interface DropdownProps {
@@ -81,7 +47,11 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
       {isOpen && (
         <View style={styles.dropdownList}>
           {options.map((option, index) => (
-            <TouchableOpacity key={index} onPress={() => selectOption(option)} style={styles.option}>
+            <TouchableOpacity 
+              key={index} 
+              onPress={() => selectOption(option)} 
+              style={styles.option}
+            >
               <Text style={styles.optionText}>{option}</Text>
             </TouchableOpacity>
           ))}
@@ -91,95 +61,117 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   );
 };
 
-const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time',];
+const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
 
-const handleOptionSelect = (option: string) => {
-  console.log('Selected option:', option);
+// Rest of the interfaces and PostCard component remain the same
+interface PostItem {
+  id: number;
+  upvotes: number;
+  downvotes: number;
+  userinitial: string;
+  loginusername: string;
+  username: string;
+  location: string;
+  fare: number;
+  destination: string;
+  description: string;
+  suggestiontextbox: string;
+  timestamp: number;
+  vehicles: VehicleType[];
+}
+
+interface PostCardProps {
+  post: PostItem;
+  handleUpvote: (id: number) => void;
+  handleDownvote: (id: number) => void;
+  onSelect: (post: PostItem) => void;
+}
+
+const timeAgo = (timestamp: number | string): string => {
+  if (!timestamp) return 'Unknown time';
+  const postDate = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  const diffInHours = Math.floor(diffInSeconds / 3600);
+  const diffInDays = Math.floor(diffInSeconds / 86400);
+
+  if (diffInMinutes < 1) return 'Just now';
+  if (diffInHours < 1) return `${diffInMinutes} minute's ago`;
+  if (diffInHours < 24) return `${diffInHours} hour's ago`;
+  if (diffInDays < 7) return `${diffInDays} day's ago`;
+  if (diffInDays === 7) return '1 week ago';
+  return '1 month ago';
 };
 
-
-
-// PostCard Component
-
-
-
-const PostCard: React.FC<PostCardProps> = ({ Post, handleUpvote, handleDownvote }) => {
-  const [timeString, setTimeString] = useState<string>(timeAgo(Post.timestamp || Date.now()));
+const PostCard: React.FC<PostCardProps> = ({ post, handleUpvote, handleDownvote, onSelect }) => {
+  const [timeString, setTimeString] = useState<string>(timeAgo(post.timestamp));
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeString(timeAgo(Post.timestamp || Date.now()));
-    }, 60000); // Update every minute
-
+      setTimeString(timeAgo(post.timestamp));
+    }, 60000);
     return () => clearInterval(timer);
-  }, [Post.timestamp]);
-
+  }, [post.timestamp]);
 
   return (
-  <Link href="/routes" asChild>
-  <TouchableOpacity  style={styles.containerpost}>
-    <View style={styles.suggestordetails}>
-      <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1}}>
-                <View style={styles.profile}>
-                  <Text style={styles.initial}>{Post.userinitial}</Text>
-                </View>
-                <View style={styles.suggestor}>
-                  <Text style={styles.suggestorname}>{Post.loginusername}</Text>
-                  <Text style={styles.suggestorusername}>{Post.username}</Text>
-              </View>
-      
-              </View>
-
-       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                <Text style={styles.suggestordestination}>{timeString}</Text>
-              </View>
-
-    </View>
-
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7,}}>
-      <Text style={styles.dest}>Destination: </Text>
-      <Text style={styles.suggestordestination}>{Post.destination}</Text>
-    </View>
-
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7 }}>
-            <Text style={styles.dest}>Fare: </Text>
-            <Text style={styles.suggestordestination}>{Post.fare}</Text>
+    <TouchableOpacity style={styles.containerpost} onPress={() => onSelect(post)}>
+      <View style={styles.suggestordetails}>
+        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1}}>
+          <View style={styles.profile}>
+            <Text style={styles.initial}>{post.userinitial}</Text>
           </View>
-
-    <View>
-      <Text style={styles.usersuggestion}>Tourist Experience: </Text>
-      <Text style={styles.suggestion}>{Post.suggestiontextbox}</Text>
-    </View>
-
-    <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-      <View style={styles.content}>
-        <Octicons name="shield-check" size={18} color="#6366F1" />
-        <Text style={styles.status}>Status</Text>
-        <View style={styles.badge}>
-          <Entypo name="check" size={14} color="#03C04A" />
-          <Text style={styles.cert}>Certified {APP_NAME}</Text>
+          <View style={styles.suggestor}>
+            <Text style={styles.suggestorname}>{post.loginusername}</Text>
+            <Text style={styles.suggestorusername}>{post.username}</Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <Text style={styles.postTimestamp}>{timeString}</Text>
         </View>
       </View>
-      <View style={styles.arrowcontainer}>
-        <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(Post.id)}>
-          <AntDesign name="arrowup" size={12} color="#22C55E" />
-          <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>{Post.upvotes}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(Post.id)}>
-          <AntDesign name="arrowdown" size={12} color="#C52222" />
-          <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>{Post.downvotes}</Text>
-        </TouchableOpacity>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7}}>
+        <Text style={styles.dest}>Destination: </Text>
+        <Text style={styles.suggestordestination}>{post.destination}</Text>
       </View>
-    </View>
-  </TouchableOpacity >
-  </Link>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 7 }}>
+        <Text style={styles.dest}>Fare: </Text>
+        <Text style={styles.suggestordestination}>{post.fare.toFixed(2)}</Text>
+      </View>
+
+      <View>
+        <Text style={styles.usersuggestion}>Tourist Experience: </Text>
+        <Text style={styles.suggestion}>{post.suggestiontextbox}</Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={styles.content}>
+          <Octicons name="shield-check" size={18} color="#6366F1" />
+          <Text style={styles.status}>Status</Text>
+          <View style={styles.badge}>
+            <Entypo name="check" size={14} color="#03C04A" />
+            <Text style={styles.cert}>Certified {APP_NAME}</Text>
+          </View>
+        </View>
+        <View style={styles.arrowcontainer}>
+          <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(post.id)}>
+            <AntDesign name="arrowup" size={12} color="#22C55E" />
+            <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>{post.upvotes}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(post.id)}>
+            <AntDesign name="arrowdown" size={12} color="#C52222" />
+            <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>{post.downvotes}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 };
 
-// Main Screen Component
 export default function TabTwoScreen() {
-  
-  const [PostData, setPostData] = useState<PostItem[]>([
+  const [posts, setPosts] = useState<PostItem[]>([
     {
       id: 1,
       upvotes: 0,
@@ -192,71 +184,93 @@ export default function TabTwoScreen() {
       destination: 'National Museum',
       description: 'Good',
       suggestiontextbox: 'Some suggestion text here.',
-      timestamp: new Date().setDate(new Date().getDate() - 7),
+      timestamp: Date.now() - 7 * 24 * 60 * 60 * 1000, // 7 days ago
+      vehicles: ["Jeep"],
     },
   ]);
 
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [submittedTexts, setSubmittedTexts] = useState<string[]>([]);
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const savedPosts = await AsyncStorage.getItem('posts');
+        if (savedPosts) {
+          setPosts(JSON.parse(savedPosts));
+        }
+      } catch (error) {
+        console.error('Error loading posts:', error);
+      }
+    };
+
+    loadPosts();
+  }, []);
+
+  // Save posts to AsyncStorage whenever they change
+  useEffect(() => {
+    const savePosts = async () => {
+      try {
+        await AsyncStorage.setItem('posts', JSON.stringify(posts));
+      } catch (error) {
+        console.error('Error saving posts:', error);
+      }
+    };
+
+    savePosts();
+  }, [posts]);
 
   const handleUpvote = (id: number): void => {
-    setPostData((prevData) =>
-      prevData.map((item) =>
-        item.id === id ? { ...item, upvotes: item.upvotes + 1 } : item
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === id ? { ...post, upvotes: post.upvotes + 1 } : post
       )
     );
   };
 
   const handleDownvote = (id: number): void => {
-    setPostData((prevData) =>
-      prevData.map((item) =>
-        item.id === id ? { ...item, downvotes: item.downvotes + 1 } : item
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === id ? { ...post, downvotes: post.downvotes + 1 } : post
       )
     );
   };
 
-  const handleSubmit = async (text: string) => {
-    try {
-      const updatedTexts = [...submittedTexts, text];
-      await AsyncStorage.setItem('submittedTexts', JSON.stringify(updatedTexts));
-      setSubmittedTexts(updatedTexts);
-    } catch (error) {
-      console.error('Failed to save text:', error);
-    }
+  const handleSubmitPost = (newPost: PostItem) => {
+    setPosts(prevPosts => [...prevPosts, { ...newPost, id: prevPosts.length + 1 }]);
+    setModalVisible(false);
   };
 
-  const handleNewPost = (newPost: PostItem) => {
-    setPostData((prevPostData) => [...prevPostData, newPost]);
-  };
 
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [selectedPost, setSelectedPost] = useState<PostItem | null>(null);
+
+    
 
   const handleOptionSelect = (option: string) => {
-    let sortedData = [...PostData];
-    switch (option) {
-      case 'Time':
-        sortedData.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-        break;
-      case 'Fare Cost':
-        sortedData.sort((a, b) => a.fare - b.fare);
-        break;
-      case 'Popularity':
-        sortedData.sort((a, b) => b.upvotes - a.upvotes);
-        break;
-      case 'Destination':
-        sortedData.sort((a, b) => a.destination.localeCompare(b.destination));
-        break;
-      default:
-        break;
-    }
-
-    setPostData(sortedData);
+    setPosts(prevPosts => {
+      const sortedPosts = [...prevPosts];
+      switch (option) {
+        case 'Time':
+          return sortedPosts.sort((a, b) => b.timestamp - a.timestamp);
+        case 'Fare Cost':
+          return sortedPosts.sort((a, b) => a.fare - b.fare);
+        case 'Popularity':
+          return sortedPosts.sort((a, b) => b.upvotes - a.upvotes);
+        case 'Destination':
+          return sortedPosts.sort((a, b) => a.destination.localeCompare(b.destination));
+        default:
+          return sortedPosts;
+      }
+    });
   };
+
+  if (selectedPost) {
+    return <RouteUserScreen post={selectedPost} onBack={() => setSelectedPost(null)} />;
+  }
 
   return (
     <ScrollView style={styles.maincontainer}>
       <View style={styles.header}>
         <Text style={styles.headerText}>Details</Text>
-        <TouchableOpacity style={styles.postbutton} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
           <Text style={styles.postButtonText}>Post</Text>
         </TouchableOpacity>
       </View>
@@ -278,7 +292,7 @@ export default function TabTwoScreen() {
 
       <Text style={styles.sectionTitle}>Best Way</Text>
 
-      <Link href="/bestwayroutes" asChild>
+      <Link href="/routetouristspots" asChild>
         <TouchableOpacity style={styles.bestwaycard}>
           <View style={styles.bestwayHeader}>
             <View style={styles.avatar}>
@@ -311,29 +325,29 @@ export default function TabTwoScreen() {
             defaultValue="Select Option"
           />
         </View>
+        
+      
       </View>
 
-      {/* Post Cards */}
-      {PostData.map((post) => (
-        <PostCard
-          key={post.id}
-          
-          Post={post}
-          handleUpvote={handleUpvote}
-          handleDownvote={handleDownvote}
+    <View style={{marginBottom: 200}}>
+      <FlatList
+          data={posts}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item }) => (
+            <PostCard
+              post={item}
+              handleUpvote={handleUpvote}
+              handleDownvote={handleDownvote}
+              onSelect={setSelectedPost}
+            />
+          )}
         />
-      ))}
-
-      <ModalComponent
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSubmit={handleSubmit}
-        onNewPost={handleNewPost}
+</View>
+      <ModalComponent 
+        visible={modalVisible} 
+        onClose={() => setModalVisible(false)} 
+        onSubmit={handleSubmitPost} 
       />
-
-      <View style={{marginBottom: 100}}>
-        <text>            </text>
-      </View>
     </ScrollView>
   );
 }
@@ -640,7 +654,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginTop: 20,
-    marginBottom: 13,
+    marginBottom: 23,
   },
   sectionTitle: {
     color: '#44457D',
@@ -666,5 +680,9 @@ const styles = StyleSheet.create({
   suggestorusername: { fontSize: 11, color: '#6B7280' },
   suggestordestination: {  fontSize: 11, color: '#6B7280', flexWrap: 'wrap', marginLeft: 0 },
     
+
+  postTimestamp: { fontSize: 10, color: '#999', marginTop: 5, textAlign: 'right' }
+ 
     
 });
+
