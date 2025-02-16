@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Stack } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Animated, Keyboard} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -38,25 +38,47 @@ const vehicleIcons: Record<VehicleType, JSX.Element> = {
 
 
 const RouteUserScreen: React.FC<{ post: PostItem; onBack: () => void }> = ({ post, onBack }) => {
+  const [inputText, setInputText] = useState('');
+  const [comments, setComments] = useState<CommentItem[]>([]);
 
-    
-        const [inputText, setInputText] = useState('');
-         const [comments, setComments] = useState<CommentItem[]>([]);
-      
-         const handlePost = () => {
-          if (inputText.trim()) {
-            const newComment: CommentItem = {
-              id: comments.length + 1,
-              text: inputText,
-              commenterName: 'Ash Ruaza',
-              userHandle: '@ashleyruaza',
-              commenterEmail: 'AR',
-            };
-      
-            setComments([...comments, newComment]); // Save new comment to state
-            setInputText(''); // Clear input after posting
-          }
-        };
+   
+  useEffect(() => {
+    const loadComments = async () => {
+      try {
+        const savedComments = await AsyncStorage.getItem(`comments_${post.id}`); // Unique key per post
+        if (savedComments) {
+          setComments(JSON.parse(savedComments));
+        }
+      } catch (error) {
+        console.error('Error loading comments:', error);
+      }
+    };
+    loadComments();
+  }, [post.id]); // Ensure it reloads when the post changes
+  
+ 
+  const handlePost = async () => {
+    if (inputText.trim()) {
+      const newComment: CommentItem = {
+        id: comments.length + 1,
+        text: inputText,
+        commenterName: 'Ash Ruaza',
+        userHandle: '@ashleyruaza',
+        commenterEmail: 'AR',
+      };
+  
+      const updatedComments = [...comments, newComment];
+      setComments(updatedComments);
+      setInputText('');
+  
+      try {
+        await AsyncStorage.setItem(`comments_${post.id}`, JSON.stringify(updatedComments)); // Unique key per post
+      } catch (error) {
+        console.error('Error saving comments:', error);
+      }
+    }
+  };
+  
       
       const Comment: React.FC<{ comment: CommentItem }> = ({ comment }) => (
           <View>
@@ -144,7 +166,7 @@ const RouteUserScreen: React.FC<{ post: PostItem; onBack: () => void }> = ({ pos
               <Text style={styles.conlabel}>Route Overview</Text>
           </View>
 
-          <Text style={{fontSize: 12, fontWeight: 400, color: '#44457D'}}>Route Description</Text>
+         
         <Text style={styles.description}>{post.description}</Text>
       
       </View>
@@ -156,51 +178,39 @@ const RouteUserScreen: React.FC<{ post: PostItem; onBack: () => void }> = ({ pos
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 }}>
           <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '700', marginTop: 10 }}>Comments</Text>
           <View style={styles.commentcircle}>
-              <Text style={styles.numofcomments}>{comments.length + 1}</Text>
+              <Text style={styles.numofcomments}>{comments.length}</Text>
           </View>
       </View>
 
-      <View style={styles.commenterDetails}>
-          <View style={styles.circlecomment}>
-              <Text style={styles.commenterinitial}>AR</Text>
-          </View>
-          <View style={[{ flexDirection: 'column' }]}>
-              <Text style={styles.commentername}>Ashley Ruaza</Text>
-              <Text style={styles.commenteremail}>@ashruaza</Text>
-          </View>
-      </View>
-
-      <Text style={styles.comment}>We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets.</Text>
-       
+      
       {comments.map((comment) => (
         <Comment key={comment.id} comment={comment} />
       ))}
       
      
       <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, width: '100%', gap: 4 }]}>
-  <View style={{ width: '85%' }}>  
-    <TextInput
-      style={styles.commenttextbox}
-      placeholder="Write a comment"
-      placeholderTextColor="#666"
-      multiline={true}
-      value={inputText}
-      onChangeText={setInputText}
-    />
-  </View>
-  
+        <View style={{ width: '85%' }}>  
+          <TextInput
+          style={styles.commenttextbox}
+          placeholder="Write a comment"
+          placeholderTextColor="#666"
+          multiline={true}
+          value={inputText}
+          onChangeText={setInputText}
+        />
+        </View>
 
-  <TouchableOpacity style={[styles.button]} onPress={handlePost}>
-    <Text style={styles.buttonText}>Post</Text>
-  </TouchableOpacity>
-</View>
+        <TouchableOpacity style={[styles.button]} onPress={handlePost}>
+          <Text style={styles.buttonText}>Post</Text>
+        </TouchableOpacity>
+      </View>
 
-</Animated.View>
+      </Animated.View>
 
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginVertical: 25, marginBottom: 100 }}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-        <Text style={styles.backText}>Close</Text>
-      </TouchableOpacity>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Text style={styles.backText}>Close</Text>
+          </TouchableOpacity>
         </View>
     </ScrollView>
   );
@@ -216,7 +226,7 @@ const styles = StyleSheet.create({
   username: {fontSize: 14, color: '#404163', fontWeight: '700',},
   email: { fontSize: 11, color: '#686A9C',},
   detailsContainer: { marginBottom: 16 },
-  locationText: {fontSize: 12, fontWeight: '400', color: '#44457D',  marginTop: 10},
+  locationText: {fontSize: 12, fontWeight: '400', color: '#44457D'},
   label: { fontSize: 14, fontWeight: '500', color: '#44457D',  marginTop: 10},
   routecontainer:{borderWidth: 1, borderColor: '#C7D2FE',borderRadius: 8, padding:10, flexDirection: 'column', width: '100%', },
   position: { flexDirection: 'row', justifyContent: 'space-between',},
@@ -228,7 +238,7 @@ const styles = StyleSheet.create({
   vehicleText: {fontSize: 11, color: '#44457D', marginVertical: 4,},
   getOnOff: {fontSize: 12, fontWeight: 'bold',  },
   description: {fontSize: 12,color: '#44457D', marginBottom: 6},
-  experience: {fontSize: 12,color: '#44457D', fontWeight: 500},
+  experience: {fontSize: 12,color: '#6B7280', fontWeight: 400},
   commentcircle: {width: 20, height: 20, borderRadius: 24, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
   numofcomments: {fontSize: 10, color: '#6366f1', fontWeight: 700,},
   commenterDetails: {flexDirection: 'row', alignItems: 'center', marginBottom:8, marginTop: 18,} ,
@@ -238,7 +248,7 @@ const styles = StyleSheet.create({
   commenteremail: { fontSize: 12, color: '#6B7280',},
   comment: { fontSize: 12, color: '#6B7280',},
   commenttextbox: {backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 6,fontSize: 11, color: '#374151',}, 
-  button: {backgroundColor: '#6366F1', paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center', height: 30, width: '15%'},
-  buttonText: {color: 'white', fontSize: 11, paddingVertical: 2},
+  button: {backgroundColor: '#6366F1', paddingHorizontal: 2, borderRadius: 10, justifyContent: 'center', alignItems: 'center', height: 30, width: '15%'},
+  buttonText: {color: 'white', fontSize: 11, fontWeight: 500},
 });
 export default RouteUserScreen;

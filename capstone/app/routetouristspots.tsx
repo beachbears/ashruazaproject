@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation } from 'expo-router';
 import { Link } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
 
@@ -48,7 +47,7 @@ const Comment: React.FC<{ comment: CommentItem }> = ({ comment }) => (
     </View>
   ); 
 
-  const navigation = useNavigation();
+ 
 
 return (
   <ScrollView style={styles.maincontainer}>
@@ -148,29 +147,29 @@ return (
        
       {comments.map((comment) => (
         <Comment key={comment.id} comment={comment} />
-      ))}
+       ))}
       
       <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, width: '100%', gap: 4 }]}>
-  <View style={{ width: '90%' }}>  
-    <TextInput
-      style={styles.commenttextbox}
-      placeholder="Write a comment"
-      placeholderTextColor="#666"
-      multiline={true}
-      value={inputText}
-      onChangeText={setInputText}
-    />
-  </View>
+        <View style={{ width: '90%' }}>  
+         <TextInput
+          style={styles.commenttextbox}
+          placeholder="Write a comment"
+          placeholderTextColor="#666"
+          multiline={true}
+          value={inputText}
+          onChangeText={setInputText}
+        />
+      </View>
 
-  <TouchableOpacity style={[styles.button]} onPress={handlePost}>
-    <Text style={styles.buttonText}>Post</Text>
-  </TouchableOpacity>
-</View>
+      <TouchableOpacity style={[styles.button]} onPress={handlePost}>
+        <Text style={styles.buttonText}>Post</Text>
+      </TouchableOpacity>
+    </View>
 
-
+{/*
       <View style={[{ borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#EEF2FF', borderRadius: 2, padding: 2, flexDirection: 'column', width: '100%', marginVertical: 15, }]}>
       
-    {/* <View style={{ flex: 1 }}>
+     <View style={{ flex: 1 }}>
         <MapView
           style={{ width: '100%', height: 300 }}
           initialRegion={{
@@ -185,9 +184,11 @@ return (
             title="Intramuros"
           />
         </MapView>
-      </View>  */}
+      </View>  
 
       </View>
+
+      */}
 
       <View style={styles.picturecontainer}>
           <View style={styles.imageWrapper}>
@@ -248,8 +249,6 @@ return (
                   </View>
               </View>
 
-                
-
       </ScrollView>
 
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginVertical: 25 }}>
@@ -264,7 +263,7 @@ return (
                   onPress={() => {
                     console.log('Button Pressed');
                 }}
-          >
+             >
               <Text style={{
                   color: '#6366F1',
                   fontSize: 13,
@@ -273,8 +272,6 @@ return (
           </TouchableOpacity>
           </Link>
       </View>
-
-     
 
   </ScrollView>
 );}
@@ -329,41 +326,17 @@ const styles = StyleSheet.create({
   picturecontainer: {justifyContent: 'center',alignItems: 'center',marginVertical: 10},
   imageWrapper: {position: 'relative', width: '100%',height: 200,},
   image: {width: '100%', height: '100%',borderRadius: 8,},
-  firsttext: {
-    position: 'absolute',
-    bottom: 10,  
-    left: 10,  
-    color: 'white',  
-    fontSize: 19,
-    marginBottom: 20,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)', 
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,},
+  firsttext: {position: 'absolute',bottom: 10,  left: 10,  color: 'white',  fontSize: 19,marginBottom: 20,fontWeight: 'bold',textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: { width: 1, height: 1 },textShadowRadius: 3,},
+  secondtext: {position: 'absolute',bottom: 10,      left: 10,  color: 'white', fontSize: 14,fontWeight: '500',textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: { width: 1, height: 1 },textShadowRadius: 30,},
 
-   secondtext: {
-    position: 'absolute',
-    bottom: 10,      
-    left: 10,  
-    color: 'white', 
-    fontSize: 14,
-    fontWeight: '500',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)', 
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 30,},
+  feedbackcontainer: { flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', flex:1, borderWidth: 1, marginVertical: 14},
+  feedback: {flexDirection: 'column', gap: 2 },
+  feedbackbox: {borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#FBFCFF', borderRadius: 14, padding: 10, width: '100%', marginVertical: 5},  
+  feedbacktitle: {fontSize: 12, color: '#6B7280', fontWeight: '700', },
+  feedbackcomment: { fontSize: 11, color: '#6B7280',},
 
-    feedbackcontainer: { flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', flex:1, borderWidth: 1, marginVertical: 14},
-    feedback: {flexDirection: 'column', gap: 2 },
-    feedbackbox: {borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#FBFCFF', borderRadius: 14, padding: 10, width: '100%', marginVertical: 5},  
-    feedbacktitle: {fontSize: 12, color: '#6B7280', fontWeight: '700', },
-    feedbackcomment: { fontSize: 11, color: '#6B7280',},
-
-    imageScrollBox: {
-      height: 200,  padding: 6
-    },
-    imageScrollContainer: {
-      paddingBottom: 16, // Optional padding at the bottom for spacing
-    },
+  imageScrollBox: {height: 200,  padding: 6},
+  imageScrollContainer: {paddingBottom: 16, },
 
       
 })

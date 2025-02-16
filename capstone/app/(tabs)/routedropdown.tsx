@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  FlatList
-} from 'react-native';
+import {View,Text,StyleSheet,ScrollView,TouchableOpacity,TextInput,FlatList} from 'react-native';
 import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Link } from 'expo-router';
@@ -19,7 +11,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp.";
 
-// Dropdown Component
 interface DropdownProps {
   options: string[];
   onSelect?: (option: string) => void;
@@ -62,8 +53,6 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 };
 
 const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
-
-// Rest of the interfaces and PostCard component remain the same
 interface PostItem {
   id: number;
   upvotes: number;
@@ -337,18 +326,16 @@ export default function TabTwoScreen() {
       </View>
 
     <View style={{marginBottom: 200}}>
-      <FlatList
-          data={posts}
-          keyExtractor={item => item.id.toString()}
-          renderItem={({ item }) => (
-            <PostCard
-              post={item}
-              handleUpvote={handleUpvote}
-              handleDownvote={handleDownvote}
-              onSelect={setSelectedPost}
-            />
-          )}
-        />
+    {posts.map((item) => (
+  <PostCard
+    key={item.id} // Equivalent to keyExtractor
+    post={item}
+    handleUpvote={handleUpvote}
+    handleDownvote={handleDownvote}
+    onSelect={setSelectedPost}
+  />
+))}
+
 </View>
       <ModalComponent 
         visible={modalVisible} 
@@ -414,4 +401,3 @@ const styles = StyleSheet.create({
   suggestordestination: {  fontSize: 11, color: '#6B7280', flexWrap: 'wrap', marginLeft: 0 },
   postTimestamp: { fontSize: 10, color: '#999', marginTop: 5, textAlign: 'right' }
 });
-
