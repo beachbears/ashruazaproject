@@ -266,10 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#6366f1',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 4,
+    boxShadow: "0px 4px 4px rgba(0, 0, 0, 0.2)",
     elevation: 6,
   },
   floatingButtonText: {

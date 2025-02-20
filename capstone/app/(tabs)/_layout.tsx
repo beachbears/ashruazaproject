@@ -1,3 +1,4 @@
+
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -130,10 +131,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     height: 60,  
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
+    boxShadow: "0px 2px 2px rgba(0, 0, 0, 0.8)",  
     elevation: 5,
     marginHorizontal: 90,
     marginVertical: 0,

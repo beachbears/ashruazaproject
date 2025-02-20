@@ -168,7 +168,6 @@ return (
 
 {/*
       <View style={[{ borderWidth: 1, borderColor: '#C7D2FE', backgroundColor: '#EEF2FF', borderRadius: 2, padding: 2, flexDirection: 'column', width: '100%', marginVertical: 15, }]}>
-      
      <View style={{ flex: 1 }}>
         <MapView
           style={{ width: '100%', height: 300 }}
@@ -187,8 +186,8 @@ return (
       </View>  
 
       </View>
-
-      */}
+*/}
+      
 
       <View style={styles.picturecontainer}>
           <View style={styles.imageWrapper}>
@@ -218,7 +217,7 @@ return (
       <ScrollView 
       nestedScrollEnabled={true}
       style={styles.imageScrollBox}
-      contentContainerStyle={[styles.imageScrollContainer, { flexGrow: 1 }]} // Added flexGrow: 1 here
+      contentContainerStyle={[styles.imageScrollContainer, { flexGrow: 1 }]}  
    >
 
               <View style={styles.feedbackbox}>

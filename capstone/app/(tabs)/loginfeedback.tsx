@@ -138,7 +138,7 @@ const GuestFeedback: React.FC = () => {
 
 const styles = StyleSheet.create({
   maincontainer: {flexDirection: 'column', padding: 30, backgroundColor: '#F9FAFB', width: '100%'},
-  feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, marginBottom: 15},
+  feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)",    marginBottom: 15},
   suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 11 },
   profile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' },
   initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
@@ -156,7 +156,8 @@ const styles = StyleSheet.create({
   boldText: { fontWeight: 'bold' },
 
   floatingButtonContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginLeft: 300, marginBottom: 80, marginTop: 'auto'},
-  floatingButton: { width: 40, height: 40, borderRadius: 28, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 }, shadowRadius: 4, elevation: 6 },
+  floatingButton: { width: 40, height: 40, borderRadius: 28, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center',boxShadow: "0px 4px 4px rgba(0, 0, 0, 0.2)",
+    elevation: 6,},
   floatingButtonText: { color: '#fff', fontSize: 20, fontWeight: '400' },
   modalBackground: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
   modalContainer: { paddingVertical: 16, backgroundColor: 'white', borderRadius: 10, paddingHorizontal: 20, width: '90%', height: 'auto', minHeight: '40%', justifyContent: 'space-between' },
