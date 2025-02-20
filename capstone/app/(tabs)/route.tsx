@@ -1,37 +1,24 @@
 import React, { useState } from 'react';
+import { useRouter } from "expo-router";
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal} from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
 import Entypo from '@expo/vector-icons/Entypo';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import ReviewModal from '../reviewmodal';
-import { Link } from 'expo-router';
 
 
 const RouteScreen = () => {
     const [modalVisible, setModalVisible] = useState(false);
+    const router = useRouter();
   return (
     
     <ScrollView style={styles.maincontainer}>
-        {/*
+        
       <View style={[{ borderWidth: 2, flex: 1, borderColor: '#C7D2FE', backgroundColor: '#EEF2FF', flexDirection: 'column', width: '100%', marginTop: 15, }]}>
-            <MapView
-                style={{ width: '100%', height: 300 }}
-                initialRegion={{
-                    latitude: 14.5896,
-                    longitude: 120.9793,
-                    latitudeDelta: 0.05,
-                    longitudeDelta: 0.05,
-                  }}
-                >
-                <Marker
-                    coordinate={{ latitude: 14.5896, longitude: 120.9793 }}
-                    title="Intramuros"
-                />
-            </MapView>
+            <Text>MAP HERE </Text>
        </View>
-            */}
+           
         <View style={styles.container}>
             <Text style={styles.text}>Details</Text>
                 <View style={{padding: 8,marginBottom: 10,}}>
@@ -104,11 +91,9 @@ const RouteScreen = () => {
                         <TouchableOpacity style={styles.twobox} onPress={() => setModalVisible(true)}>
                             <Text style={styles.texttwo}>Review</Text>
                         </TouchableOpacity>
-                        <Link href="/community" asChild>
-                            <TouchableOpacity style={styles.twobox}>
-                                <Text style={styles.texttwo}>Route Post Suggestions</Text>
-                            </TouchableOpacity>
-                        </Link>
+                        <TouchableOpacity style={styles.twobox} onPress={() => router.push("/community")}>
+                            <Text style={styles.texttwo}>Route Post Suggestions</Text>
+                        </TouchableOpacity>
                     </View>
                     <ReviewModal visible={modalVisible} onClose={() => setModalVisible(false)} />
             </View>
@@ -162,7 +147,7 @@ const styles = StyleSheet.create({
   box: {flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: '#F4F6FF', padding: 8},
   boxlabel: {fontSize: 11, fontWeight: 700, color: '#44457D'},
 
-  routecontainer:{borderWidth: 1, borderColor: '#C7D2FE',borderRadius: 8, padding: 16, flexDirection: 'column', width: '100%', marginVertical: 18 },
+  routecontainer:{borderWidth: 1, borderColor: '#C7D2FE',borderRadius: 8, padding: 16, flexDirection: 'column', width: '100%', marginTop: 18, marginBottom: 100},
   routeline: { paddingLeft: 14, borderLeftWidth: 3  ,borderLeftColor: 'green', },
   greencircle: {position: 'absolute',left: -7 ,paddingHorizontal: 6,paddingVertical: 6, borderRadius: 24, backgroundColor: 'green', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
   bluecircle: {position: 'absolute',left: -4.5 ,paddingHorizontal: 6,paddingVertical: 6, borderRadius: 24, backgroundColor: 'blue', alignItems: 'center', justifyContent: 'center', marginRight: 16},

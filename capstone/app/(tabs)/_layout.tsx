@@ -1,18 +1,17 @@
 
 import { Tabs } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { StyleSheet, View, Image, Text, TouchableOpacity} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { APP_NAME } from '@/constants';
-import { flatMap, wrap } from 'lodash';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarShowLabel: false, 
+        tabBarShowLabel: true, 
         headerStyle: styles.headerStyle, 
         header: () => (
         <View style={styles.header}>
@@ -31,12 +30,15 @@ export default function TabLayout() {
         </View>
         ),
         tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: 500, color: '#44457D', marginTop: 6},
       }}
     >
+      
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
+          tabBarLabel: 'Home', 
           tabBarIcon: ({ focused }) => (
             <View style={[styles.iconContainer, focused && styles.iconContainerFocused]}>
             <Feather name="home" size={20} color={focused ? '#fff' : '#6366F1'} />
@@ -46,12 +48,28 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="routedropdown"
+        name="route"
         options={{
-          title: ' ',
+          title: 'Route',
+          tabBarLabel: 'Route', 
           tabBarIcon: ({ focused }) => (
             <View style={[styles.iconContainer, focused && styles.iconContainerFocused]}>
             <FontAwesome5 name="route" size={16} color={focused ? '#fff' : '#6366F1'} />
+            </View>
+            
+          ),
+          tabBarItemStyle: styles.tabBarItem,
+        }}
+      />
+
+<Tabs.Screen
+        name="community"
+        options={{
+          title: 'Community',
+          tabBarLabel: 'Community', 
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.iconContainer, focused && styles.iconContainerFocused]}>
+               <FontAwesome6 name="people-group" size={16} color={focused ? '#fff' : '#6366F1'} />
             </View>
             
           ),
@@ -63,6 +81,7 @@ export default function TabLayout() {
             name="about"
             options={{
             title: 'About',
+            tabBarLabel: 'About', 
             tabBarIcon: ({ focused }) => (
                 <View style={[styles.iconContainer, focused && styles.iconContainerFocused]}>
                 <Feather name="book-open" size={20} color={focused ? '#fff' : '#6366F1'} />
@@ -75,6 +94,7 @@ export default function TabLayout() {
          name="loginfeedback"
          options={{
          title: 'Feedback',
+         tabBarLabel: 'Feedback', 
          tabBarIcon: ({ focused }) => (
             <View style={[styles.iconContainer, focused && styles.iconContainerFocused]}>
             <Entypo name="message" size={20} color={focused ? '#fff' : '#6366F1'} />
@@ -112,9 +132,8 @@ const styles = StyleSheet.create({
     gap: 100
   },
   logo: {
-    width: 50,
-    height: 50,
-    resizeMode: 'contain',
+    width: 30,
+    height: 30,
   },
   account: {
     width: 30, height: 30, borderRadius: 24, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center'
@@ -123,24 +142,29 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 24, backgroundColor: '#E0E7FF', alignItems: 'center', justifyContent: 'center'
   },
   tabBar: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 30,
-    borderColor: '#C7D2FE',
-    borderWidth: 2,   
-    borderTopWidth: 1,
     position: 'absolute',
-    bottom: 10,
-    height: 60,  
-    boxShadow: "0px 2px 2px rgba(0, 0, 0, 0.8)",  
-    elevation: 5,
-    marginHorizontal: 90,
-    marginVertical: 0,
-    justifyContent: 'center',   
-    width: 'auto',
-  },
+    bottom: 10, 
+    left: '5%', 
+    right: '5%',  
+    height: 70,   
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    elevation: 5, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: '#C7D2FE',
+    borderWidth: 2,
+    marginHorizontal: 10,
+    paddingHorizontal: 4
+  },  
+  
   tabBarItem: {
-    borderRadius: 15,
-    backgroundColor: 'transparent', 
+    
+      justifyContent: 'center', 
+      alignItems: 'center',
+      paddingVertical: 10,   
+  
+    
   },
   iconContainer: {
     width: 40,
@@ -149,7 +173,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E7FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: -20
   },
   iconContainerFocused: {
     backgroundColor: '#6366F1',

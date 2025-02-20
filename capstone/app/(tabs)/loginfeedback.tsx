@@ -1,67 +1,43 @@
 import React, { useState } from 'react';
-import { Text, StyleSheet, ScrollView, View, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform} from 'react-native';
-import AntDesign from '@expo/vector-icons/AntDesign';
+import { Text, StyleSheet, ScrollView, View, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import FeedbackComponent from '../feedbackmodal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { APP_NAME } from '@/constants';
-
+import AntDesign from '@expo/vector-icons/AntDesign';
 
 type FeedbackItem = {
   id: number;
-  upvotes: number;
-  downvotes: number;
   text: string;
   userName: string;
   userHandle: string;
   initials: string;
+  rating: number;
 };
 
-const GuestFeedback: React.FC = () => {
+const Feedback: React.FC = () => {
   const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([
     {
       id: 1,
-      upvotes: 6,
-      downvotes: 4,
       text: "Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to national hero José Rizal. Apaka angas bbossing!",
       userName: "Ashley",
       userHandle: "@ashruaza",
-      initials: "AR"
+      initials: "AR",
+      rating: 5, // Default rating added to avoid undefined issues
     },
-    // Add other initial feedback items here...
   ]);
 
-  const [inputText, setInputText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
 
-  const handleUpvote = (id: number): void => {
-    setFeedbackData((prevData) =>
-      prevData.map((item) =>
-        item.id === id ? { ...item, upvotes: item.upvotes + 1 } : item
-      )
-    );
-  };
-
-  const handleDownvote = (id: number): void => {
-    setFeedbackData((prevData) =>
-      prevData.map((item) =>
-        item.id === id ? { ...item, downvotes: item.downvotes + 1 } : item
-      )
-    );
-  };
-
-  const handleSubmit = () => {
-    if (inputText.trim()) {
+  const handleSubmit = (text: string, rating: number) => {
+    if (text.trim()) {
       const newFeedback: FeedbackItem = {
         id: feedbackData.length + 1,
-        upvotes: 0,
-        downvotes: 0,
-        text: inputText,
+        text,
         userName: "Ash Ruaza",
         userHandle: "@ashleyruaza",
-        initials: "AR"
+        initials: "AR", // ✅ Fixed missing comma
+        rating, // ✅ Ensuring rating is included
       };
       setFeedbackData([newFeedback, ...feedbackData]);
-      setInputText('');
       setModalVisible(false);
     }
   };
@@ -81,20 +57,18 @@ const GuestFeedback: React.FC = () => {
           <Text style={styles.suggestorusername}>{feedback.userHandle}</Text>
         </View>
       </View>
-
-      <Text style={styles.usersuggestion}>{feedback.text}</Text>
-
-      <View style={styles.arrowcontainer}>
-        <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(feedback.id)}>
-          <AntDesign name="arrowup" size={15} color="#22C55E" />
-          <Text style={[styles.num, { color: '#22C55E' }]}>{feedback.upvotes}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(feedback.id)}>
-          <AntDesign name="arrowdown" size={15} color="#C52222" />
-          <Text style={[styles.num, { color: '#C52222' }]}>{feedback.downvotes}</Text>
-        </TouchableOpacity>
+      <View style={{ flexDirection: 'row', marginLeft: 48, marginVertical:3, gap: 2 }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <AntDesign 
+            key={star} 
+            name="star" 
+            size={14} 
+            color={star <= feedback.rating ? "#FFD700" : "#D3D3D3"} 
+          />
+        ))}
       </View>
+      <Text style={styles.usersuggestion}>{feedback.text}</Text>
+      
     </View>
   );
 
@@ -106,38 +80,40 @@ const GuestFeedback: React.FC = () => {
         share your thoughts and suggestions to make <Text style={styles.boldText}>{APP_NAME}</Text> even better!
       </Text>
 
+      <View style={styles.ButtonContainer}>
+        <TouchableOpacity
+          style={styles.Button}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text style={styles.ButtonText}>Submit Feedback</Text>
+        </TouchableOpacity>
+      </View>
+     
+     <View style={{marginBottom: 150}}>
       {feedbackData.map((feedback) => (
         <FeedbackCard key={feedback.id} feedback={feedback} />
       ))}
-
-      {/* Floating button to open modal */}
-      <View style={styles.floatingButtonContainer}>
-        <TouchableOpacity
-          style={styles.floatingButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.floatingButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
+    </View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"} // Adjust layout for iOS/Android
+        behavior={Platform.OS === "ios" ? "padding" : "height"}  
       >
         <FeedbackComponent
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
           onSubmit={handleSubmit}
-          onNewFeedback={handleNewFeedback} 
+          onNewFeedback={handleNewFeedback} // ✅ Fixed missing prop
         />
       </KeyboardAvoidingView>
     </ScrollView>
   );
 };
 
+ 
 
 const styles = StyleSheet.create({
-  maincontainer: {flexDirection: 'column', padding: 30, backgroundColor: '#F9FAFB', width: '100%'},
+  maincontainer: {flexDirection: 'column', padding: 20, backgroundColor: '#F9FAFB', width: '100%'},
   feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)",    marginBottom: 15},
   suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 11 },
   profile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' },
@@ -151,14 +127,13 @@ const styles = StyleSheet.create({
   arrowdown: { borderWidth: 1, borderColor: '#EBA2A2', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, flexDirection: 'row', alignItems: 'center' },
   arrowcontainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   
-  headerText: { fontSize: 20, fontWeight: '600', color: '#44457D', textAlign: 'center', marginTop: -10},
-  descriptionText: { color: '#44457D', textAlign: 'center', marginBottom: 30, fontSize: 13 },
+  headerText: { fontSize: 20, fontWeight: '600', color: '#44457D', textAlign: 'center', marginTop: -20},
+  descriptionText: { color: '#44457D', textAlign: 'center', fontSize: 13 },
   boldText: { fontWeight: 'bold' },
 
-  floatingButtonContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginLeft: 300, marginBottom: 80, marginTop: 'auto'},
-  floatingButton: { width: 40, height: 40, borderRadius: 28, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center',boxShadow: "0px 4px 4px rgba(0, 0, 0, 0.2)",
-    elevation: 6,},
-  floatingButtonText: { color: '#fff', fontSize: 20, fontWeight: '400' },
+  ButtonContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20, marginTop: 10},
+  Button: { width: 120, height: 25, borderRadius: 5, backgroundColor: '#22C55E', alignItems: 'center', justifyContent: 'center'},
+  ButtonText: { color: '#fff', fontSize: 12, fontWeight: '500' },
   modalBackground: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
   modalContainer: { paddingVertical: 16, backgroundColor: 'white', borderRadius: 10, paddingHorizontal: 20, width: '90%', height: 'auto', minHeight: '40%', justifyContent: 'space-between' },
   modalText: { fontSize: 11, color: '#6B7280', flexWrap: 'wrap', paddingTop: 20, paddingBottom: 6 },
@@ -176,4 +151,4 @@ const styles = StyleSheet.create({
   suggestiontextbox: { backgroundColor: '#F5F7FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 8, fontSize: 11, color: '#374151', marginVertical: 8, width: '100%', height: 120, textAlignVertical: 'top' },
 });
 
-export default GuestFeedback;
+export default Feedback;

@@ -1,26 +1,29 @@
 import { APP_NAME } from '@/constants';
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, View, TextInput,  StyleSheet, TouchableOpacity, Text,} from 'react-native';
-
+import { Modal, View, TextInput, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import AntDesign from '@expo/vector-icons/AntDesign';
 
 interface FeedbackItem {
-        id: number;
-        upvotes: number;
-        downvotes: number;
-        text: string;
-        userName: string;
-        userHandle: string;
-        initials: string;
+  id: number;
+  upvotes: number;
+  downvotes: number;
+  text: string;
+  userName: string;
+  userHandle: string;
+  initials: string;
+  rating: number;
 }
+
 interface ModalComponentProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (inputText: string) => void;
+  onSubmit: (inputText: string, rating: number) => void;
   onNewFeedback: (newPost: FeedbackItem) => void;
 }
 
 const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSubmit, onNewFeedback }) => {
   const [suggestion, setSuggestion] = useState<string>('');
+  const [selectedStars, setSelectedStars] = useState<number>(0);
   const suggestionInputRef = useRef<TextInput>(null);
 
   const handleSubmit = () => {
@@ -33,12 +36,18 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
         userName: "Ashley Ruaza",
         userHandle: "@ashruza",
         text: suggestion,
+        rating: selectedStars,
       };
       onNewFeedback(newFeedback);
       setSuggestion('');
-      onSubmit(suggestion);
+      setSelectedStars(0);
+      onSubmit(suggestion, selectedStars);
       onClose();
     }
+  };
+
+  const handleStarPress = (rating: number) => {
+    setSelectedStars(rating);
   };
 
   useEffect(() => {
@@ -53,47 +62,49 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.modalBackground}>
         <View style={styles.PostContainer}>
-      
-            
-           
-                   
-                        <View style={styles.userdetails}>
-                          <View style={styles.userprofile}>
-                            <Text style={styles.userinitial}>AR</Text>
-                          </View>
-                          <View style={styles.user}>
-                            <Text style={styles.loginusername}>Ash Ruaza</Text>
-                            <Text style={styles.username}>@ashleyruaza</Text>
-                          </View>
-                        </View>
-            
-                        <Text style={styles.modalText}>Tell us your experience using {APP_NAME}</Text>
-            
-                        <TextInput
-                          style={styles.suggestiontextbox}
-                          placeholder="Type here..."
-                          placeholderTextColor="#666"
-                          multiline
-                          value={suggestion}
-              onChangeText={setSuggestion}
-                        />
-            
-            <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-  <Text style={styles.closeText}>Close</Text>
-</TouchableOpacity>
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-  <Text style={styles.submitText}>Submit</Text>
-</TouchableOpacity>
-
-
+          <View style={styles.userdetails}>
+            <View style={styles.userprofile}>
+              <Text style={styles.userinitial}>AR</Text>
             </View>
-     
+            <View style={styles.user}>
+              <Text style={styles.loginusername}>Ash Ruaza</Text>
+              <Text style={styles.username}>@ashleyruaza</Text>
+            </View>
+          </View>
+
+          <Text style={styles.modalText}>Rate your experience</Text>
+          <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <TouchableOpacity key={star} onPress={() => handleStarPress(star)}>
+                <AntDesign name="star" size={20} color={star <= selectedStars ? "#FFD700" : "#D3D3D3"} />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.modalText}>Tell us your experience using {APP_NAME}</Text>
+          <TextInput
+            style={styles.suggestiontextbox}
+            placeholder="Type here..."
+            placeholderTextColor="#666"
+            multiline
+            value={suggestion}
+            onChangeText={setSuggestion}
+          />
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+              <Text style={styles.submitText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
   );
 };
+
 
 const styles = StyleSheet.create({
   modalBackground: {
@@ -200,7 +211,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 8,
+    alignItems: 'center',
   },
   vehicleTypes: {
     flexDirection: 'row',
@@ -252,7 +263,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: 80,
   },
-  modalText: { fontSize: 11, color: '#6B7280', flexWrap: 'wrap', paddingBottom: 6 },
+  modalText: { fontSize: 11, color: '#686A9C', flexWrap: 'wrap', fontWeight: 500, paddingBottom: 6 },
   
   getOnText: {
     color: '#44457D',
@@ -274,7 +285,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '400',
   },
-  closeButton: {
+  cancelButton: {
     borderRadius: 10,
     width: 70,
     height: 36,
@@ -284,14 +295,14 @@ const styles = StyleSheet.create({
   submitButton: {
     borderRadius: 10,
     backgroundColor: '#22C55E',
-    width: 80,
-    height: 36,
+    width: 60,
+    height: 30,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeText: {
+  cancelText: {
     color: '#6366F1',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   submitText: {

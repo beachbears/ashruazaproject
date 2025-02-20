@@ -8,7 +8,7 @@ import {
   ImageBackground,
   StyleSheet,
   ScrollView,
-  TouchableWithoutFeedback,
+ 
   Keyboard,
 } from 'react-native';
 import { APP_NAME} from "../../constants";
@@ -51,7 +51,7 @@ const Home = () => {
 
   return (
     <View style={styles.container}>
-      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+     
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
@@ -125,7 +125,7 @@ const Home = () => {
             </View>
           </View>
         </ScrollView>
-      </TouchableWithoutFeedback>
+       
     </View>
   );
 };
