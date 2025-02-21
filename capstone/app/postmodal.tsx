@@ -65,6 +65,7 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
       vehicles: selectedVehicles,
     };
 
+    
     onSubmit(newPost);
     setLocation('');
     setFare('');
