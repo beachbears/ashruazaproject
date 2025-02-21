@@ -3,9 +3,9 @@ import {View,Text,StyleSheet,ScrollView,TouchableOpacity,TextInput,FlatList} fro
 import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { APP_NAME } from "../../constants";
-import RouteUserScreen from '../routeuser';
-import ModalComponent from '../postmodal';
+import { APP_NAME } from "../constants";
+import RouteUserScreen from './routeuser';
+import ModalComponent from './postmodal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -200,139 +200,140 @@ const PostCard: React.FC<PostCardProps> = ({ post, handleUpvote, handleDownvote,
 };
 
 export default function TabTwoScreen() {
-  const [posts, setPosts] = useState<PostItem[]>([
-    {
-      id: 1,
-      upvotes: 0,
-      downvotes: 0,
-      userinitial: 'AR',
-      loginusername: 'Ashley Ruaza',
-      username: '@ashruaza',
-      location: 'North Olympus',
-      fare: 500,
-      destination: 'National Museum',
-      description: 'Good',
-      suggestiontextbox: 'Some suggestion text here.',
-      timestamp: Date.now() - 7 * 24 * 60 * 60 * 1000,  
-      vehicles: ["Jeep"],
-    },
-  ]);
-
-  useEffect(() => {
-    const loadPosts = async () => {
-      try {
-        const savedPosts = await AsyncStorage.getItem('posts');
-        if (savedPosts) {
-          setPosts(JSON.parse(savedPosts));
+    const [posts, setPosts] = useState<PostItem[]>([
+      {
+        id: 1,
+        upvotes: 0,
+        downvotes: 0,
+        userinitial: 'AR',
+        loginusername: 'Ashley Ruaza',
+        username: '@ashruaza',
+        location: 'North Olympus',
+        fare: 500,
+        destination: 'National Museum',
+        description: 'Good',
+        suggestiontextbox: 'Some suggestion text here.',
+        timestamp: Date.now() - 7 * 24 * 60 * 60 * 1000,  
+        vehicles: ["Jeep"],
+      },
+    ]);
+  
+    // Load posts with unique keys
+    useEffect(() => {
+      const loadPosts = async () => {
+        try {
+          const savedPosts = await AsyncStorage.getItem(`posts_${posts[0].id}`);
+          if (savedPosts) {
+            setPosts(JSON.parse(savedPosts));
+          }
+        } catch (error) {
+          console.error('Error loading posts:', error);
         }
-      } catch (error) {
-        console.error('Error loading posts:', error);
-      }
+      };
+      loadPosts();
+    }, []);
+  
+    // Save posts with unique keys
+    useEffect(() => {
+      const savePosts = async () => {
+        try {
+          await AsyncStorage.setItem(`posts_${posts[0].id}`, JSON.stringify(posts));
+        } catch (error) {
+          console.error('Error saving posts:', error);
+        }
+      };
+      savePosts();
+    }, [posts]);
+  
+    const handleUpvote = (id: number): void => {
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === id ? { ...post, upvotes: post.upvotes + 1 } : post
+        )
+      );
     };
-
-    loadPosts();
-  }, []);
-
-   
-  useEffect(() => {
-    const savePosts = async () => {
-      try {
-        await AsyncStorage.setItem('posts', JSON.stringify(posts));
-      } catch (error) {
-        console.error('Error saving posts:', error);
-      }
+  
+    const handleDownvote = (id: number): void => {
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === id ? { ...post, downvotes: post.downvotes + 1 } : post
+        )
+      );
     };
-
-    savePosts();
-  }, [posts]);
-
-  const handleUpvote = (id: number): void => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === id ? { ...post, upvotes: post.upvotes + 1 } : post
-      )
-    );
-  };
-
-  const handleDownvote = (id: number): void => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === id ? { ...post, downvotes: post.downvotes + 1 } : post
-      )
-    );
-  };
-
-  const handleSubmitPost = (newPost: PostItem) => {
-    setPosts(prevPosts => [...prevPosts, { ...newPost, id: prevPosts.length + 1 }]);
-    setModalVisible(false);
-  };
-
-
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [selectedPost, setSelectedPost] = useState<PostItem | null>(null);
-
-    
-
-  const handleOptionSelect = (option: string) => {
-    setPosts(prevPosts => {
-      const sortedPosts = [...prevPosts];
-      switch (option) {
-        case 'Time':
-          return sortedPosts.sort((a, b) => b.timestamp - a.timestamp);
-        case 'Fare Cost':
-          return sortedPosts.sort((a, b) => a.fare - b.fare);
-        case 'Popularity':
-          return sortedPosts.sort((a, b) => b.upvotes - a.upvotes);
-        case 'Destination':
-          return sortedPosts.sort((a, b) => a.destination.localeCompare(b.destination));
-        default:
-          return sortedPosts;
-      }
-    });
-  };
-
-  if (selectedPost) {
-    return <RouteUserScreen post={selectedPost} onBack={() => setSelectedPost(null)} />;
-  }
-
-  return (
-    <ScrollView style={styles.maincontainer}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
-            <Text style={styles.postButtonText}>Post</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={{ zIndex: 1000, }}>
-          <Dropdown
-            options={dropdownOptions}
-            onSelect={handleOptionSelect}
-            defaultValue="Select Option"
-          />
+  
+    const handleSubmitPost = (newPost: PostItem) => {
+      setPosts(prevPosts => {
+        const updatedPosts = [...prevPosts, { ...newPost, id: prevPosts.length + 1 }];
+        // Save the new post with its unique key
+        AsyncStorage.setItem(`posts_${newPost.id}`, JSON.stringify(updatedPosts))
+          .catch(error => console.error('Error saving new post:', error));
+        return updatedPosts;
+      });
+      setModalVisible(false);
+    };
+  
+    const [modalVisible, setModalVisible] = useState<boolean>(false);
+    const [selectedPost, setSelectedPost] = useState<PostItem | null>(null);
+  
+    const handleOptionSelect = (option: string) => {
+      setPosts(prevPosts => {
+        const sortedPosts = [...prevPosts];
+        switch (option) {
+          case 'Time':
+            return sortedPosts.sort((a, b) => b.timestamp - a.timestamp);
+          case 'Fare Cost':
+            return sortedPosts.sort((a, b) => a.fare - b.fare);
+          case 'Popularity':
+            return sortedPosts.sort((a, b) => b.upvotes - a.upvotes);
+          case 'Destination':
+            return sortedPosts.sort((a, b) => a.destination.localeCompare(b.destination));
+          default:
+            return sortedPosts;
+        }
+      });
+    };
+  
+    if (selectedPost) {
+      return <RouteUserScreen post={selectedPost} onBack={() => setSelectedPost(null)} />;
+    }
+  
+    return (
+      <ScrollView style={styles.maincontainer}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
+          <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
+              <Text style={styles.postButtonText}>Post</Text>
+          </TouchableOpacity>
         </View>
-
-    <View style={{marginBottom: 200}}>
-    {posts.map((item) => (
-  <PostCard
-    key={item.id}  
-    post={item}
-    handleUpvote={handleUpvote}
-    handleDownvote={handleDownvote}
-    onSelect={setSelectedPost}
-  />
-))}
-
-</View>
-      <ModalComponent 
-        visible={modalVisible} 
-        onClose={() => setModalVisible(false)} 
-        onSubmit={handleSubmitPost} 
-      />
-    </ScrollView>
-  );
-}
-
+  
+        <View style={{ zIndex: 1000 }}>
+            <Dropdown
+              options={dropdownOptions}
+              onSelect={handleOptionSelect}
+              defaultValue="Select Option"
+            />
+        </View>
+  
+        <View style={{marginBottom: 200}}>
+          {posts.map((item) => (
+            <PostCard
+              key={item.id}  
+              post={item}
+              handleUpvote={handleUpvote}
+              handleDownvote={handleDownvote}
+              onSelect={setSelectedPost}
+            />
+          ))}
+        </View>
+  
+        <ModalComponent 
+          visible={modalVisible} 
+          onClose={() => setModalVisible(false)} 
+          onSubmit={handleSubmitPost} 
+        />
+      </ScrollView>
+    );
+  }
 const styles = StyleSheet.create({
   maincontainer: {flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15},
   content: {flexDirection: 'row',alignItems: 'center',gap: 4},

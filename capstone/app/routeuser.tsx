@@ -3,8 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Animated, Keyboard} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
-type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp.";
+type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
 type CommentItem = {
     id: number;
     text: string;
@@ -34,6 +35,7 @@ const vehicleIcons: Record<VehicleType, JSX.Element> = {
   "E-jeep": <FontAwesome5 name="bus" size={20} color="#4F46E5" />,
   "Bus": <FontAwesome5 name="bus-alt" size={22} color="#4F46E5" />,
   "UV Exp.": <FontAwesome5 name="car" size={22} color="#4F46E5" />,
+  "Train": <FontAwesome6 name="train-subway" size={24} color="#4F46E5" />
 };
 
 

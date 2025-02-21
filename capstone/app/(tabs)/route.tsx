@@ -91,7 +91,7 @@ const RouteScreen = () => {
                         <TouchableOpacity style={styles.twobox} onPress={() => setModalVisible(true)}>
                             <Text style={styles.texttwo}>Review</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.twobox} onPress={() => router.push("/community")}>
+                        <TouchableOpacity style={styles.twobox} onPress={() => router.push("/postsuggestions")}>
                             <Text style={styles.texttwo}>Route Post Suggestions</Text>
                         </TouchableOpacity>
                     </View>

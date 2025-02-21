@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Modal, StyleSheet, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
 // Define Vehicle Types
-const VEHICLE_TYPES: VehicleType[] = ["Jeep", "E-jeep", "Bus", "UV Exp."];
+const VEHICLE_TYPES: VehicleType[] = ["Jeep", "E-jeep", "Bus", "UV Exp.", "Train"];
 
-type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp.";
+type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
 
 interface PostItem {
   id: number;
@@ -95,28 +96,39 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
         <TextInput placeholder="Destination: E.g. Intramuros" value={destination} onChangeText={setDestination} style={styles.input} />
 
         <View style={styles.vehicleTypes}>
-           {VEHICLE_TYPES.map(vehicle => (
-             <TouchableOpacity 
-               key={vehicle} 
-                style={styles.vehicleItem} 
-                  onPress={() => toggleVehicle(vehicle)}
-                                              >
-                {/* Display the correct icon based on vehicle type */}
-            {vehicle === "Jeep" ? (
-            <MaterialCommunityIcons name="jeepney" size={26} color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} />
-                   ) : (
-                <FontAwesome5 
-                name={vehicle === "UV Exp." ? "car" : vehicle === "Bus" ? "bus-alt" : "bus"} 
-                 size={24} 
-                   color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} 
-                      />
-                      )}
+  {VEHICLE_TYPES.map(vehicle => (
+    <TouchableOpacity 
+      key={vehicle} 
+      style={styles.vehicleItem} 
+      onPress={() => toggleVehicle(vehicle)}
+    >
+      {/* Display the correct icon based on vehicle type */}
+      {vehicle === "Jeep" ? (
+        <MaterialCommunityIcons 
+          name="jeepney" 
+          size={26} 
+          color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} 
+        />
+      ) : vehicle === "Train" ? (
+        <FontAwesome6 
+          name="train-subway" 
+          size={24} 
+          color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} 
+        />
+      ) : (
+        <FontAwesome5 
+          name={vehicle === "UV Exp." ? "car" : vehicle === "Bus" ? "bus-alt" : "bus"} 
+          size={24} 
+          color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} 
+        />
+      )}
 
-             {/* Vehicle name */}
-                   <Text style={styles.vehicleText}>{vehicle}</Text>
-                </TouchableOpacity>
-               ))}
-            </View>
+      {/* Vehicle name */}
+      <Text style={styles.vehicleText}>{vehicle}</Text>
+    </TouchableOpacity>
+  ))}
+</View>
+
 
         <Text style={styles.routeOverviewText}>Route Overview</Text>
 
