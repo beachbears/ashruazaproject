@@ -62,6 +62,13 @@ const RouteScreen = () => {
                 
                 <View style={styles.routecontainer}>
                     <Text style={{fontSize: 13, fontWeight: '500', color: '#6B7280', marginBottom: 18}}>Route Overview</Text>
+                    <Text style={styles.walk}>Walk: 18.2 km (3h 45m)</Text>
+                    <Text style={styles.from}>From: Novaliches, Bayan Glori, Quezon City</Text>
+                    <Text style={styles.to}>To: Intramuros, Manila</Text>
+                    <Text style={styles.walkto}>
+  <Text style={{ fontWeight: 'bold' }}>• Walk to:</Text> Intramuros, Manila
+</Text>
+
                     <View style={styles.routeline}>
                         <View style={{ flexDirection: 'row' }}>
                             <Text style={[styles.getOnOff, { color: 'green' }]}>Get On  </Text>
@@ -104,59 +111,30 @@ const RouteScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  maincontainer: {
-    flexDirection: 'column',
-    backgroundColor: '#F9FAFB',
-    width: '100%',
-  },
-  text: {
-    color: '#44457D',
-    fontWeight: '500',
-    fontSize: 16,
-  },
-  container: {
-    padding: 15,
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginTop: 10,
-  },
-  userlocation: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
-  userdestination: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
+  maincontainer: {flexDirection: 'column',backgroundColor: '#F9FAFB',width: '100%',},
+  text: {color: '#44457D',fontWeight: '500',fontSize: 16,},
+  container: {padding: 15,marginBottom: 20,},
+  label: {fontSize: 12,fontWeight: '500',color: '#6B7280',marginTop: 10,},
+  userlocation: {backgroundColor: '#F5F7FF',borderWidth: 1,borderColor: '#C7D2FE',borderRadius: 8,padding: 8,fontSize: 11,color: '#374151',marginVertical: 8,},
+  userdestination: {backgroundColor: '#F5F7FF',borderWidth: 1,borderColor: '#C7D2FE',borderRadius: 8,padding: 8, fontSize: 11,color: '#374151',marginVertical: 8,},
   box: {flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: '#F4F6FF', padding: 8},
   boxlabel: {fontSize: 11, fontWeight: 700, color: '#44457D'},
 
   routecontainer:{borderWidth: 1, borderColor: '#C7D2FE',borderRadius: 8, padding: 16, flexDirection: 'column', width: '100%', marginTop: 18, marginBottom: 100},
+  walk: {fontWeight: 600, fontSize: 12, color: '#44457D', marginLeft: 70},
+  from: {fontSize: 12, color: '#44457D', marginLeft: 70},
+  to: {fontSize: 12, color: '#44457D', marginLeft: 70},
+  walkto: {fontSize: 12, color: '#44457D', marginTop: 10, marginBottom: 8, marginLeft: 70},
+
   routeline: { paddingLeft: 14, borderLeftWidth: 3  ,borderLeftColor: 'green', },
   greencircle: {position: 'absolute',left: -7 ,paddingHorizontal: 6,paddingVertical: 6, borderRadius: 24, backgroundColor: 'green', alignItems: 'center', justifyContent: 'center', marginRight: 16,},
   bluecircle: {position: 'absolute',left: -4.5 ,paddingHorizontal: 6,paddingVertical: 6, borderRadius: 24, backgroundColor: 'blue', alignItems: 'center', justifyContent: 'center', marginRight: 16},
   routes: {flexDirection: 'column', marginVertical: 6, marginLeft: 3},
   getOnOff: {fontSize: 12, fontWeight: 'bold',  },
-  directionText: {fontSize: 10,color: '#6B7280',marginBottom: 8,marginLeft: 50,},
-  startroute:{fontSize: 10,color: '#6B7280',marginBottom: 10,marginLeft: 5, flexWrap: 'wrap', flex: 1},
-  endroute:{fontSize: 10,color: '#6B7280',marginBottom: 10,marginLeft: 5, flexWrap: 'wrap', flex: 1},
-  walkroutes: {fontSize: 10, color: '#6B7280', marginVertical: 6, marginLeft: 5,  flexWrap: 'wrap', flex: 1},
+  directionText: {fontSize: 12,color: '#44457D',marginBottom: 8,marginLeft: 50,},
+  startroute:{fontSize: 12,color: '#44457D',marginBottom: 10,marginLeft: 5, flexWrap: 'wrap', flex: 1},
+  endroute:{fontSize: 12,color: '#44457D',marginBottom: 10,marginLeft: 5, flexWrap: 'wrap', flex: 1},
+  walkroutes: {fontSize: 12, color: '#44457D', marginVertical: 6, marginLeft: 5,  flexWrap: 'wrap', flex: 1},
   twobox: {borderRadius: 6, backgroundColor: '#E0E7FF', paddingVertical: 5, paddingHorizontal: 12, margin: 4},
   texttwo: {fontSize: 12, color: '#6366F1', fontWeight: 500}
 });
