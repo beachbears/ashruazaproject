@@ -136,7 +136,7 @@ export default function PostSuggestions() {
                 <Text style={styles.cert}>Certified {APP_NAME}</Text>
               </View>
             </View>
-            
+           
           </View>
         </TouchableOpacity>
         ))}
