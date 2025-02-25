@@ -22,13 +22,13 @@ const RouteScreen = () => {
         <View style={styles.container}>
             <Text style={styles.text}>Details</Text>
                 <View style={{padding: 8,marginBottom: 10,}}>
-                    <Text style={styles.label}>Location</Text>
+                    <Text style={styles.label}>From:</Text>
                         <TextInput
                         style={styles.userlocation}
                         placeholder="Novaliches, Bayan Glori"
                         placeholderTextColor="#666"
                         />
-                    <Text style={styles.label}>Destination</Text>
+                    <Text style={styles.label}>To:</Text>
                         <TextInput
                         style={styles.userdestination}
                         placeholder="Intramuros, Manila City"

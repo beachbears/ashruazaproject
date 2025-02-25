@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Modal, StyleSheet, ScrollView } from 'react-native';
+import {
+  Modal,
+  View,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
-// Define Vehicle Types
 const VEHICLE_TYPES: VehicleType[] = ["Jeep", "E-jeep", "Bus", "UV Exp.", "Train"];
 
 type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
 
-interface PostItem {
+interface Post {
   id: number;
   upvotes: number;
   downvotes: number;
@@ -25,32 +32,36 @@ interface PostItem {
   vehicles: VehicleType[];
 }
 
-interface ModalComponentProps {
+interface PostModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (newPost: PostItem) => void;
+  onSubmit: (post: Post) => void;
 }
 
-const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSubmit }) => {
+export default function PostModal({ visible, onClose, onSubmit }: PostModalProps) {
+  // Removed unused user details state since we display hard-coded values.
   const [location, setLocation] = useState('');
   const [fare, setFare] = useState('');
   const [destination, setDestination] = useState('');
   const [description, setDescription] = useState('');
+  // Renamed suggestion state to "suggestion" for simplicity.
   const [suggestion, setSuggestion] = useState('');
   const [selectedVehicles, setSelectedVehicles] = useState<VehicleType[]>([]);
 
   const toggleVehicle = (vehicle: VehicleType) => {
-    setSelectedVehicles(prev => prev.includes(vehicle)
-      ? prev.filter(v => v !== vehicle)
-      : [...prev, vehicle]
+    setSelectedVehicles(prev =>
+      prev.includes(vehicle)
+        ? prev.filter(v => v !== vehicle)
+        : [...prev, vehicle]
     );
   };
 
   const handleSubmit = () => {
-    if (!location || !destination || !description) return; // Prevent empty submissions
+    // Prevent submission if key fields are empty
+    if (!location || !destination || !description) return;
 
-    const newPost: PostItem = {
-      id: Date.now(),
+    const newPost: Post = {
+      id: Date.now(), // Unique ID generation
       upvotes: 0,
       downvotes: 0,
       userinitial: 'AR',
@@ -65,8 +76,8 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
       vehicles: selectedVehicles,
     };
 
-    
     onSubmit(newPost);
+    // Reset form fields after submission
     setLocation('');
     setFare('');
     setDestination('');
@@ -79,79 +90,109 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalContainer}>
-      <View style={styles.postContainer}>
-      <ScrollView>
-
-      <View style={styles.userdetails}>
-            <View style={styles.userprofile}>
-              <Text style={styles.userinitial}>AR</Text>
+        <View style={styles.postContainer}>
+          <ScrollView>
+            {/* User Details */}
+            <View style={styles.userdetails}>
+              <View style={styles.userprofile}>
+                <Text style={styles.userinitial}>AR</Text>
+              </View>
+              <View style={styles.user}>
+                <Text style={styles.loginusername}>Ash Ruaza</Text>
+                <Text style={styles.username}>@ashruaza</Text>
+              </View>
             </View>
-            <View style={styles.user}>
-              <Text style={styles.loginusername}>Ash Ruaza</Text>
-              <Text style={styles.username}>@ashleyruaza</Text>
+
+            {/* Input Fields */}
+            <TextInput
+              placeholder="Location: E.g. Glori Bayan"
+              value={location}
+              onChangeText={setLocation}
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Fare: E.g. 150.00"
+              value={fare}
+              onChangeText={setFare}
+              keyboardType="numeric"
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Destination: E.g. Intramuros"
+              value={destination}
+              onChangeText={setDestination}
+              style={styles.input}
+            />
+
+            {/* Vehicle Selection */}
+            <View style={styles.vehicleTypes}>
+              {VEHICLE_TYPES.map(vehicle => (
+                <TouchableOpacity
+                  key={vehicle}
+                  style={styles.vehicleItem}
+                  onPress={() => toggleVehicle(vehicle)}
+                >
+                  {vehicle === "Jeep" ? (
+                    <MaterialCommunityIcons
+                      name="jeepney"
+                      size={26}
+                      color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"}
+                    />
+                  ) : vehicle === "Train" ? (
+                    <FontAwesome6
+                      name="train-subway"
+                      size={24}
+                      color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"}
+                    />
+                  ) : (
+                    <FontAwesome5
+                      name={vehicle === "UV Exp." ? "car" : vehicle === "Bus" ? "bus-alt" : "bus"}
+                      size={24}
+                      color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"}
+                    />
+                  )}
+                  <Text style={styles.vehicleText}>{vehicle}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          </View>
 
-        <TextInput placeholder="Location: E.g. Glori Bayan" value={location} onChangeText={setLocation} style={styles.input} />
-        <TextInput placeholder="Fare: E.g. 150.00" value={fare} onChangeText={setFare} keyboardType="numeric" style={styles.input} />
-        <TextInput placeholder="Destination: E.g. Intramuros" value={destination} onChangeText={setDestination} style={styles.input} />
+            {/* Route Overview */}
+            <Text style={styles.routeOverviewText}>Route Overview</Text>
+            <TextInput
+              placeholder={"Route Description\n \n \n \n"}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              style={styles.input}
+            />
+            <TextInput
+              placeholder={
+                "Your Experiences\n\nE.g. We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets were enchanting but tricky to navigate without a map. A tricycle driver offered a short tour, which made it easier to locate iconic spots like Fort Santiago and San Agustin Church. Getting lost led us to a quaint café serving authentic Filipino dishes."
+              }
+              value={suggestion}
+              onChangeText={setSuggestion}
+              multiline
+              style={styles.input}
+            />
 
-        <View style={styles.vehicleTypes}>
-  {VEHICLE_TYPES.map(vehicle => (
-    <TouchableOpacity 
-      key={vehicle} 
-      style={styles.vehicleItem} 
-      onPress={() => toggleVehicle(vehicle)}
-    >
-      {/* Display the correct icon based on vehicle type */}
-      {vehicle === "Jeep" ? (
-        <MaterialCommunityIcons 
-          name="jeepney" 
-          size={26} 
-          color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} 
-        />
-      ) : vehicle === "Train" ? (
-        <FontAwesome6 
-          name="train-subway" 
-          size={24} 
-          color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} 
-        />
-      ) : (
-        <FontAwesome5 
-          name={vehicle === "UV Exp." ? "car" : vehicle === "Bus" ? "bus-alt" : "bus"} 
-          size={24} 
-          color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"} 
-        />
-      )}
-
-      {/* Vehicle name */}
-      <Text style={styles.vehicleText}>{vehicle}</Text>
-    </TouchableOpacity>
-  ))}
-</View>
-
-
-        <Text style={styles.routeOverviewText}>Route Overview</Text>
-
-        <TextInput placeholder={"Route Description\n \n \n \n"} value={description} onChangeText={setDescription} multiline style={styles.input} />
-        <TextInput placeholder={"Your Experiences\n\nE.g. We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets were enchanting but tricky to navigate without a map. A tricycle driver offered a short tour, which made it easier to locate iconic spots like Fort Santiago and San Agustin Church. Getting lost led us to a quaint café serving authentic Filipino dishes."}value={suggestion} onChangeText={setSuggestion} multiline style={styles.input} />
-        
-        <View style={styles.buttonContainer}>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Text style={styles.closeText}>Close</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
-          <Text style={styles.buttonText}>Submit</Text>
-        </TouchableOpacity>
-       
-        </View>
-        </ScrollView>
-       
+            {/* Action Buttons */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Text style={styles.closeText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                <Text style={styles.buttonText}>Submit</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
   );
-};
+}
+
+ 
+
 
 const styles = StyleSheet.create({
   modalContainer: {
@@ -269,5 +310,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
-export default ModalComponent;
