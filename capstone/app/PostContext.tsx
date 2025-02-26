@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
+export type PostCategory = 'community' | 'postsuggestions';
+export type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
 
-interface Post {
+export interface Post {
   id: number;
   upvotes: number;
   downvotes: number;
@@ -16,12 +17,15 @@ interface Post {
   suggestiontextbox: string;
   timestamp: number;
   vehicles: VehicleType[];
-  category?: 'community' | 'postsuggestions'; // Add category field
+  category: PostCategory; // Ensure category is required
 }
 
 interface PostContextType {
   posts: Post[];
-  addPost: (newPost: Post, source: 'community' | 'postsuggestions') => void;
+  addPost: (newPost: Omit<Post, 'category'>, source: PostCategory) => void;
+  handleUpvote: (postId: number) => void;
+  handleDownvote: (postId: number) => void;
+  getPostsByCategory: (category: PostCategory) => Post[];
 }
 
 const PostContext = createContext<PostContextType | undefined>(undefined);
@@ -29,13 +33,43 @@ const PostContext = createContext<PostContextType | undefined>(undefined);
 export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [posts, setPosts] = useState<Post[]>([]);
 
-  const addPost = (newPost: Post, source: 'community' | 'postsuggestions') => {
-    const postWithSource = { ...newPost, category: source }; // Add category field
-    setPosts((prevPosts) => [postWithSource, ...prevPosts]); // Correctly update state
+  // Add post with explicit category
+  const addPost = (newPost: Omit<Post, 'category'>, source: PostCategory) => {
+    const postWithCategory: Post = {
+      ...newPost,
+      category: source,
+      id: Date.now(), // Ensure unique ID
+      timestamp: Date.now()
+    };
+    setPosts(prev => [postWithCategory, ...prev]);
+  };
+
+  // Voting handlers
+  const handleUpvote = (postId: number) => {
+    setPosts(prev => prev.map(post => 
+      post.id === postId ? { ...post, upvotes: post.upvotes + 1 } : post
+    ));
+  };
+
+  const handleDownvote = (postId: number) => {
+    setPosts(prev => prev.map(post => 
+      post.id === postId ? { ...post, downvotes: post.downvotes + 1 } : post
+    ));
+  };
+
+  // Filter posts by category
+  const getPostsByCategory = (category: PostCategory) => {
+    return posts.filter(post => post.category === category);
   };
 
   return (
-    <PostContext.Provider value={{ posts, addPost }}>
+    <PostContext.Provider value={{ 
+      posts, 
+      addPost, 
+      handleUpvote, 
+      handleDownvote,
+      getPostsByCategory 
+    }}>
       {children}
     </PostContext.Provider>
   );

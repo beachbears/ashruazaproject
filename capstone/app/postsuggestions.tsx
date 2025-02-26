@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView} from 'react-native';
-import { usePostContext } from './PostContext';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { 
+  usePostContext,
+  type Post,
+  type VehicleType  // Add this
+} from './PostContext';
 import PostModal from './postmodal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
@@ -11,30 +14,53 @@ import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { APP_NAME } from "../constants";
 
-const VEHICLE_TYPES: VehicleType[] = ["Jeep", "E-jeep", "Bus", "UV Exp.", "Train"];
-type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
+const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
 
+interface DropdownProps {
+  options: string[];
+  onSelect?: (option: string) => void;
+  defaultValue?: string;
+}
+
+const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
+
+  const toggleDropdown = () => setIsOpen(!isOpen);
+
+  const selectOption = (option: string) => {
+    setSelectedOption(option);
+    setIsOpen(false);
+    if (onSelect) onSelect(option);
+  };
+
+  return (
+    <View style={styles.dropdowncontainer}>
+      <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
+        <Text style={styles.buttonText}>{selectedOption}</Text>
+        <Entypo name="chevron-down" size={20} color="#44457D" />
+      </TouchableOpacity>
+      {isOpen && (
+        <View style={styles.dropdownList}>
+          {options.map((option, index) => (
+            <TouchableOpacity 
+              key={index} 
+              onPress={() => selectOption(option)} 
+              style={styles.option}
+            >
+              <Text style={styles.optionText}>{option}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
 
 interface PostModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (post: Post) => void;
-}
-
-interface Post {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  userinitial: string;
-  loginusername: string;
-  username: string;
-  location: string;
-  fare: number;
-  destination: string;  
-  description: string;
-  suggestiontextbox: string;
-  timestamp: number;
-  vehicles: VehicleType[];
+  onSubmit: (post: Omit<Post, 'category'>) => void;
 }
 
 const vehicleIcons: Record<VehicleType, JSX.Element> = {
@@ -46,30 +72,72 @@ const vehicleIcons: Record<VehicleType, JSX.Element> = {
 };
 
 export default function PostSuggestions() {
-  const { posts, addPost } = usePostContext();
+  const { posts, addPost, handleUpvote, handleDownvote } = usePostContext();
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string>('Time');
 
+  // Show only suggestion posts
+  const suggestionPosts = posts.filter(post => post.category === 'postsuggestions');
 
-  // Function to submit post from PostSuggestions
-  const handlePostSubmit = (newPost: Post) => {
-    addPost(newPost, 'postsuggestions'); // Save as a 'postsuggestions' post
-    setModalVisible(false);
+  const handleOptionSelect = (option: string) => {
+    setSelectedOption(option);
   };
 
+  const handlePostSubmit = (newPost: Omit<Post, 'category'>) => {
+    addPost(newPost, 'postsuggestions'); // Explicit suggestion category
+  };
+
+  const sortedPosts = suggestionPosts.sort((a, b) => {
+    switch(selectedOption) {
+      case 'Time': 
+        return b.timestamp - a.timestamp;
+      case 'Fare Cost':
+        return a.fare - b.fare;
+      case 'Popularity':
+        return b.upvotes - a.upvotes;
+      case 'Destination':
+        return a.destination.localeCompare(b.destination);
+      default:
+        return 0;
+    }
+  });
+
+    // Add this ABOVE your PostSuggestions component
+const timeAgo = (timestamp: number): string => {
+  const now = Date.now();
+  const diff = now - timestamp;
+  
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diff < minute) return 'Just now';
+  if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+  if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+  return `${Math.floor(diff / day)}d ago`;
+};
 
   return (  
     <ScrollView style={styles.maincontainer}>
-     <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
-          <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
-              <Text style={styles.postButtonText}>Post</Text>
-          </TouchableOpacity>
-        </View>
-      {/* Show ONLY posts from PostSuggestions */}
-      {posts
-        .filter((post) => post.category === 'postsuggestions') // Filter posts
-        .map((post, index) => (
-          <TouchableOpacity style={styles.containerpost}  >
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
+        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
+          <Text style={styles.postButtonText}>Post</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ zIndex: 1000 }}>
+        <Dropdown
+          options={dropdownOptions}
+          onSelect={handleOptionSelect}
+          defaultValue="Select Option"
+        />
+      </View>
+
+<View style={{marginBottom: 200}}> 
+      {sortedPosts.map((post) => (
+        <View key={post.id} style={styles.containerpost}>
+          {/* Your post rendering content */}
           <View style={styles.suggestordetails}>
             <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1}}>
               <View style={styles.profile}>
@@ -80,53 +148,57 @@ export default function PostSuggestions() {
                 <Text style={styles.suggestorusername}>{post.username}</Text>
               </View>
             </View>
-         
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+    <Text style={styles.postTimestamp}>
+      {timeAgo(post.timestamp)}
+    </Text>
+  </View>
           </View>
-    
+
           <View style={styles.detailsContainer}>
-              <View style={{flexDirection: 'column', marginRight: 90}}>
-                  <Text style={styles.label}>Location</Text>
-                  <Text style={styles.locationText}>{post.location}</Text>
-                  </View>
-                  <View style={{flexDirection: 'column', }}>
-                  <Text style={styles.label}>Destination</Text>
-                  <Text style={styles.locationText}>{post.destination}</Text>
-                  </View>
-                  </View>
-    
+            <View style={{flexDirection: 'column', marginRight: 90}}>
+              <Text style={styles.label}>Location</Text>
+              <Text style={styles.locationText}>{post.location}</Text>
+            </View>
+            <View style={{flexDirection: 'column'}}>
+              <Text style={styles.label}>Destination</Text>
+              <Text style={styles.locationText}>{post.destination}</Text>
+            </View>
+          </View>
+
           <View style={styles.routecontainer}>
-               <View style={styles.position}> 
-                  <Text style={styles.conlabel}>Types of Vehicles</Text>
-                  <Text style={styles.fare}>Fare: ₱{post.fare}.00</Text>
+            <View style={styles.position}> 
+              <Text style={styles.conlabel}>Types of Vehicles</Text>
+              <Text style={styles.fare}>Fare: ₱{post.fare}.00</Text>
+            </View>
+            
+            <View style={styles.vehiclesContainer}>
+              {post.vehicles?.length > 0 ? (
+                post.vehicles.map((vehicle, index) => (
+                  <View key={index} style={styles.vehicleItem}>
+                    {vehicleIcons[vehicle]}
+                    <Text style={styles.vehicleText}>{vehicle}</Text>
                   </View>
-          
-                  <View style={styles.vehiclesContainer}>
-                  {post.vehicles?.length > 0 ? (
-                    post.vehicles.map((vehicle, index) => (
-                      <View key={index} style={styles.vehicleItem}>
-                        {vehicleIcons[vehicle]}
-                        <Text style={styles.vehicleText}>{vehicle}</Text>
-                      </View>
-                    ))
-                  ) : (
-                    <Text style={styles.vehicleText}>No vehicles selected</Text>
-                  )}
-                </View>
-                <Text style={styles.estimatedTime}>Estimated Time: 45 minutes to 1.5 hours depending on traffic.</Text>
-                <View style={{ marginTop: 20, marginBottom: 10 }}>
-                        <Text style={styles.conlabel}>Route Overview</Text>
-                    </View>
-          
-                   
-                  <Text style={styles.description}>{post.description}</Text>
-                
-                </View>
-    
-                 <View style={{flexDirection: 'column', gap: 8, marginTop: 20}}>
-                        <Text style={{fontSize: 14, fontWeight: 500, color: '#44457D'}}>Your Experiences </Text>
-                        <Text style={styles.experience}>{post.suggestiontextbox}</Text>
-                        </View>
-    
+                ))
+              ) : (
+                <Text style={styles.vehicleText}>No vehicles selected</Text>
+              )}
+            </View>
+            
+            <Text style={styles.estimatedTime}>Estimated Time: 45 minutes to 1.5 hours depending on traffic.</Text>
+            
+            <View style={{ marginTop: 20, marginBottom: 10 }}>
+              <Text style={styles.conlabel}>Route Overview</Text>
+            </View>
+            
+            <Text style={styles.description}>{post.description}</Text>
+          </View>
+
+          <View style={{flexDirection: 'column', gap: 8, marginTop: 20}}>
+            <Text style={{fontSize: 14, fontWeight: '500', color: '#44457D'}}>Your Experiences</Text>
+            <Text style={styles.experience}>{post.suggestiontextbox}</Text>
+          </View>
+
           <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={styles.content}>
               <Octicons name="shield-check" size={18} color="#6366F1" />
@@ -136,23 +208,44 @@ export default function PostSuggestions() {
                 <Text style={styles.cert}>Certified {APP_NAME}</Text>
               </View>
             </View>
-           
+
+            <View style={styles.arrowcontainer}>
+    <TouchableOpacity 
+      style={styles.arrowup} 
+      onPress={() => handleUpvote(post.id)}
+    >
+      <AntDesign name="arrowup" size={12} color="#22C55E" />
+      <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>
+        {post.upvotes}
+      </Text>
+    </TouchableOpacity>
+    
+    <TouchableOpacity 
+      style={styles.arrowdown} 
+      onPress={() => handleDownvote(post.id)}
+    >
+      <AntDesign name="arrowdown" size={12} color="#C52222" />
+      <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>
+        {post.downvotes}
+      </Text>
+    </TouchableOpacity>
+  </View>
           </View>
-        </TouchableOpacity>
-        ))}
-
-
-     
-
-      {/* Post Modal */}
+        </View>
+      ))}
+</View>
       <PostModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onSubmit={handlePostSubmit} // Posts go to both pages
+        onSubmit={handlePostSubmit}
       />
     </ScrollView>
   );
 }
+
+ 
+
+ 
 
 const styles = StyleSheet.create({
   maincontainer: {flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15},
@@ -194,7 +287,7 @@ const styles = StyleSheet.create({
   arrowcontainer: {  flexDirection: 'row',  alignItems: 'center',  gap: 4,},
   arrowupnum: { marginLeft: 6, fontSize: 10, fontWeight: '700',},
   arrowdownnum: { marginLeft: 6, fontSize: 10, fontWeight: '700', },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16,},
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16, marginTop:16},
   sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 16,},
   dest: { fontSize: 12, color: '#6B7280', fontWeight: '500', marginLeft: 50, },
   usersuggestion: {  fontSize: 12, marginVertical: 4, color: '#6B7280', fontWeight: '500', marginLeft: 50, },

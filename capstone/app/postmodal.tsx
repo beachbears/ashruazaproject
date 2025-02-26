@@ -39,14 +39,13 @@ interface PostModalProps {
 }
 
 export default function PostModal({ visible, onClose, onSubmit }: PostModalProps) {
-  // Removed unused user details state since we display hard-coded values.
   const [location, setLocation] = useState('');
   const [fare, setFare] = useState('');
   const [destination, setDestination] = useState('');
   const [description, setDescription] = useState('');
-  // Renamed suggestion state to "suggestion" for simplicity.
   const [suggestion, setSuggestion] = useState('');
   const [selectedVehicles, setSelectedVehicles] = useState<VehicleType[]>([]);
+  const [isExperienceOnly, setIsExperienceOnly] = useState(false);
 
   const toggleVehicle = (vehicle: VehicleType) => {
     setSelectedVehicles(prev =>
@@ -56,34 +55,40 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
     );
   };
 
+  const handleExperienceToggle = () => {
+    setIsExperienceOnly(!isExperienceOnly);
+  };
+
   const handleSubmit = () => {
-    // Prevent submission if key fields are empty
-    if (!location || !destination || !description) return;
+    if ((!isExperienceOnly && (!location || !destination || !description)) || 
+        (isExperienceOnly && !suggestion)) {
+      return;
+    }
 
     const newPost: Post = {
-      id: Date.now(), // Unique ID generation
+      id: Date.now(),
       upvotes: 0,
       downvotes: 0,
       userinitial: 'AR',
       loginusername: 'Ashley Ruaza',
       username: '@ashruaza',
-      location,
-      fare: parseFloat(fare) || 0,
-      destination,
-      description,
+      location: isExperienceOnly ? 'Experience Post' : location,
+      fare: isExperienceOnly ? 0 : parseFloat(fare) || 0,
+      destination: isExperienceOnly ? 'Experience Post' : destination,
+      description: isExperienceOnly ? '' : description,
       suggestiontextbox: suggestion,
       timestamp: Date.now(),
-      vehicles: selectedVehicles,
+      vehicles: isExperienceOnly ? [] : selectedVehicles,
     };
 
     onSubmit(newPost);
-    // Reset form fields after submission
     setLocation('');
     setFare('');
     setDestination('');
     setDescription('');
     setSuggestion('');
     setSelectedVehicles([]);
+    setIsExperienceOnly(false);
     onClose();
   };
 
@@ -92,7 +97,7 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
       <View style={styles.modalContainer}>
         <View style={styles.postContainer}>
           <ScrollView>
-            {/* User Details */}
+            <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' ,  }}> 
             <View style={styles.userdetails}>
               <View style={styles.userprofile}>
                 <Text style={styles.userinitial}>AR</Text>
@@ -101,81 +106,106 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
                 <Text style={styles.loginusername}>Ash Ruaza</Text>
                 <Text style={styles.username}>@ashruaza</Text>
               </View>
+              </View>
+              <TouchableOpacity 
+              style={styles.toggleContainer}
+              onPress={handleExperienceToggle}
+            >
+              <View style={[
+                styles.toggleCircle,
+                isExperienceOnly && styles.toggleCircleActive
+              ]}>
+              </View>
+              <Text style={styles.toggleText}>
+                {isExperienceOnly ? 'Switch to Full Post' : 'Experience Only'}
+              </Text>
+            </TouchableOpacity>
+            
             </View>
 
-            {/* Input Fields */}
-            <TextInput
-              placeholder="Location: E.g. Glori Bayan"
-              value={location}
-              onChangeText={setLocation}
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Fare: E.g. 150.00"
-              value={fare}
-              onChangeText={setFare}
-              keyboardType="numeric"
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Destination: E.g. Intramuros"
-              value={destination}
-              onChangeText={setDestination}
-              style={styles.input}
-            />
+            
 
-            {/* Vehicle Selection */}
-            <View style={styles.vehicleTypes}>
-              {VEHICLE_TYPES.map(vehicle => (
-                <TouchableOpacity
-                  key={vehicle}
-                  style={styles.vehicleItem}
-                  onPress={() => toggleVehicle(vehicle)}
-                >
-                  {vehicle === "Jeep" ? (
-                    <MaterialCommunityIcons
-                      name="jeepney"
-                      size={26}
-                      color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"}
-                    />
-                  ) : vehicle === "Train" ? (
-                    <FontAwesome6
-                      name="train-subway"
-                      size={24}
-                      color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"}
-                    />
-                  ) : (
-                    <FontAwesome5
-                      name={vehicle === "UV Exp." ? "car" : vehicle === "Bus" ? "bus-alt" : "bus"}
-                      size={24}
-                      color={selectedVehicles.includes(vehicle) ? "gray" : "#4F46E5"}
-                    />
-                  )}
-                  <Text style={styles.vehicleText}>{vehicle}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {!isExperienceOnly && (
+              <>
+                <TextInput
+                  placeholder="Location: E.g. Glori Bayan"
+                  value={location}
+                  onChangeText={setLocation}
+                  style={styles.input}
+                />
+                <TextInput
+                  placeholder="Fare: E.g. 150.00"
+                  value={fare}
+                  onChangeText={setFare}
+                  keyboardType="numeric"
+                  style={styles.input}
+                />
+                <TextInput
+                  placeholder="Destination: E.g. Intramuros"
+                  value={destination}
+                  onChangeText={setDestination}
+                  style={styles.input}
+                />
 
-            {/* Route Overview */}
-            <Text style={styles.routeOverviewText}>Route Overview</Text>
+                <View style={styles.vehicleTypes}>
+                  {VEHICLE_TYPES.map(vehicle => (
+                    <TouchableOpacity
+                      key={vehicle}
+                      style={[
+                        styles.vehicleItem,
+                        
+                      ]}
+                      onPress={() => toggleVehicle(vehicle)}
+                    >
+                      {vehicle === "Jeep" ? (
+                        <MaterialCommunityIcons
+                          name="jeepney"
+                          size={26}
+                          color={selectedVehicles.includes(vehicle) ? "#4F46E5" : "#64748B"}
+                        />
+                      ) : vehicle === "Train" ? (
+                        <FontAwesome6
+                          name="train-subway"
+                          size={24}
+                          color={selectedVehicles.includes(vehicle) ? "#4F46E5" : "#64748B"}
+                        />
+                      ) : (
+                        <FontAwesome5
+                          name={vehicle === "UV Exp." ? "car" : vehicle === "Bus" ? "bus-alt" : "bus"}
+                          size={24}
+                          color={selectedVehicles.includes(vehicle) ? "#4F46E5" : "#64748B"}
+                        />
+                      )}
+                      <Text style={[
+                        styles.vehicleText,
+                        { color: selectedVehicles.includes(vehicle) ? "#4F46E5" : "#64748B" }
+                      ]}>
+                        {vehicle}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.routeOverviewText}>Route Overview</Text>
+                <TextInput
+                  placeholder={"Route Description\n\n"}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  style={styles.input}
+                />
+              </>
+            )}
+
             <TextInput
-              placeholder={"Route Description\n \n \n \n"}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              style={styles.input}
-            />
-            <TextInput
-              placeholder={
-                "Your Experiences\n\nE.g. We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets were enchanting but tricky to navigate without a map. A tricycle driver offered a short tour, which made it easier to locate iconic spots like Fort Santiago and San Agustin Church. Getting lost led us to a quaint café serving authentic Filipino dishes."
-              }
+              placeholder={"Your Experiences\n\nE.g. We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets were enchanting but tricky to navigate without a map. A tricycle driver offered a short tour, which made it easier to locate iconic spots like Fort Santiago and San Agustin Church. Getting lost led us to a quaint café serving authentic Filipino dishes."}
+              
               value={suggestion}
               onChangeText={setSuggestion}
               multiline
               style={styles.input}
             />
 
-            {/* Action Buttons */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
                 <Text style={styles.closeText}>Close</Text>
@@ -190,9 +220,6 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
     </Modal>
   );
 }
-
- 
-
 
 const styles = StyleSheet.create({
   modalContainer: {
@@ -211,7 +238,6 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     justifyContent: 'space-between',
   },
-
   userdetails: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -272,6 +298,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#6B7280',
   },
+  
   routeOverviewText: {
     color: '#44457D',
     fontWeight: '400',
@@ -301,12 +328,40 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#FFFFFF',
-  fontSize: 13,
-  fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '700',
   },
   closeText: {
     color: '#6366F1',
     fontSize: 13,
     fontWeight: '700',
+  },
+  experienceToggle: {
+    backgroundColor: '#E0E7FF',
+    padding: 6,
+    borderRadius: 8,
+    marginVertical: 10,
+    alignItems: 'flex-end',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  toggleCircle: {
+    width: 12,
+    height: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#4F46E5',
+    marginRight: 10,
+  },
+  toggleCircleActive: {
+    backgroundColor: '#4F46E5',
+  },
+  toggleText: {
+    color: '#44457D',
+    fontWeight: '500',
+    fontSize: 12,
   },
 });

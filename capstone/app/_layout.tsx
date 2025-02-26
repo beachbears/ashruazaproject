@@ -7,6 +7,13 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="routeuser" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="postsuggestions" 
+          options={{ 
+            headerShown: false,
+            title: 'Suggestions'
+          }} 
+        />
         <Slot />  
       </Stack>
     </PostProvider>

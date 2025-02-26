@@ -87,7 +87,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="loginfeedback"
+          name="feedback"
           options={{
             title: 'Feedback',
             tabBarLabel: 'Feedback',

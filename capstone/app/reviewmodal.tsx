@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Image, ScrollView,  Dimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface ReviewModalProps {
   visible: boolean;
   onClose: () => void;
 }
+const windowWidth = Dimensions.get('window').width;
+const windowHeight = Dimensions.get('window').height;
 
 const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose }) => {
   return (
@@ -13,15 +15,17 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           
-            <Image
-                source={require('../assets/images/intramuros.jpg')}
-                style={styles.image}
-            />
-                           
-            <View style={styles.label}>
-                <Text style={styles.touristspot}>Intramuros</Text>
-                <Text style={styles.location}>Manila City</Text>
-            </View>
+        <View style={styles.imageContainer}>
+  <Image
+    source={require('../assets/images/intramuros.jpg')}
+    style={styles.image}
+    resizeMode="cover"
+  />
+  <View style={styles.labelContainer}>
+    <Text style={styles.touristspot}>Intramuros</Text>
+    <Text style={styles.location}>Manila City</Text>
+  </View>
+</View>
                 
             <Text style={styles.description}>Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to national hero José Rizal. The ornate Manila Cathedral houses bronze carvings and stained glass windows.</Text>
 
@@ -85,10 +89,31 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: { backgroundColor: 'white', padding: 10, borderRadius: 10, width: '90%', height: '90%'},
  
-  image: {height: 200, width: '100%', borderRadius: 10,},
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: windowHeight * 0.3, // 30% of screen height
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginVertical: 10,
+  },
+  labelContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10,
+  },
+  image: { width: '100%',
+    height: '100%', borderRadius: 10,},
   label: {flex: 1, flexDirection: 'column', justifyContent: 'flex-end',   alignItems: 'flex-start', marginLeft: 10, marginBottom: 10 },
-  touristspot: {position: 'absolute',bottom: 10, color: 'white',  fontSize: 20,marginBottom: 20,fontWeight: 'bold',textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: { width: 1, height: 1 },textShadowRadius: 3,},
-  location: {position: 'absolute',bottom: 10, color: 'white', fontSize: 14,fontWeight: '500',textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: { width: 1, height: 1 },textShadowRadius: 30,},
+  touristspot: {position: 'absolute',bottom: 26, color: 'white',   textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: { width: 1, height: 1 },textShadowRadius: 3,    marginLeft: 10,
+  fontSize: windowWidth < 400 ? 16 : 20, // Responsive text sizing
+  fontWeight: 'bold',
+  marginBottom: 4,},
+  location: {position: 'absolute',bottom: 10,   fontWeight: '500',textShadowColor: 'rgba(0, 0, 0, 0.8)', textShadowOffset: { width: 1, height: 1 },textShadowRadius: 30,  color: 'white',  marginLeft: 10,
+  fontSize: windowWidth < 400 ? 14 : 16,},
 
   description: { fontSize: 12, color: '#686A9C',},
   triviafacts: { fontSize: 12, color: '#4F6355',},
