@@ -3,12 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Use your local IP address and port
 const axiosInstance = axios.create({
-  baseURL: 'http://192.168.202.224:8081',
+  baseURL: 'https://comgu20-production.up.railway.app', // prod: http://comgu20-production.up.railway.app
+  timeout: 10000, // Moved outside of headers
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
+
 
 // Add request interceptor to include token
 axiosInstance.interceptors.request.use(
