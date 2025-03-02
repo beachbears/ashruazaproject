@@ -21,6 +21,9 @@ import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import ReviewModal from '../reviewmodal';
+
+const router = useRouter();
+
 const polyline = require('@mapbox/polyline'); // Using require for CommonJS module
 
 LogBox.ignoreLogs(['textShadow*', 'shadow*']);
@@ -555,7 +558,7 @@ const RouteScreen: React.FC = () => {
       <Text style={styles.text}>Details</Text>
 
       {/* Origin Input */}
-      <Text style={styles.label}>Origin</Text>
+      <Text style={styles.label}>From:</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.userInput}
@@ -576,7 +579,7 @@ const RouteScreen: React.FC = () => {
       <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
 
       {/* Destination Input */}
-      <Text style={styles.label}>Destination</Text>
+      <Text style={styles.label}>To:</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.userInput}
@@ -614,9 +617,11 @@ const RouteScreen: React.FC = () => {
             <TouchableOpacity style={styles.twobox} onPress={() => setModalVisible(true)}>
               <Text style={styles.texttwo}>Review</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.twobox} onPress={() => router.push("/postsuggestion")}>
-              <Text style={styles.texttwo}>Route Post Suggestions</Text>
-            </TouchableOpacity>
+            <TouchableOpacity style={styles.twobox} onPress={() => router.push("/postsuggestions")}>
+                            <Text style={styles.texttwo}>Route Post Suggestions</Text>
+                        </TouchableOpacity>
+ 
+
           </View>
           <ReviewModal visible={modalVisible} onClose={() => setModalVisible(false)} />
         </View>
@@ -636,6 +641,8 @@ const RouteScreen: React.FC = () => {
   if (hasRoute) {
     return (
       <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        
+        <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
         <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
           <MapComponent
             initialRegion={region}
@@ -645,7 +652,6 @@ const RouteScreen: React.FC = () => {
             style={styles.map}
           />
         </Animated.View>
-        <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
           {detailsContent}
         </ScrollView>
       </View>
@@ -669,10 +675,7 @@ const RouteScreen: React.FC = () => {
 };
 
 export default RouteScreen;
-
-//
-// Styles
-//
+ 
 const styles = StyleSheet.create({
   maincontainer: {
     width: '100%',

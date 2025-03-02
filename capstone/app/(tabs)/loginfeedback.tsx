@@ -49,11 +49,8 @@ const Feedback: React.FC = () => {
   // When a user submits feedback, use the user's name from context.
   const handleSubmit = async (text: string, rating: number) => {
     if (text.trim() && userName) {
-      // Compute initials from userName (e.g., "John Doe" => "JD")
       const initials = userName.split(' ').map((word: any[]) => word[0]).join('').toUpperCase();
-      // Generate a simple user handle based on the user's name.
       const handle = '@' + userName.toLowerCase().replace(/\s+/g, '');
-      
       const newFeedback: FeedbackItem = {
         id: feedbackData.length + 1, // Alternatively, use the backend-provided ID
         text,
