@@ -122,14 +122,14 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
             </View>
 
             <TextInput
-              placeholder="Location: E.g. Glori Bayan"
+              placeholder="From: E.g. Glori Bayan"
               value={location}
               onChangeText={setLocation}
               style={styles.input}
             />
 
             <TextInput
-              placeholder="Destination: E.g. Intramuros"
+              placeholder="To: E.g. Intramuros"
               value={destination}
               onChangeText={setDestination}
               style={styles.input}
