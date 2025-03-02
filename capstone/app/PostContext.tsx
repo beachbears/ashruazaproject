@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export type PostCategory = 'community' | 'postsuggestions';
+// Update PostCategory type to include 'experience'
+export type PostCategory = 'community' | 'postsuggestions' | 'experience';
 export type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
 
 export interface Post {
@@ -17,7 +18,8 @@ export interface Post {
   suggestiontextbox: string;
   timestamp: number;
   vehicles: VehicleType[];
-  category: PostCategory; // Ensure category is required
+  category: PostCategory;
+  isExperienceOnly: boolean;
 }
 
 interface PostContextType {
@@ -26,25 +28,28 @@ interface PostContextType {
   handleUpvote: (postId: number) => void;
   handleDownvote: (postId: number) => void;
   getPostsByCategory: (category: PostCategory) => Post[];
+  experienceOnly: boolean;
+  setExperienceOnly: (value: boolean) => void;
 }
 
 const PostContext = createContext<PostContextType | undefined>(undefined);
 
 export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [experienceOnly, setExperienceOnly] = useState(false);
 
-  // Add post with explicit category
   const addPost = (newPost: Omit<Post, 'category'>, source: PostCategory) => {
     const postWithCategory: Post = {
       ...newPost,
       category: source,
-      id: Date.now(), // Ensure unique ID
+      isExperienceOnly: newPost.isExperienceOnly, // Ensure this is correctly set
+      id: Date.now(),
       timestamp: Date.now()
     };
+    console.log("Post with Category:", postWithCategory); // Log the post object
     setPosts(prev => [postWithCategory, ...prev]);
   };
 
-  // Voting handlers
   const handleUpvote = (postId: number) => {
     setPosts(prev => prev.map(post => 
       post.id === postId ? { ...post, upvotes: post.upvotes + 1 } : post
@@ -57,7 +62,6 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ));
   };
 
-  // Filter posts by category
   const getPostsByCategory = (category: PostCategory) => {
     return posts.filter(post => post.category === category);
   };
@@ -68,7 +72,9 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       addPost, 
       handleUpvote, 
       handleDownvote,
-      getPostsByCategory 
+      getPostsByCategory,
+      experienceOnly,
+      setExperienceOnly
     }}>
       {children}
     </PostContext.Provider>

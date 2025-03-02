@@ -5,8 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   Text,
-  StyleSheet,
-  ScrollView,
+  ScrollView, StyleSheet
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -30,12 +29,13 @@ interface Post {
   suggestiontextbox: string;
   timestamp: number;
   vehicles: VehicleType[];
+  isExperienceOnly: boolean;
 }
 
 interface PostModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (post: Post) => void;
+  onSubmit: (post: Omit<Post, 'category'>) => void;
 }
 
 export default function PostModal({ visible, onClose, onSubmit }: PostModalProps) {
@@ -57,30 +57,29 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
 
   const handleExperienceToggle = () => {
     setIsExperienceOnly(!isExperienceOnly);
+    console.log("isExperienceOnly:", !isExperienceOnly); // Log the new state
   };
-
+  
   const handleSubmit = () => {
-    if ((!isExperienceOnly && (!location || !destination || !description)) || 
-        (isExperienceOnly && !suggestion)) {
-      return;
-    }
-
-    const newPost: Post = {
+    const newPost: Omit<Post, 'category'> = {
       id: Date.now(),
       upvotes: 0,
       downvotes: 0,
       userinitial: 'AR',
       loginusername: 'Ashley Ruaza',
       username: '@ashruaza',
-      location: isExperienceOnly ? 'Experience Post' : location,
-      fare: isExperienceOnly ? 0 : parseFloat(fare) || 0,
-      destination: isExperienceOnly ? 'Experience Post' : destination,
-      description: isExperienceOnly ? '' : description,
+      fare: isExperienceOnly ? 0 : parseFloat(fare) || 0, // Set fare to 0 for experience-only posts
+      location: location,
+      destination: destination,
+      description: isExperienceOnly ? '' : description, // Empty description for experience-only posts
       suggestiontextbox: suggestion,
       timestamp: Date.now(),
-      vehicles: isExperienceOnly ? [] : selectedVehicles,
+      vehicles: isExperienceOnly ? [] : selectedVehicles, // Empty vehicles for experience-only posts
+      isExperienceOnly: isExperienceOnly,
     };
-
+  
+    console.log("New Post:", newPost); // Log the new post object
+    console.log("isExperienceOnly:", isExperienceOnly); // Inside handleSubmit in PostModal
     onSubmit(newPost);
     setLocation('');
     setFare('');
@@ -97,53 +96,52 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
       <View style={styles.modalContainer}>
         <View style={styles.postContainer}>
           <ScrollView>
-            <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' ,  }}> 
-            <View style={styles.userdetails}>
-              <View style={styles.userprofile}>
-                <Text style={styles.userinitial}>AR</Text>
-              </View>
-              <View style={styles.user}>
-                <Text style={styles.loginusername}>Ash Ruaza</Text>
-                <Text style={styles.username}>@ashruaza</Text>
-              </View>
+            <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+              <View style={styles.userdetails}>
+                <View style={styles.userprofile}>
+                  <Text style={styles.userinitial}>AR</Text>
+                </View>
+                <View style={styles.user}>
+                  <Text style={styles.loginusername}>Ash Ruaza</Text>
+                  <Text style={styles.username}>@ashruaza</Text>
+                </View>
               </View>
               <TouchableOpacity 
-              style={styles.toggleContainer}
-              onPress={handleExperienceToggle}
-            >
-              <View style={[
-                styles.toggleCircle,
-                isExperienceOnly && styles.toggleCircleActive
-              ]}>
-              </View>
-              <Text style={styles.toggleText}>
-                {isExperienceOnly ? 'Switch to Full Post' : 'Experience Only'}
-              </Text>
-            </TouchableOpacity>
-            
+                style={styles.toggleContainer}
+                onPress={handleExperienceToggle}
+              >
+                <View style={[
+                  styles.toggleCircle,
+                  isExperienceOnly && styles.toggleCircleActive
+                ]}>
+                </View>
+                <Text style={styles.toggleText}>
+                  {isExperienceOnly ? 'Switch to Full Post' : 'Experience Only'}
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            
+            <TextInput
+              placeholder="Location: E.g. Glori Bayan"
+              value={location}
+              onChangeText={setLocation}
+              style={styles.input}
+            />
+
+            <TextInput
+              placeholder="Destination: E.g. Intramuros"
+              value={destination}
+              onChangeText={setDestination}
+              style={styles.input}
+            />
 
             {!isExperienceOnly && (
               <>
-                <TextInput
-                  placeholder="Location: E.g. Glori Bayan"
-                  value={location}
-                  onChangeText={setLocation}
-                  style={styles.input}
-                />
                 <TextInput
                   placeholder="Fare: E.g. 150.00"
                   value={fare}
                   onChangeText={setFare}
                   keyboardType="numeric"
-                  style={styles.input}
-                />
-                <TextInput
-                  placeholder="Destination: E.g. Intramuros"
-                  value={destination}
-                  onChangeText={setDestination}
                   style={styles.input}
                 />
 
@@ -153,7 +151,6 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
                       key={vehicle}
                       style={[
                         styles.vehicleItem,
-                        
                       ]}
                       onPress={() => toggleVehicle(vehicle)}
                     >
@@ -199,7 +196,6 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
 
             <TextInput
               placeholder={"Your Experiences\n\nE.g. We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets were enchanting but tricky to navigate without a map. A tricycle driver offered a short tour, which made it easier to locate iconic spots like Fort Santiago and San Agustin Church. Getting lost led us to a quaint café serving authentic Filipino dishes."}
-              
               value={suggestion}
               onChangeText={setSuggestion}
               multiline

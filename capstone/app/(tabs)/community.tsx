@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { 
   usePostContext,
   type Post,
-  type VehicleType  // Add this
+  type VehicleType
 } from '../PostContext';
 import PostModal from '../postmodal';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,22 +16,21 @@ import { APP_NAME } from "../../constants";
 
 const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
 
-interface DropdownProps {
+// Dropdown Component
+const Dropdown: React.FC<{
   options: string[];
   onSelect?: (option: string) => void;
   defaultValue?: string;
-}
-
-const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
+}> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(defaultValue);
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
   const selectOption = (option: string) => {
     setSelectedOption(option);
     setIsOpen(false);
-    if (onSelect) onSelect(option);
+    onSelect?.(option);
   };
 
   return (
@@ -65,26 +64,18 @@ const vehicleIcons: Record<VehicleType, JSX.Element> = {
   "Train": <FontAwesome6 name="train-subway" size={24} color="#4F46E5" />
 };
 
-const timeAgo = (timestamp: number): string => {
-  const now = Date.now();
-  const diff = now - timestamp;
-  
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (diff < minute) return 'Just now';
-  if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`;
-  return `${Math.floor(diff / day)}d ago`;
-};
-
 export default function Community() {
-  const { posts, addPost, handleUpvote, handleDownvote } = usePostContext();
+  const { 
+    posts, 
+    addPost, 
+    handleUpvote, 
+    handleDownvote, 
+    experienceOnly, 
+    setExperienceOnly 
+  } = usePostContext();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string>('Time');
 
-  // Show posts from BOTH categories
   const allPosts = posts;
 
   const sortedPosts = allPosts.sort((a, b) => {
@@ -102,17 +93,35 @@ export default function Community() {
     }
   });
 
-  const handlePostSubmit = (newPost: Omit<Post, 'category'>) => {
-    addPost(newPost, 'community'); // Explicit community category
+  const timeAgo = (timestamp: number): string => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (diff < minute) return 'Just now';
+    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+    return `${Math.floor(diff / day)}d ago`;
   };
-  
-  
+
+  const handlePostSubmit = (newPost: Omit<Post, 'category'>) => {
+    addPost({ 
+      ...newPost,
+      isExperienceOnly: experienceOnly 
+    }, 'community');
+    setExperienceOnly(false);
+  };
 
   return (
     <ScrollView style={styles.maincontainer}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Community Posts</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
+        <TouchableOpacity 
+          onPress={() => setModalVisible(true)} 
+          style={styles.postbutton}
+        >
           <Text style={styles.postButtonText}>Create Post</Text>
         </TouchableOpacity>
       </View>
@@ -124,117 +133,127 @@ export default function Community() {
           defaultValue="Select Option"
         />
       </View>
-<View style={{marginBottom: 200}}> 
-      {sortedPosts.map((post) => (
-        <View key={post.id} style={styles.containerpost}>
-          <View style={styles.suggestordetails}>
-            <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-              <View style={styles.profile}>
-                <Text style={styles.initial}>{post.userinitial}</Text>
-              </View>
-              <View style={styles.suggestor}>
-                <Text style={styles.suggestorname}>{post.loginusername}</Text>
-                <Text style={styles.suggestorusername}>{post.username}</Text>
-              </View>
-              
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                  <Text style={styles.postTimestamp}>
-                    {timeAgo(post.timestamp)}
-                  </Text>
+
+      <View style={{marginBottom: 200}}> 
+        {sortedPosts.map((post) =>  (
+          
+          <View key={post.id} style={styles.containerpost}>
+            <View style={styles.suggestordetails}>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                <View style={styles.profile}>
+                  <Text style={styles.initial}>{post.userinitial}</Text>
                 </View>
-          </View>
-
-          <View style={styles.detailsContainer}>
-            <View style={{flexDirection: 'column', marginRight: 90}}>
-              <Text style={styles.label}>Location</Text>
-              <Text style={styles.locationText}>{post.location}</Text>
-            </View>
-            <View style={{flexDirection: 'column'}}>
-              <Text style={styles.label}>Destination</Text>
-              <Text style={styles.locationText}>{post.destination}</Text>
-            </View>
-          </View>
-
-          <View style={styles.routecontainer}>
-            <View style={styles.position}> 
-              <Text style={styles.conlabel}>Types of Vehicles</Text>
-              <Text style={styles.fare}>Fare: ₱{post.fare}.00</Text>
-            </View>
-            
-            <View style={styles.vehiclesContainer}>
-              {post.vehicles?.length > 0 ? (
-                post.vehicles.map((vehicle, index) => (
-                  <View key={index} style={styles.vehicleItem}>
-                    {vehicleIcons[vehicle]}
-                    <Text style={styles.vehicleText}>{vehicle}</Text>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.vehicleText}>No vehicles selected</Text>
-              )}
-            </View>
-            
-            <Text style={styles.estimatedTime}>Estimated Time: 45 minutes to 1.5 hours depending on traffic.</Text>
-            
-            <View style={{ marginTop: 20, marginBottom: 10 }}>
-              <Text style={styles.conlabel}>Route Overview</Text>
-            </View>
-            
-            <Text style={styles.description}>{post.description}</Text>
-          </View>
-
-          <View style={{flexDirection: 'column', gap: 8, marginTop: 20}}>
-            <Text style={{fontSize: 14, fontWeight: '500', color: '#44457D'}}>Your Experiences</Text>
-            <Text style={styles.experience}>{post.suggestiontextbox}</Text>
-          </View>
-
-          <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={styles.content}>
-              <Octicons name="shield-check" size={18} color="#6366F1" />
-              <Text style={styles.status}>Status</Text>
-              <View style={styles.badge}>
-                <Entypo name="check" size={14} color="#03C04A" />
-                <Text style={styles.cert}>Certified {APP_NAME}</Text>
+                <View style={styles.suggestor}>
+                  <Text style={styles.suggestorname}>{post.loginusername}</Text>
+                  <Text style={styles.suggestorusername}>{post.username}</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={styles.postTimestamp}>
+                  {timeAgo(post.timestamp)}
+                </Text>
               </View>
             </View>
-            
-            <View style={styles.arrowcontainer}>
-              <TouchableOpacity 
-                style={styles.arrowup} 
-                onPress={() => handleUpvote(post.id)}
-              >
-                <AntDesign name="arrowup" size={12} color="#22C55E" />
-                <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>
-                  {post.upvotes}
+
+            <View style={styles.detailsContainer}>
+              <View style={{flexDirection: 'column', marginRight: 90}}>
+                <Text style={styles.label}>Location</Text>
+                <Text style={styles.locationText}>{post.location}</Text>
+              </View>
+              <View style={{flexDirection: 'column'}}>
+                <Text style={styles.label}>Destination</Text>
+                <Text style={styles.locationText}>{post.destination}</Text>
+              </View>
+            </View>
+
+            {/* Completely remove routecontainer for experience-only posts */}
+            {!post.isExperienceOnly && (
+              <View style={styles.routecontainer}>
+                <View style={styles.position}> 
+                  <Text style={styles.conlabel}>Types of Vehicles</Text>
+                  <Text style={styles.fare}>Fare: ₱{post.fare}.00</Text>
+                </View>
+                
+                <View style={styles.vehiclesContainer}>
+                  {post.vehicles?.length > 0 ? (
+                    post.vehicles.map((vehicle, index) => (
+                      <View key={index} style={styles.vehicleItem}>
+                        {vehicleIcons[vehicle]}
+                        <Text style={styles.vehicleText}>{vehicle}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.vehicleText}>No vehicles selected</Text>
+                  )}
+                </View>
+                
+                <Text style={styles.estimatedTime}>
+                  Estimated Time: 45 minutes to 1.5 hours depending on traffic.
                 </Text>
-              </TouchableOpacity>
+                
+                <View style={{ marginTop: 20, marginBottom: 10 }}>
+                  <Text style={styles.conlabel}>Route Overview</Text>
+                </View>
+                
+                <Text style={styles.description}>{post.description}</Text>
+              </View>
+            )}
+
+            <View style={{flexDirection: 'column', gap: 8, marginTop: 20}}>
+              <Text style={{fontSize: 14, fontWeight: '500', color: '#44457D'}}>
+                {post.isExperienceOnly ? 'Your Experience' : 'Your Suggestions'}
+              </Text>
+              <Text style={styles.experience}>{post.suggestiontextbox}</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={styles.content}>
+                <Octicons name="shield-check" size={18} color="#6366F1" />
+                <Text style={styles.status}>Status</Text>
+                <View style={styles.badge}>
+                  <Entypo name="check" size={14} color="#03C04A" />
+                  <Text style={styles.cert}>Certified {APP_NAME}</Text>
+                </View>
+              </View>
               
-              <TouchableOpacity 
-                style={styles.arrowdown} 
-                onPress={() => handleDownvote(post.id)}
-              >
-                <AntDesign name="arrowdown" size={12} color="#C52222" />
-                <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>
-                  {post.downvotes}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.arrowcontainer}>
+                <TouchableOpacity 
+                  style={styles.arrowup} 
+                  onPress={() => handleUpvote(post.id)}
+                >
+                  <AntDesign name="arrowup" size={12} color="#22C55E" />
+                  <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>
+                    {post.upvotes}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.arrowdown} 
+                  onPress={() => handleDownvote(post.id)}
+                >
+                  <AntDesign name="arrowdown" size={12} color="#C52222" />
+                  <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>
+                    {post.downvotes}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      ))}
-
-</View>
+        ))}
+      </View>
 
       <PostModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          setExperienceOnly(false);
+        }}
         onSubmit={handlePostSubmit}
       />
     </ScrollView>
   );
 }
-
+ 
  
 
 const styles = StyleSheet.create({
@@ -288,5 +307,8 @@ const styles = StyleSheet.create({
   suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
   suggestorusername: { fontSize: 11, color: '#6B7280' },
   suggestordestination: {  fontSize: 11, color: '#6B7280', flexWrap: 'wrap', marginLeft: 0 },
-  postTimestamp: { fontSize: 10, color: '#999', marginTop: 5, textAlign: 'right' }
+  postTimestamp: { fontSize: 10, color: '#999', marginTop: 5, textAlign: 'right' },
+  hidden: {
+    display: 'none', // Hide the routecontainer
+  },
 });
