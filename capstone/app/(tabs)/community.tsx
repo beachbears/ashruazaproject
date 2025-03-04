@@ -1,35 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,TextInput,FlatList} from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { 
+  usePostContext,
+  type Post,
+  type VehicleType
+} from '../PostContext';
+import PostModal from '../postmodal';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Octicons from '@expo/vector-icons/Octicons';
 import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { APP_NAME } from "../../constants";
-import RouteUserScreen from '../routeuser';
-import ModalComponent from '../postmodal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { FontAwesome5 } from '@expo/vector-icons';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
+const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
 
-type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
-
-interface DropdownProps {
+// Dropdown Component
+const Dropdown: React.FC<{
   options: string[];
   onSelect?: (option: string) => void;
   defaultValue?: string;
-}
-
-const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
+}> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(defaultValue);
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
   const selectOption = (option: string) => {
     setSelectedOption(option);
     setIsOpen(false);
-    if (onSelect) onSelect(option);
+    onSelect?.(option);
   };
 
   return (
@@ -55,23 +56,6 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   );
 };
 
-const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
-interface PostItem {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  userinitial: string;
-  loginusername: string;
-  username: string;
-  location: string;
-  fare: number;
-  destination: string;
-  description: string;
-  suggestiontextbox: string;
-  timestamp: number;
-  vehicles: VehicleType[];
-}
-
 const vehicleIcons: Record<VehicleType, JSX.Element> = {
   "Jeep": <MaterialCommunityIcons name="jeepney" size={24} color="#4F46E5" />,
   "E-jeep": <FontAwesome5 name="bus" size={20} color="#4F46E5" />,
@@ -80,261 +64,200 @@ const vehicleIcons: Record<VehicleType, JSX.Element> = {
   "Train": <FontAwesome6 name="train-subway" size={24} color="#4F46E5" />
 };
 
-interface PostCardProps {
-  post: PostItem;
-  handleUpvote: (id: number) => void;
-  handleDownvote: (id: number) => void;
-  onSelect: (post: PostItem) => void;
-}
+export default function Community() {
+  const { 
+    posts, 
+    addPost, 
+    handleUpvote, 
+    handleDownvote, 
+    experienceOnly, 
+    setExperienceOnly 
+  } = usePostContext();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string>('Time');
 
-const timeAgo = (timestamp: number | string): string => {
-  if (!timestamp) return 'Unknown time';
-  const postDate = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  const diffInHours = Math.floor(diffInSeconds / 3600);
-  const diffInDays = Math.floor(diffInSeconds / 86400);
+  const allPosts = posts;
 
-  if (diffInMinutes < 1) return 'Just now';
-  if (diffInHours < 1) return `${diffInMinutes} minute's ago`;
-  if (diffInHours < 24) return `${diffInHours} hour's ago`;
-  if (diffInDays < 7) return `${diffInDays} day's ago`;
-  if (diffInDays === 7) return '1 week ago';
-  return '1 month ago';
-};
+  const sortedPosts = allPosts.sort((a, b) => {
+    switch(selectedOption) {
+      case 'Time': 
+        return b.timestamp - a.timestamp;
+      case 'Fare Cost':
+        return a.fare - b.fare;
+      case 'Popularity':
+        return b.upvotes - a.upvotes;
+      case 'Destination':
+        return a.destination.localeCompare(b.destination);
+      default:
+        return 0;
+    }
+  });
 
-const PostCard: React.FC<PostCardProps> = ({ post, handleUpvote, handleDownvote, onSelect }) => {
-  const [timeString, setTimeString] = useState<string>(timeAgo(post.timestamp));
+  const timeAgo = (timestamp: number): string => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeString(timeAgo(post.timestamp));
-    }, 60000);
-    return () => clearInterval(timer);
-  }, [post.timestamp]);
-
-  return (
-    <TouchableOpacity style={styles.containerpost} onPress={() => onSelect(post)}>
-      <View style={styles.suggestordetails}>
-        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1}}>
-          <View style={styles.profile}>
-            <Text style={styles.initial}>{post.userinitial}</Text>
-          </View>
-          <View style={styles.suggestor}>
-            <Text style={styles.suggestorname}>{post.loginusername}</Text>
-            <Text style={styles.suggestorusername}>{post.username}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-          <Text style={styles.postTimestamp}>{timeString}</Text>
-        </View>
-      </View>
-
-      <View style={styles.detailsContainer}>
-          <View style={{flexDirection: 'column', marginRight: 90}}>
-              <Text style={styles.label}>Location</Text>
-              <Text style={styles.locationText}>{post.location}</Text>
-              </View>
-              <View style={{flexDirection: 'column', }}>
-              <Text style={styles.label}>Destination</Text>
-              <Text style={styles.locationText}>{post.destination}</Text>
-              </View>
-              </View>
-
-      <View style={styles.routecontainer}>
-           <View style={styles.position}> 
-              <Text style={styles.conlabel}>Types of Vehicles</Text>
-              <Text style={styles.fare}>Fare: ₱{post.fare}.00</Text>
-              </View>
-      
-              <View style={styles.vehiclesContainer}>
-              {post.vehicles?.length > 0 ? (
-                post.vehicles.map((vehicle, index) => (
-                  <View key={index} style={styles.vehicleItem}>
-                    {vehicleIcons[vehicle]}
-                    <Text style={styles.vehicleText}>{vehicle}</Text>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.vehicleText}>No vehicles selected</Text>
-              )}
-            </View>
-            <Text style={styles.estimatedTime}>Estimated Time: 45 minutes to 1.5 hours depending on traffic.</Text>
-            <View style={{ marginTop: 20, marginBottom: 10 }}>
-                    <Text style={styles.conlabel}>Route Overview</Text>
-                </View>
-      
-               
-              <Text style={styles.description}>{post.description}</Text>
-            
-            </View>
-
-             <View style={{flexDirection: 'column', gap: 8, marginTop: 20}}>
-                    <Text style={{fontSize: 14, fontWeight: 500, color: '#44457D'}}>Your Experiences </Text>
-                    <Text style={styles.experience}>{post.suggestiontextbox}</Text>
-                    </View>
-
-      <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={styles.content}>
-          <Octicons name="shield-check" size={18} color="#6366F1" />
-          <Text style={styles.status}>Status</Text>
-          <View style={styles.badge}>
-            <Entypo name="check" size={14} color="#03C04A" />
-            <Text style={styles.cert}>Certified {APP_NAME}</Text>
-          </View>
-        </View>
-        <View style={styles.arrowcontainer}>
-          <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(post.id)}>
-            <AntDesign name="arrowup" size={12} color="#22C55E" />
-            <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>{post.upvotes}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(post.id)}>
-            <AntDesign name="arrowdown" size={12} color="#C52222" />
-            <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>{post.downvotes}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-export default function TabTwoScreen() {
-  const [posts, setPosts] = useState<PostItem[]>([
-    {
-      id: 1,
-      upvotes: 0,
-      downvotes: 0,
-      userinitial: 'AR',
-      loginusername: 'Ashley Ruaza',
-      username: '@ashruaza',
-      location: 'North Olympus',
-      fare: 500,
-      destination: 'National Museum',
-      description: 'Good',
-      suggestiontextbox: 'Some suggestion text here.',
-      timestamp: Date.now() - 7 * 24 * 60 * 60 * 1000,  
-      vehicles: ["Jeep"],
-    },
-  ]);
-
-  useEffect(() => {
-    const loadPosts = async () => {
-      try {
-        const savedPosts = await AsyncStorage.getItem('posts');
-        if (savedPosts) {
-          setPosts(JSON.parse(savedPosts));
-        }
-      } catch (error) {
-        console.error('Error loading posts:', error);
-      }
-    };
-
-    loadPosts();
-  }, []);
-
-   
-  useEffect(() => {
-    const savePosts = async () => {
-      try {
-        await AsyncStorage.setItem('posts', JSON.stringify(posts));
-      } catch (error) {
-        console.error('Error saving posts:', error);
-      }
-    };
-
-    savePosts();
-  }, [posts]);
-
-  const handleUpvote = (id: number): void => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === id ? { ...post, upvotes: post.upvotes + 1 } : post
-      )
-    );
+    if (diff < minute) return 'Just now';
+    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+    return `${Math.floor(diff / day)}d ago`;
   };
 
-  const handleDownvote = (id: number): void => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === id ? { ...post, downvotes: post.downvotes + 1 } : post
-      )
-    );
+  const handlePostSubmit = (newPost: Omit<Post, 'category'>) => {
+    addPost({ 
+      ...newPost,
+      isExperienceOnly: experienceOnly 
+    }, 'community');
+    setExperienceOnly(false);
   };
-
-  const handleSubmitPost = (newPost: PostItem) => {
-    setPosts(prevPosts => [...prevPosts, { ...newPost, id: prevPosts.length + 1 }]);
-    setModalVisible(false);
-  };
-
-
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [selectedPost, setSelectedPost] = useState<PostItem | null>(null);
-
-    
-
-  const handleOptionSelect = (option: string) => {
-    setPosts(prevPosts => {
-      const sortedPosts = [...prevPosts];
-      switch (option) {
-        case 'Time':
-          return sortedPosts.sort((a, b) => b.timestamp - a.timestamp);
-        case 'Fare Cost':
-          return sortedPosts.sort((a, b) => a.fare - b.fare);
-        case 'Popularity':
-          return sortedPosts.sort((a, b) => b.upvotes - a.upvotes);
-        case 'Destination':
-          return sortedPosts.sort((a, b) => a.destination.localeCompare(b.destination));
-        default:
-          return sortedPosts;
-      }
-    });
-  };
-
-  if (selectedPost) {
-    return <RouteUserScreen post={selectedPost} onBack={() => setSelectedPost(null)} />;
-  }
 
   return (
     <ScrollView style={styles.maincontainer}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
-            <Text style={styles.postButtonText}>Post</Text>
+        <Text style={styles.sectionTitle}>Community Posts</Text>
+        <TouchableOpacity 
+          onPress={() => setModalVisible(true)} 
+          style={styles.postbutton}
+        >
+          <Text style={styles.postButtonText}>Create Post</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={{ zIndex: 1000, }}>
-          <Dropdown
-            options={dropdownOptions}
-            onSelect={handleOptionSelect}
-            defaultValue="Select Option"
-          />
-        </View>
+      <View style={{ zIndex: 1000 }}>
+        <Dropdown
+          options={dropdownOptions}
+          onSelect={setSelectedOption}
+          defaultValue="Select Option"
+        />
+      </View>
 
-    <View style={{marginBottom: 200}}>
-    {posts.map((item) => (
-  <PostCard
-    key={item.id}  
-    post={item}
-    handleUpvote={handleUpvote}
-    handleDownvote={handleDownvote}
-    onSelect={setSelectedPost}
-  />
-))}
+      <View style={{marginBottom: 200}}> 
+        {sortedPosts.map((post) =>  (
+          
+          <View key={post.id} style={styles.containerpost}>
+            <View style={styles.suggestordetails}>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                <View style={styles.profile}>
+                  <Text style={styles.initial}>{post.userinitial}</Text>
+                </View>
+                <View style={styles.suggestor}>
+                  <Text style={styles.suggestorname}>{post.loginusername}</Text>
+                  <Text style={styles.suggestorusername}>{post.username}</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={styles.postTimestamp}>
+                  {timeAgo(post.timestamp)}
+                </Text>
+              </View>
+            </View>
 
-</View>
-      <ModalComponent 
-        visible={modalVisible} 
-        onClose={() => setModalVisible(false)} 
-        onSubmit={handleSubmitPost} 
+            <View style={styles.detailsContainer}>
+              <View style={{flexDirection: 'column', marginRight: 90}}>
+                <Text style={styles.label}>Location</Text>
+                <Text style={styles.locationText}>{post.location}</Text>
+              </View>
+              <View style={{flexDirection: 'column'}}>
+                <Text style={styles.label}>Destination</Text>
+                <Text style={styles.locationText}>{post.destination}</Text>
+              </View>
+            </View>
+
+            {/* Completely remove routecontainer for experience-only posts */}
+            {!post.isExperienceOnly && (
+              <View style={styles.routecontainer}>
+                <View style={styles.position}> 
+                  <Text style={styles.conlabel}>Types of Vehicles</Text>
+                  <Text style={styles.fare}>Fare: ₱{post.fare}.00</Text>
+                </View>
+                
+                <View style={styles.vehiclesContainer}>
+                  {post.vehicles?.length > 0 ? (
+                    post.vehicles.map((vehicle, index) => (
+                      <View key={index} style={styles.vehicleItem}>
+                        {vehicleIcons[vehicle]}
+                        <Text style={styles.vehicleText}>{vehicle}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.vehicleText}>No vehicles selected</Text>
+                  )}
+                </View>
+                
+                <Text style={styles.estimatedTime}>
+                  Estimated Time: 45 minutes to 1.5 hours depending on traffic.
+                </Text>
+                
+                <View style={{ marginTop: 20, marginBottom: 10 }}>
+                  <Text style={styles.conlabel}>Route Overview</Text>
+                </View>
+                
+                <Text style={styles.description}>{post.description}</Text>
+              </View>
+            )}
+
+            <View style={{flexDirection: 'column', gap: 8, marginTop: 20}}>
+              <Text style={{fontSize: 14, fontWeight: '500', color: '#44457D'}}>
+                {post.isExperienceOnly ? 'Your Experience' : 'Your Suggestions'}
+              </Text>
+              <Text style={styles.experience}>{post.suggestiontextbox}</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={styles.content}>
+                <Octicons name="shield-check" size={18} color="#6366F1" />
+                <Text style={styles.status}>Status</Text>
+                <View style={styles.badge}>
+                  <Entypo name="check" size={14} color="#03C04A" />
+                  <Text style={styles.cert}>Certified {APP_NAME}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.arrowcontainer}>
+                <TouchableOpacity 
+                  style={styles.arrowup} 
+                  onPress={() => handleUpvote(post.id)}
+                >
+                  <AntDesign name="arrowup" size={12} color="#22C55E" />
+                  <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>
+                    {post.upvotes}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.arrowdown} 
+                  onPress={() => handleDownvote(post.id)}
+                >
+                  <AntDesign name="arrowdown" size={12} color="#C52222" />
+                  <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>
+                    {post.downvotes}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <PostModal
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false);
+          setExperienceOnly(false);
+        }}
+        onSubmit={handlePostSubmit}
       />
     </ScrollView>
   );
 }
+ 
+ 
 
 const styles = StyleSheet.create({
-  maincontainer: {flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15},
+  maincontainer: {flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15,},
   content: {flexDirection: 'row',alignItems: 'center',gap: 4},
   headerText: {color: '#44457D',fontWeight: '500',fontSize: 16,},
   postbutton: {backgroundColor: '#6366F1',paddingHorizontal: 14,paddingVertical: 6,borderRadius: 10,justifyContent: 'center',alignItems: 'center'},
@@ -384,5 +307,8 @@ const styles = StyleSheet.create({
   suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
   suggestorusername: { fontSize: 11, color: '#6B7280' },
   suggestordestination: {  fontSize: 11, color: '#6B7280', flexWrap: 'wrap', marginLeft: 0 },
-  postTimestamp: { fontSize: 10, color: '#999', marginTop: 5, textAlign: 'right' }
+  postTimestamp: { fontSize: 10, color: '#999', marginTop: 5, textAlign: 'right' },
+  hidden: {
+    display: 'none', // Hide the routecontainer
+  },
 });

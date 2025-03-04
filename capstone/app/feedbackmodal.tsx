@@ -1,13 +1,21 @@
 import { APP_NAME } from '@/constants';
-import React, { useState, useRef, useEffect } from 'react';
-import { Modal, View, TextInput, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import {
+  Modal,
+  View,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+} from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import { AuthContext } from '../AuthContext'; // adjust path as needed
 
 interface FeedbackItem {
   id: number;
   upvotes: number;
   downvotes: number;
-  text: string;
+  content: string;
   userName: string;
   userHandle: string;
   initials: string;
@@ -17,39 +25,31 @@ interface FeedbackItem {
 interface ModalComponentProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (inputText: string, rating: number) => void;
-  onNewFeedback: (newPost: FeedbackItem) => void;
+  onSubmit: (text: string, rating: number) => void;
+  onNewFeedback?: (newFeedback: FeedbackItem) => void;
 }
 
-const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSubmit, onNewFeedback }) => {
+
+
+/**
+ * A modal for collecting user feedback (text + star rating).
+ * This version uses AuthContext to determine the user's identity.
+ * If no user is logged in, it uses default Guest values.
+ */
+const ModalComponent: React.FC<ModalComponentProps> = ({
+  visible,
+  onClose,
+  onSubmit,
+  onNewFeedback,
+}) => {
   const [suggestion, setSuggestion] = useState<string>('');
   const [selectedStars, setSelectedStars] = useState<number>(0);
   const suggestionInputRef = useRef<TextInput>(null);
 
-  const handleSubmit = () => {
-    if (suggestion.trim()) {
-      const newFeedback: FeedbackItem = {
-        id: Date.now(),
-        upvotes: 0,
-        downvotes: 0,
-        initials: "AR",
-        userName: "Ashley Ruaza",
-        userHandle: "@ashruza",
-        text: suggestion,
-        rating: selectedStars,
-      };
-      onNewFeedback(newFeedback);
-      setSuggestion('');
-      setSelectedStars(0);
-      onSubmit(suggestion, selectedStars);
-      onClose();
-    }
-  };
+  // Access user data from AuthContext
+  const { isLoggedIn, userName, userHandle, userInitials } = useContext(AuthContext);
 
-  const handleStarPress = (rating: number) => {
-    setSelectedStars(rating);
-  };
-
+  // Focus the text input when the modal becomes visible
   useEffect(() => {
     if (visible && suggestionInputRef.current) {
       setTimeout(() => {
@@ -58,17 +58,62 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
     }
   }, [visible]);
 
+  const handleStarPress = (rating: number) => {
+    setSelectedStars(rating);
+  };
+
+  /**
+   * Submits the feedback:
+   * - Uses user data from AuthContext if available; otherwise defaults to Guest values.
+   * - Calls `onNewFeedback` and `onSubmit` with the feedback data.
+   */
+  const handleSubmit = () => {
+    if (suggestion.trim()) {
+      const newFeedback: FeedbackItem = {
+        id: Date.now(),
+        upvotes: 0,
+        downvotes: 0,
+        // Use user data if logged in; else fallback to Guest
+        initials: isLoggedIn && userInitials ? userInitials : 'G',
+        userName: isLoggedIn && userName ? userName : 'Guest',
+        userHandle: isLoggedIn && userHandle ? userHandle : '@guest',
+        content: suggestion,
+        rating: selectedStars,
+      };
+
+      onNewFeedback?.(newFeedback);
+      onSubmit(suggestion, selectedStars);
+
+      // Reset fields and close modal
+      setSuggestion('');
+      setSelectedStars(0);
+      onClose();
+    }
+  };
+
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
       <View style={styles.modalBackground}>
         <View style={styles.PostContainer}>
+          {/* User details area - display logged in user info or default Guest info */}
           <View style={styles.userdetails}>
             <View style={styles.userprofile}>
-              <Text style={styles.userinitial}>AR</Text>
+              <Text style={styles.userinitial}>
+                {isLoggedIn && userInitials ? userInitials : 'G'}
+              </Text>
             </View>
             <View style={styles.user}>
-              <Text style={styles.loginusername}>Ash Ruaza</Text>
-              <Text style={styles.username}>@ashleyruaza</Text>
+              <Text style={styles.loginusername}>
+                {isLoggedIn && userName ? userName : 'Guest'}
+              </Text>
+              <Text style={styles.username}>
+                {isLoggedIn && userHandle ? userHandle : '@guest'}
+              </Text>
             </View>
           </View>
 
@@ -76,13 +121,20 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
           <View style={{ flexDirection: 'row', marginBottom: 10 }}>
             {[1, 2, 3, 4, 5].map((star) => (
               <TouchableOpacity key={star} onPress={() => handleStarPress(star)}>
-                <AntDesign name="star" size={20} color={star <= selectedStars ? "#FFD700" : "#D3D3D3"} />
+                <AntDesign
+                  name="star"
+                  size={20}
+                  color={star <= selectedStars ? '#FFD700' : '#D3D3D3'}
+                />
               </TouchableOpacity>
             ))}
           </View>
 
-          <Text style={styles.modalText}>Tell us your experience using {APP_NAME}</Text>
+          <Text style={styles.modalText}>
+            Tell us your experience using {APP_NAME}
+          </Text>
           <TextInput
+            ref={suggestionInputRef}
             style={styles.suggestiontextbox}
             placeholder="Type here..."
             placeholderTextColor="#666"
@@ -105,6 +157,7 @@ const ModalComponent: React.FC<ModalComponentProps> = ({ visible, onClose, onSub
   );
 };
 
+export default ModalComponent;
 
 const styles = StyleSheet.create({
   modalBackground: {
@@ -155,46 +208,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
   },
-  location: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
-  fare: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
-  destination: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
-  description: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-  },
   suggestiontextbox: {
     backgroundColor: '#F5F7FF',
     borderWidth: 1,
@@ -213,78 +226,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
-  vehicleTypes: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#EEF2FF',
-    borderRadius: 8,
-    padding: 4,
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  vehicleItem: {
-    alignItems: 'center',
-  },
-  vehicleText: {
-    fontSize: 9,
-    color: '#6B7280',
-    marginVertical: 4,
-  },
-  modernJeepIcon: {
-    paddingBottom: 2,
-    paddingTop: 2,
-  },
-  busIcon: {
-    paddingTop: 2.5,
-  },
-  trainIcon: {
-    paddingTop: 5,
-  },
-  carIcon: {
-    paddingTop: 4,
-  },
-  routeOverviewText: {
-    color: '#44457D',
-    fontWeight: '400',
-    fontSize: 14,
-  },
-  getOnContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    justifyContent: 'space-between',
-    marginVertical: 10,
-  },
-  geton: {
-    backgroundColor: '#F5F7FF',
-    borderRadius: 8,
-    padding: 4,
-    borderColor: '#C7D2FE',
-    borderWidth: 1,
-    width: 80,
-  },
-  modalText: { fontSize: 11, color: '#686A9C', flexWrap: 'wrap', fontWeight: 500, paddingBottom: 6 },
-  
-  getOnText: {
-    color: '#44457D',
-    fontSize: 13,
-    fontWeight: '400',
-  },
-  floatingButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 28,
-    backgroundColor: '#6366f1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: "0px 4px 4px rgba(0, 0, 0, 0.2)",
-    elevation: 6,
-  },
-  floatingButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '400',
-  },
   cancelButton: {
     borderRadius: 10,
     width: 70,
@@ -299,6 +240,7 @@ const styles = StyleSheet.create({
     height: 30,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 10,
   },
   cancelText: {
     color: '#6366F1',
@@ -310,6 +252,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  modalText: {
+    fontSize: 11,
+    color: '#686A9C',
+    flexWrap: 'wrap',
+    fontWeight: '500',
+    paddingBottom: 6,
+  },
 });
-
-export default ModalComponent;

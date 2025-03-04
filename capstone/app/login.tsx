@@ -108,6 +108,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
 
       if (response.data.token) {
         await AsyncStorage.setItem("token", response.data.token);
+        
         // I-update ang global auth state gamit ang login function mula sa AuthContext
         login(formData.email);
         router.replace("/(tabs)");

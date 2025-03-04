@@ -1,21 +1,31 @@
-import React, { useState, useContext } from 'react';
-import { Text, StyleSheet, ScrollView, View, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import FeedbackComponent from '../feedbackmodal';
-import { APP_NAME } from '@/constants';
+import React, { useState, useContext, useEffect } from 'react';
+import {
+  Text,
+  StyleSheet,
+  ScrollView,
+  View,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  LogBox,
+} from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { LogBox } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AuthContext } from '../../AuthContext'; // Update path as needed
-import axiosInstance from '../../axiosConfig'; // Update path as needed
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import FeedbackComponent from '../feedbackmodal'; // Your modal component
+import { AuthContext } from '../../AuthContext';     // Update path as needed
+import axiosInstance from '../../axiosConfig';       // Update path as needed
 
 LogBox.ignoreLogs(['textShadow*', 'shadow*']);
 
+// Define your FeedbackItem type
 type FeedbackItem = {
   id: number;
-  text: string;
-  userName: string;
-  userHandle: string;
-  initials: string;
+  content: string;
+  userName: string;     // e.g. "John Doe"
+  userHandle: string;   // e.g. "@johndoe"
+  initials: string;     // e.g. "JD"
   rating: number;
 };
 
@@ -23,54 +33,86 @@ const Feedback: React.FC = () => {
   const router = useRouter();
   const { isLoggedIn, userName } = useContext(AuthContext);
 
-  const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([
-    {
-      id: 1,
-      text: "Old-world Intramuros is home to Spanish-era landmarks like Fort Santiago, with a large stone gate and a shrine to national hero José Rizal. Apaka angas bbossing!",
-      userName: "Ashley",
-      userHandle: "@ashruaza",
-      initials: "AR",
-      rating: 5,
-    },
-  ]);
-
+  // Start with an empty array for a dynamic page
+  const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Post new feedback to your Rails backend using axiosInstance.
+  // ---------------------------------------------
+  // 1. Load feedback from AsyncStorage on mount
+  // ---------------------------------------------
+  useEffect(() => {
+    const loadFeedback = async () => {
+      try {
+        const storedFeedback = await AsyncStorage.getItem('feedbackData');
+        if (storedFeedback) {
+          setFeedbackData(JSON.parse(storedFeedback));
+        }
+      } catch (error) {
+        console.error('Error loading feedback:', error);
+      }
+    };
+    loadFeedback();
+  }, []);
+
+  // --------------------------------------------------
+  // 2. Persist feedback to AsyncStorage on each change
+  // --------------------------------------------------
+  useEffect(() => {
+    const storeFeedback = async () => {
+      try {
+        await AsyncStorage.setItem('feedbackData', JSON.stringify(feedbackData));
+      } catch (error) {
+        console.error('Error storing feedback:', error);
+      }
+    };
+    storeFeedback();
+  }, [feedbackData]);
+
+  // Send new feedback to your backend using axiosInstance
   const postFeedback = async (feedback: FeedbackItem) => {
     try {
       const response = await axiosInstance.post('/api/feedbacks', feedback);
       return response.data;
     } catch (error) {
-      console.error("Error posting feedback", error);
+      console.error('Error posting feedback:', error);
     }
   };
 
-  // When a user submits feedback, use the user's name from context.
+  // ---------------------------------------------
+  // 3. Handle feedback submission
+  // ---------------------------------------------
   const handleSubmit = async (text: string, rating: number) => {
+    // Only submit if there's text and user is logged in
     if (text.trim() && userName) {
-      const initials = userName.split(' ').map((word: any[]) => word[0]).join('').toUpperCase();
+      // Generate user initials, e.g. "John Doe" => "JD"
+      const initials = userName
+        .split(' ')
+        .map((word: any[]) => word[0])
+        .join('')
+        .toUpperCase();
+
+      // Generate a simple user handle (e.g., '@johndoe')
       const handle = '@' + userName.toLowerCase().replace(/\s+/g, '');
+
       const newFeedback: FeedbackItem = {
-        id: feedbackData.length + 1, // Alternatively, use the backend-provided ID
-        text,
-        userName: userName,
+        id: Date.now(), // or use feedbackData.length + 1, or server ID
+        content: text,
+        userName,
         userHandle: handle,
-        initials: initials,
+        initials,
         rating,
       };
-      setFeedbackData([newFeedback, ...feedbackData]);
+
+      // Update local state (this also triggers persistence)
+      setFeedbackData((prev) => [newFeedback, ...prev]);
       setModalVisible(false);
+
+      // Post to backend (optional)
       await postFeedback(newFeedback);
     }
   };
 
-  const handleNewFeedback = (newFeedback: FeedbackItem) => {
-    setFeedbackData((prevFeedbackData) => [...prevFeedbackData, newFeedback]);
-  };
-
-  // Check if the user is logged in; if not, route to login page.
-  // If logged in, open the modal.
+  // Open the feedback modal if logged in; otherwise, navigate to login
   const handleFeedbackPress = () => {
     if (!isLoggedIn) {
       router.push('/login');
@@ -79,6 +121,9 @@ const Feedback: React.FC = () => {
     setModalVisible(true);
   };
 
+  // ---------------------------------------------
+  // 4. Render a single feedback item
+  // ---------------------------------------------
   const FeedbackCard: React.FC<{ feedback: FeedbackItem }> = ({ feedback }) => (
     <View style={styles.feedbackcontainer}>
       <View style={styles.suggestordetails}>
@@ -86,30 +131,37 @@ const Feedback: React.FC = () => {
           <Text style={styles.initial}>{feedback.initials}</Text>
         </View>
         <View style={styles.suggestor}>
-          <Text style={styles.suggestorname}>{feedback.userName}</Text>
+          {/* Show first name in bold */}
+          <Text style={styles.suggestorname}>
+            {feedback.userName.split(' ')[0]}
+          </Text>
+          {/* Show handle prefixed with '@' */}
           <Text style={styles.suggestorusername}>{feedback.userHandle}</Text>
         </View>
       </View>
+      {/* Render rating stars */}
       <View style={{ flexDirection: 'row', marginLeft: 48, marginVertical: 3, gap: 2 }}>
         {[1, 2, 3, 4, 5].map((star) => (
-          <AntDesign 
-            key={star} 
-            name="star" 
-            size={14} 
-            color={star <= feedback.rating ? "#FFD700" : "#D3D3D3"} 
+          <AntDesign
+            key={star}
+            name="star"
+            size={14}
+            color={star <= feedback.rating ? '#FFD700' : '#D3D3D3'}
           />
         ))}
       </View>
-      <Text style={styles.usersuggestion}>{feedback.text}</Text>
+      <Text style={styles.usersuggestion}>{feedback.content}</Text>
     </View>
   );
 
+  // ---------------------------------------------
+  // 5. Page Layout
+  // ---------------------------------------------
   return (
     <ScrollView style={styles.maincontainer}>
-      <Text style={styles.headerText}>Our Feedback</Text>
+      <Text style={styles.headerText}>Feedback</Text>
       <Text style={styles.descriptionText}>
-        We value your input on <Text style={styles.boldText}>{APP_NAME}</Text>. Your feedback will help us to improve.
-        Please share your thoughts and suggestions to make <Text style={styles.boldText}>{APP_NAME}</Text> even better!
+        We appreciate your thoughts! Please submit your feedback below.
       </Text>
 
       <View style={styles.ButtonContainer}>
@@ -117,7 +169,8 @@ const Feedback: React.FC = () => {
           <Text style={styles.ButtonText}>Submit Feedback</Text>
         </TouchableOpacity>
       </View>
-     
+
+      {/* Render existing feedback */}
       <View style={{ marginBottom: 150 }}>
         {feedbackData.map((feedback) => (
           <FeedbackCard key={feedback.id} feedback={feedback} />
@@ -126,54 +179,104 @@ const Feedback: React.FC = () => {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <FeedbackComponent
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          onSubmit={handleSubmit}
-          onNewFeedback={handleNewFeedback}
-        />
+      <FeedbackComponent
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSubmit={handleSubmit}
+      />
+
       </KeyboardAvoidingView>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  maincontainer: { flexDirection: 'column', padding: 20, backgroundColor: '#F9FAFB', width: '100%' },
-  feedbackcontainer: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#EEF2FF', padding: 12, elevation: 4, boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.2)", marginBottom: 15 },
-  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 11 },
-  profile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' },
-  initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  suggestor: { flexDirection: 'column' },
-  suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
-  suggestorusername: { fontSize: 11, color: '#6B7280' },
-  usersuggestion: { fontSize: 11, color: '#6B7280', flexWrap: 'wrap', marginLeft: 50, marginBottom: 10 },
-  arrowup: { borderWidth: 1, borderColor: '#ABEBA2', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, flexDirection: 'row', alignItems: 'center' },
-  num: { marginLeft: 6, fontSize: 12, fontWeight: '600' },
-  arrowdown: { borderWidth: 1, borderColor: '#EBA2A2', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, flexDirection: 'row', alignItems: 'center' },
-  arrowcontainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
-  headerText: { fontSize: 20, fontWeight: '600', color: '#44457D', textAlign: 'center', marginTop: -20 },
-  descriptionText: { color: '#44457D', textAlign: 'center', fontSize: 13 },
-  boldText: { fontWeight: 'bold' },
-  ButtonContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20, marginTop: 10 },
-  Button: { width: 120, height: 25, borderRadius: 5, backgroundColor: '#22C55E', alignItems: 'center', justifyContent: 'center' },
-  ButtonText: { color: '#fff', fontSize: 12, fontWeight: '500' },
-  modalBackground: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-  modalContainer: { paddingVertical: 16, backgroundColor: 'white', borderRadius: 10, paddingHorizontal: 20, width: '90%', height: 'auto', minHeight: '40%', justifyContent: 'space-between' },
-  modalText: { fontSize: 11, color: '#6B7280', flexWrap: 'wrap', paddingTop: 20, paddingBottom: 6 },
-  buttonContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 'auto', width: '100%', gap: 8 },
-  cancelButton: { borderRadius: 10, backgroundColor: '#FFFFFF', width: 80, height: 36, alignItems: 'center', justifyContent: 'center' },
-  submitButton: { borderRadius: 10, backgroundColor: '#22C55E', width: 80, height: 36, alignItems: 'center', justifyContent: 'center' },
-  cancelText: { color: '#6366F1', fontSize: 13, fontWeight: '700' },
-  submitText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  userdetails: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', height: 50, gap: 11 },
-  userprofile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' },
-  userinitial: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  user: { flexDirection: 'column' },
-  loginusername: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
-  username: { fontSize: 11, color: '#6B7280' },
-  suggestiontextbox: { backgroundColor: '#F5F7FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 8, fontSize: 11, color: '#374151', marginVertical: 8, width: '100%', height: 120, textAlignVertical: 'top' },
-});
-
 export default Feedback;
+
+const styles = StyleSheet.create({
+  maincontainer: {
+    flexDirection: 'column',
+    padding: 20,
+    backgroundColor: '#F9FAFB',
+    width: '100%',
+  },
+  feedbackcontainer: {
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EEF2FF',
+    padding: 12,
+    elevation: 4,
+    marginBottom: 15,
+  },
+  suggestordetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 50,
+    gap: 11,
+  },
+  profile: {
+    width: 36,
+    height: 36,
+    borderRadius: 24,
+    backgroundColor: '#6366F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initial: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  suggestor: {
+    flexDirection: 'column',
+  },
+  suggestorname: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '700',
+  },
+  suggestorusername: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  usersuggestion: {
+    fontSize: 11,
+    color: '#6B7280',
+    flexWrap: 'wrap',
+    marginLeft: 50,
+    marginBottom: 10,
+  },
+  headerText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#44457D',
+    textAlign: 'center',
+    marginTop: -20,
+  },
+  descriptionText: {
+    color: '#44457D',
+    textAlign: 'center',
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  ButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  Button: {
+    width: 120,
+    height: 25,
+    borderRadius: 5,
+    backgroundColor: '#22C55E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+});
