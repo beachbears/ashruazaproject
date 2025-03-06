@@ -14,10 +14,11 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import FeedbackComponent from '../feedbackmodal'; // Your modal component
-import { AuthContext } from '../../AuthContext';     // Update path as needed
+import { AuthContext, AuthContextType  } from "../../contexts/AuthContext"; // Ensure the path is correct
+
 import axiosInstance from '../../axiosConfig';       // Update path as needed
 
-LogBox.ignoreLogs(['textShadow*', 'shadow*']);
+LogBox.ignoreLogs(['textShadow*', 'shadow*']    );
 
 // Define your FeedbackItem type
 type FeedbackItem = {
@@ -31,7 +32,11 @@ type FeedbackItem = {
 
 const Feedback: React.FC = () => {
   const router = useRouter();
-  const { isLoggedIn, userName } = useContext(AuthContext);
+  const authContext = useContext(AuthContext) as AuthContextType | null;
+
+  if (!authContext) return null; // Prevents errors if context is null
+  
+  const { isLoggedIn, userName, userHandle, userInitials, authToken } = authContext;
 
   // Start with an empty array for a dynamic page
   const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([]);
@@ -87,7 +92,7 @@ const Feedback: React.FC = () => {
       // Generate user initials, e.g. "John Doe" => "JD"
       const initials = userName
         .split(' ')
-        .map((word: any[]) => word[0])
+        .map((word: string) => word[0])
         .join('')
         .toUpperCase();
 

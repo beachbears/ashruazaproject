@@ -1,126 +1,39 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { 
-  usePostContext,
-  type Post,
-  type VehicleType
-} from './PostContext';
+import { usePostContext, type Post } from './../contexts/PostContext';
 import PostModal from './postmodal';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { FontAwesome5 } from '@expo/vector-icons';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import Octicons from '@expo/vector-icons/Octicons';
-import Entypo from '@expo/vector-icons/Entypo';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import { APP_NAME } from "../constants";
-
-const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
-
-interface DropdownProps {
-  options: string[];
-  onSelect?: (option: string) => void;
-  defaultValue?: string;
-}
-
-const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
-
-  const toggleDropdown = () => setIsOpen(!isOpen);
-
-  const selectOption = (option: string) => {
-    setSelectedOption(option);
-    setIsOpen(false);
-    if (onSelect) onSelect(option);
-  };
-
-  return (
-    <View style={styles.dropdowncontainer}>
-      <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
-        <Text style={styles.buttonText}>{selectedOption}</Text>
-        <Entypo name="chevron-down" size={20} color="#44457D" />
-      </TouchableOpacity>
-      {isOpen && (
-        <View style={styles.dropdownList}>
-          {options.map((option, index) => (
-            <TouchableOpacity 
-              key={index} 
-              onPress={() => selectOption(option)} 
-              style={styles.option}
-            >
-              <Text style={styles.optionText}>{option}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-};
-
-interface PostModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (post: Omit<Post, 'category'>) => void;
-}
-
-const vehicleIcons: Record<VehicleType, JSX.Element> = {
-  "Jeep": <MaterialCommunityIcons name="jeepney" size={24} color="#4F46E5" />,
-  "E-jeep": <FontAwesome5 name="bus" size={20} color="#4F46E5" />,
-  "Bus": <FontAwesome5 name="bus-alt" size={22} color="#4F46E5" />,
-  "UV Exp.": <FontAwesome5 name="car" size={22} color="#4F46E5" />,
-  "Train": <FontAwesome6 name="train-subway" size={24} color="#4F46E5" />
-};
+import {AuthContext, AuthContextType } from './../contexts/AuthContext';
 
 export default function PostSuggestions() {
-  const { posts, addPost, handleUpvote, handleDownvote, experienceOnly, setExperienceOnly } = usePostContext();
+  const { posts, addPost, experienceOnly, setExperienceOnly } = usePostContext();
+  const { authToken } = React.useContext(AuthContext); // Ensure this correctly provides authToken
+
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<string>('Time');
 
-  const suggestionPosts = posts.filter(post => post.category === 'postsuggestions');
+  const handlePostSubmit = async (formData: Post & { originLat: number; originLon: number; destLat: number; destLon: number }) => {
+    try {
+      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ route_post: formData }),
+      });
 
-  const handleOptionSelect = (option: string) => {
-    setSelectedOption(option);
-  };
+      if (!response.ok) {
+        throw new Error('Failed to create post');
+      }
 
-  // PostSuggestions.tsx
-const handlePostSubmit = (formData: Omit<Post, 'category' | 'isExperienceOnly'>) => {
-  // Add experienceOnly state to the post data
-  addPost({ 
-    ...formData,
-    isExperienceOnly: experienceOnly 
-  }, 'postsuggestions');
-  
-  // Reset experience mode
-  setExperienceOnly(false);
-};
+      const newPost = await response.json();
 
-  const sortedPosts = suggestionPosts.sort((a, b) => {
-    switch(selectedOption) {
-      case 'Time': 
-        return b.timestamp - a.timestamp;
-      case 'Fare Cost':
-        return a.fare - b.fare;
-      case 'Popularity':
-        return b.upvotes - a.upvotes;
-      case 'Destination':
-        return a.destination.localeCompare(b.destination);
-      default:
-        return 0;
-    }
-  });
-
-  const timeAgo = (timestamp: number): string => {
-    const now = Date.now();
-    const diff = now - timestamp;
+      addPost(newPost, 'postsuggestions');
     
-    const minute = 60 * 1000;
-    const hour = 60 * minute;
-    const day = 24 * hour;
 
-    if (diff < minute) return 'Just now';
-    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
-    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
-    return `${Math.floor(diff / day)}d ago`;
+      setExperienceOnly(false);
+    } catch (error) {
+      console.error('Error posting:', error);
+    }
   };
 
   return (  
@@ -132,19 +45,11 @@ const handlePostSubmit = (formData: Omit<Post, 'category' | 'isExperienceOnly'>)
         </TouchableOpacity>
       </View>
 
-      <View style={{ zIndex: 1000 }}>
-        <Dropdown
-          options={dropdownOptions}
-          onSelect={handleOptionSelect}
-          defaultValue="Select Option"
-        />
-      </View>
-
-      <View style={{marginBottom: 200}}> 
-        {sortedPosts.map((post) => (
+      <View style={{ marginBottom: 200 }}> 
+        {posts.map((post) => (
           <View key={post.id} style={styles.containerpost}>
             <View style={styles.suggestordetails}>
-              <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1}}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                 <View style={styles.profile}>
                   <Text style={styles.initial}>{post.userinitial}</Text>
                 </View>
@@ -153,113 +58,52 @@ const handlePostSubmit = (formData: Omit<Post, 'category' | 'isExperienceOnly'>)
                   <Text style={styles.suggestorusername}>{post.username}</Text>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                <Text style={styles.postTimestamp}>
-                  {timeAgo(post.timestamp)}
-                </Text>
-              </View>
             </View>
-
             <View style={styles.detailsContainer}>
-              <View style={{flexDirection: 'column', marginRight: 90}}>
+              <View style={{ flexDirection: 'column', marginRight: 90 }}>
                 <Text style={styles.label}>Location</Text>
-                <Text style={styles.locationText}>{post.location}</Text>
+                <Text style={styles.locationText}>{post.location}</Text>  
               </View>
-              <View style={{flexDirection: 'column'}}>
+              <View style={{ flexDirection: 'column' }}>
                 <Text style={styles.label}>Destination</Text>
-                <Text style={styles.locationText}>{post.destination}</Text>
+                <Text style={styles.locationText}>{post.destination}</Text>  
               </View>
             </View>
-
-            {!post.isExperienceOnly && (
-              <View style={styles.routecontainer}>
-                <View style={styles.position}> 
-                  <Text style={styles.conlabel}>Types of Vehicles</Text>
-                  <Text style={styles.fare}>Fare: ₱{post.fare}.00</Text>
-                </View>
-                
-                <View style={styles.vehiclesContainer}>
-                  {post.vehicles?.length > 0 ? (
-                    post.vehicles.map((vehicle, index) => (
-                      <View key={index} style={styles.vehicleItem}>
-                        {vehicleIcons[vehicle]}
-                        <Text style={styles.vehicleText}>{vehicle}</Text>
-                      </View>
-                    ))
-                  ) : (
-                    <Text style={styles.vehicleText}>No vehicles selected</Text>
-                  )}
-                </View>
-                
-                <Text style={styles.estimatedTime}>Estimated Time: 45 minutes to 1.5 hours depending on traffic.</Text>
-                
-                <View style={{ marginTop: 20, marginBottom: 10 }}>
-                  <Text style={styles.conlabel}>Route Overview</Text>
-                </View>
-                
-                <Text style={styles.description}>{post.description}</Text>
-              </View>
-            )}
-
-            <View style={{flexDirection: 'column', gap: 8, marginTop: 20}}>
-              <Text style={{fontSize: 14, fontWeight: '500', color: '#44457D'}}>
-                {post.isExperienceOnly ? 'Your Experience' : 'Your Suggestions'}
-              </Text>
-              <Text style={styles.experience}>{post.suggestiontextbox}</Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={styles.content}>
-                <Octicons name="shield-check" size={18} color="#6366F1" />
-                <Text style={styles.status}>Status</Text>
-                <View style={styles.badge}>
-                  <Entypo name="check" size={14} color="#03C04A" />
-                  <Text style={styles.cert}>Certified {APP_NAME}</Text>
-                </View>
-              </View>
-
-              <View style={styles.arrowcontainer}>
-                <TouchableOpacity 
-                  style={styles.arrowup} 
-                  onPress={() => handleUpvote(post.id)}
-                >
-                  <AntDesign name="arrowup" size={12} color="#22C55E" />
-                  <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>
-                    {post.upvotes}
-                  </Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.arrowdown} 
-                  onPress={() => handleDownvote(post.id)}
-                >
-                  <AntDesign name="arrowdown" size={12} color="#C52222" />
-                  <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>
-                    {post.downvotes}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+            <View style={{ flexDirection: 'column', gap: 8, marginTop: 20 }}>
+              <Text style={styles.experience}>{post.content}</Text>
             </View>
           </View>
         ))}
       </View>
-      
+
       <PostModal
         visible={modalVisible}
         onClose={() => {
           setModalVisible(false);
           setExperienceOnly(false);
         }}
-        onSubmit={handlePostSubmit}
+        onSubmit={(formData) => handlePostSubmit({
+          ...formData,
+          originLat: 0, // Replace with actual values
+          originLon: 0,
+          destLat: 0,
+          destLon: 0
+        })}
+        location=""
+        destination=""
+        originLat={0}
+        originLon={0}
+        destLat={0}
+        destLon={0}
+        userEmail=""
+        userPassword=""
+        authToken={authToken}
       />
     </ScrollView>
   );
 }
 
- 
- 
 
- 
 
 const styles = StyleSheet.create({
   maincontainer: {flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15},

@@ -1,16 +1,9 @@
-import React from 'react';
-import { PostProvider } from './PostContext'; // Import PostProvider
-import CommunityPage from './(tabs)/community';
-import PostSuggestionPage from './postsuggestions';
-
-function App() {
-  return (
-    <PostProvider>
-      <CommunityPage />
-      <PostSuggestionPage />
-     
-    </PostProvider>
-  );
-}
-
-export default App;
+export type RootStackParamList = {
+  login: undefined;
+  signup: undefined;
+  _layout: undefined;
+  routes: undefined;
+  bestwayroutes: undefined;
+  "not-found": undefined;  // Use quotes for special characters
+  tabs: undefined;  // Remove parentheses
+};

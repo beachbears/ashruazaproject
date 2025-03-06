@@ -4,7 +4,7 @@ import {
   usePostContext,
   type Post,
   type VehicleType
-} from '../PostContext';
+} from '../../contexts/PostContext';
 import PostModal from '../postmodal';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -68,8 +68,8 @@ export default function Community() {
   const { 
     posts, 
     addPost, 
-    handleUpvote, 
-    handleDownvote, 
+    // handleUpvote, 
+    // handleDownvote, 
     experienceOnly, 
     setExperienceOnly 
   } = usePostContext();
@@ -78,20 +78,20 @@ export default function Community() {
 
   const allPosts = posts;
 
-  const sortedPosts = allPosts.sort((a, b) => {
-    switch(selectedOption) {
-      case 'Time': 
-        return b.timestamp - a.timestamp;
-      case 'Fare Cost':
-        return a.fare - b.fare;
-      case 'Popularity':
-        return b.upvotes - a.upvotes;
-      case 'Destination':
-        return a.destination.localeCompare(b.destination);
-      default:
-        return 0;
-    }
-  });
+  // const sortedPosts = allPosts.sort((a, b) => {
+  //   switch(selectedOption) {
+  //     case 'Time': 
+  //       return b.timestamp - a.timestamp;
+  //     case 'Fare Cost':
+  //       return a.fare - b.fare;
+  //     case 'Popularity':
+  //       return b.upvotes - a.upvotes;
+  //     case 'Destination':
+  //       return a.destination.localeCompare(b.destination);
+  //     default:
+  //       return 0;
+  //   }
+  // });
 
   const timeAgo = (timestamp: number): string => {
     const now = Date.now();
@@ -109,7 +109,7 @@ export default function Community() {
   const handlePostSubmit = (newPost: Omit<Post, 'category'>) => {
     addPost({ 
       ...newPost,
-      isExperienceOnly: experienceOnly 
+      // isExperienceOnly: experienceOnly 
     }, 'community');
     setExperienceOnly(false);
   };
@@ -134,7 +134,7 @@ export default function Community() {
         />
       </View>
 
-      <View style={{marginBottom: 200}}> 
+      {/* <View style={{marginBottom: 200}}> 
         {sortedPosts.map((post) =>  (
           
           <View key={post.id} style={styles.containerpost}>
@@ -157,17 +157,17 @@ export default function Community() {
 
             <View style={styles.detailsContainer}>
               <View style={{flexDirection: 'column', marginRight: 90}}>
-                <Text style={styles.label}>Location</Text>
+                <Text style={styles.label}>From: </Text>
                 <Text style={styles.locationText}>{post.location}</Text>
               </View>
               <View style={{flexDirection: 'column'}}>
-                <Text style={styles.label}>Destination</Text>
+                <Text style={styles.label}>To: </Text>
                 <Text style={styles.locationText}>{post.destination}</Text>
               </View>
             </View>
 
             {/* Completely remove routecontainer for experience-only posts */}
-            {!post.isExperienceOnly && (
+            {/* {!post.isExperienceOnly && (
               <View style={styles.routecontainer}>
                 <View style={styles.position}> 
                   <Text style={styles.conlabel}>Types of Vehicles</Text>
@@ -240,16 +240,16 @@ export default function Community() {
             </View>
           </View>
         ))}
-      </View>
+      </View> */}
 
-      <PostModal
+      {/* <PostModal
         visible={modalVisible}
         onClose={() => {
           setModalVisible(false);
           setExperienceOnly(false);
         }}
         onSubmit={handlePostSubmit}
-      />
+      /> */}
     </ScrollView>
   );
 }
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   headerText: {color: '#44457D',fontWeight: '500',fontSize: 16,},
   postbutton: {backgroundColor: '#6366F1',paddingHorizontal: 14,paddingVertical: 6,borderRadius: 10,justifyContent: 'center',alignItems: 'center'},
   postButtonText: {color: 'white',fontSize: 12, },
-  detailsContainer: { marginBottom: 16, flexDirection: 'row',  paddingHorizontal: 10, },
+  detailsContainer: { marginBottom: 16, flexDirection: 'column',  paddingHorizontal: 10, },
   locationText: {fontSize: 12, fontWeight: '400', color: '#44457D'},
   label: { fontSize: 14, fontWeight: '500', color: '#44457D',  marginTop: 10},
   

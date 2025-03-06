@@ -8,7 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Ionicons } from '@expo/vector-icons';
 import { APP_NAME } from '@/constants';
-import { AuthContext } from '../../AuthContext'; // adjust path as necessary
+import { AuthContext, AuthContextType  } from "../../contexts/AuthContext"; // Ensure the path is correct
 
 // Ignore specific warnings
 LogBox.ignoreLogs([

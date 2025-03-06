@@ -7,96 +7,113 @@ import {
   Text,
   ScrollView, StyleSheet
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { FontAwesome5 } from '@expo/vector-icons';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-
-const VEHICLE_TYPES: VehicleType[] = ["Jeep", "E-jeep", "Bus", "UV Exp.", "Train"];
-
-type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
-
+ 
 interface Post {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  userinitial: string;
-  loginusername: string;
-  username: string;
-  location: string;
-  fare: number;
-  destination: string;
-  description: string;
-  suggestiontextbox: string;
-  timestamp: number;
-  vehicles: VehicleType[];
-  isExperienceOnly: boolean;
+  // id: number;
+  // upvotes: number;
+  // downvotes: number;
+  // userinitial: string;
+  // loginusername: string;
+  // username: string;
+  // fare: number;
+  // description: string;
+  // suggestiontextbox: string;
+  // timestamp: number;
+  // vehicles: VehicleType[];
+  // isExperienceOnly: boolean;
+  location: string;         // Add location
+  destination: string;  
+  content: string;
+  origin_lat: number;
+  origin_lon: number;
+  dest_lat: number;
+  dest_lon: number;
 }
+
 
 interface PostModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (post: Omit<Post, 'category'>) => void;
+  onSubmit: (formData: Post) => void;
+  location: string;
+  destination: string;
+  originLat: number; // Pass origin latitude
+  originLon: number; // Pass origin longitude
+  destLat: number; // Pass destination latitude
+  destLon: number; // Pass destination longitude
+  userEmail: string; // Pass user email
+  userPassword: string; // Pass user password
+  authToken: string; // Pass JWT token for authorization
+  // content: string;
+  // origin_lat: number;
+  // origin_lon: number;
+  // dest_lat: number;
+  // dest_lon: number;
 }
 
-export default function PostModal({ visible, onClose, onSubmit }: PostModalProps) {
-  const [location, setLocation] = useState('');
-  const [fare, setFare] = useState('');
-  const [destination, setDestination] = useState('');
-  const [description, setDescription] = useState('');
-  const [suggestion, setSuggestion] = useState('');
-  const [selectedVehicles, setSelectedVehicles] = useState<VehicleType[]>([]);
-  const [isExperienceOnly, setIsExperienceOnly] = useState(false);
 
-  const toggleVehicle = (vehicle: VehicleType) => {
-    setSelectedVehicles(prev =>
-      prev.includes(vehicle)
-        ? prev.filter(v => v !== vehicle)
-        : [...prev, vehicle]
-    );
-  };
-
-  const handleExperienceToggle = () => {
-    setIsExperienceOnly(!isExperienceOnly);
-    console.log("isExperienceOnly:", !isExperienceOnly); // Log the new state
-  };
-  
-  const handleSubmit = () => {
-    const newPost: Omit<Post, 'category'> = {
-      id: Date.now(),
-      upvotes: 0,
-      downvotes: 0,
-      userinitial: 'AR',
-      loginusername: 'Ashley Ruaza',
-      username: '@ashruaza',
-      fare: isExperienceOnly ? 0 : parseFloat(fare) || 0, // Set fare to 0 for experience-only posts
-      location: location,
-      destination: destination,
-      description: isExperienceOnly ? '' : description, // Empty description for experience-only posts
-      suggestiontextbox: suggestion,
-      timestamp: Date.now(),
-      vehicles: isExperienceOnly ? [] : selectedVehicles, // Empty vehicles for experience-only posts
-      isExperienceOnly: isExperienceOnly,
+export default function PostModal({ visible, onClose, onSubmit, location, destination, originLat, originLon, destLat, destLon, userEmail, userPassword, authToken }: PostModalProps) {
+ 
+  const [content, setContent] = useState('');
+  const [error, setError] = useState('');
+   
+  const handleSubmit = async () => {
+    // Construct the payload exactly as the API expects
+    const newPost: Post = {
+      content: content, // Use the content state from the text input
+      origin_lat: originLat, // Use prop instead of hardcoded value
+      origin_lon: originLon,
+      dest_lat: destLat,
+      dest_lon: destLon,
+      location: location,  // Include location
+      destination: destination,  // Include destination
     };
-  
-    console.log("New Post:", newPost); // Log the new post object
-    console.log("isExperienceOnly:", isExperienceOnly); // Inside handleSubmit in PostModal
-    onSubmit(newPost);
-    setLocation('');
-    setFare('');
-    setDestination('');
-    setDescription('');
-    setSuggestion('');
-    setSelectedVehicles([]);
-    setIsExperienceOnly(false);
-    onClose();
+ 
+    console.log("New Post Payload:", newPost); // Debugging
+ 
+    try {
+      // Send the new post to your backend API
+      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`, // Include the JWT token
+        },
+        body: JSON.stringify({
+          route_post: newPost, // Match the API's expected parameter name
+        }),
+      });
+ 
+      if (!response.ok) {
+        console.log(response)
+        throw new Error('Failed to create post');
+      }
+ 
+      const data = await response.json();
+      console.log('Post created:', data);
+ 
+      // Call the onSubmit callback (if needed)
+      onSubmit(newPost);
+ 
+      // Close the modal
+      onClose();
+    } catch (error) {
+      console.error('Error creating post:', error);
+      setError('Failed to create post. Please try again.');
+    }
+ 
+    // Reset form fields
+    setContent('');
+ 
   };
+
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalContainer}>
         <View style={styles.postContainer}>
           <ScrollView>
-            <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={styles.userdetails}>
                 <View style={styles.userprofile}>
                   <Text style={styles.userinitial}>AR</Text>
@@ -106,101 +123,21 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
                   <Text style={styles.username}>@ashruaza</Text>
                 </View>
               </View>
-              <TouchableOpacity 
-                style={styles.toggleContainer}
-                onPress={handleExperienceToggle}
-              >
-                <View style={[
-                  styles.toggleCircle,
-                  isExperienceOnly && styles.toggleCircleActive
-                ]}>
-                </View>
-                <Text style={styles.toggleText}>
-                  {isExperienceOnly ? 'Switch to Full Post' : 'Experience Only'}
-                </Text>
-              </TouchableOpacity>
             </View>
 
-            <TextInput
-              placeholder="From: E.g. Glori Bayan"
-              value={location}
-              onChangeText={setLocation}
-              style={styles.input}
-            />
 
-            <TextInput
-              placeholder="To: E.g. Intramuros"
-              value={destination}
-              onChangeText={setDestination}
-              style={styles.input}
-            />
+            <Text style={styles.input}>From: {location}</Text>
+            <Text style={styles.input}>To: {destination}</Text>
 
-            {!isExperienceOnly && (
-              <>
-                <TextInput
-                  placeholder="Fare: E.g. 150.00"
-                  value={fare}
-                  onChangeText={setFare}
-                  keyboardType="numeric"
-                  style={styles.input}
-                />
-
-                <View style={styles.vehicleTypes}>
-                  {VEHICLE_TYPES.map(vehicle => (
-                    <TouchableOpacity
-                      key={vehicle}
-                      style={[
-                        styles.vehicleItem,
-                      ]}
-                      onPress={() => toggleVehicle(vehicle)}
-                    >
-                      {vehicle === "Jeep" ? (
-                        <MaterialCommunityIcons
-                          name="jeepney"
-                          size={26}
-                          color={selectedVehicles.includes(vehicle) ? "#4F46E5" : "#64748B"}
-                        />
-                      ) : vehicle === "Train" ? (
-                        <FontAwesome6
-                          name="train-subway"
-                          size={24}
-                          color={selectedVehicles.includes(vehicle) ? "#4F46E5" : "#64748B"}
-                        />
-                      ) : (
-                        <FontAwesome5
-                          name={vehicle === "UV Exp." ? "car" : vehicle === "Bus" ? "bus-alt" : "bus"}
-                          size={24}
-                          color={selectedVehicles.includes(vehicle) ? "#4F46E5" : "#64748B"}
-                        />
-                      )}
-                      <Text style={[
-                        styles.vehicleText,
-                        { color: selectedVehicles.includes(vehicle) ? "#4F46E5" : "#64748B" }
-                      ]}>
-                        {vehicle}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <Text style={styles.routeOverviewText}>Route Overview</Text>
-                <TextInput
-                  placeholder={"Route Description\n\n"}
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                  style={styles.input}
-                />
-              </>
-            )}
 
             <TextInput
               placeholder={"Your Experiences\n\nE.g. We started our journey at the Intramuros gates, aiming to explore the historic walled city. We initially struggled with finding parking, but a guard directed us to a nearby lot. The cobblestone streets were enchanting but tricky to navigate without a map. A tricycle driver offered a short tour, which made it easier to locate iconic spots like Fort Santiago and San Agustin Church. Getting lost led us to a quaint café serving authentic Filipino dishes."}
-              value={suggestion}
-              onChangeText={setSuggestion}
+              value={content}
+              onChangeText={setContent}
               multiline
               style={styles.input}
             />
+
 
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -217,6 +154,8 @@ export default function PostModal({ visible, onClose, onSubmit }: PostModalProps
   );
 }
 
+
+ 
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
@@ -294,7 +233,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#6B7280',
   },
-  
+ 
   routeOverviewText: {
     color: '#44457D',
     fontWeight: '400',
@@ -361,3 +300,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 });
+
+
+
+
+
+
+
+
+
+
+
+

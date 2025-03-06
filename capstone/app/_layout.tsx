@@ -2,8 +2,8 @@ import { Slot, Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View, LogBox } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AuthProvider } from '../AuthContext';
-import { PostProvider } from './PostContext';
+import { AuthProvider } from '../contexts/AuthContext';
+import { PostProvider } from '../contexts/PostContext';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([

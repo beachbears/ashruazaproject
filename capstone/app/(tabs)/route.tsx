@@ -617,9 +617,24 @@ const RouteScreen: React.FC = () => {
             <TouchableOpacity style={styles.twobox} onPress={() => setModalVisible(true)}>
               <Text style={styles.texttwo}>Review</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.twobox} onPress={() => router.push("/postsuggestions")}>
-                            <Text style={styles.texttwo}>Route Post Suggestions</Text>
-                        </TouchableOpacity>
+           
+
+                        <TouchableOpacity
+  style={styles.twobox}
+  onPress={() => {
+    // Navigate to Route Post Suggestion Page with location and destination
+    router.push({
+      pathname: "/postsuggestions",
+      params: {
+        location: origin, // Pass the origin as location
+        destination: destination, // Pass the destination
+       
+      },
+    });
+  }}
+>
+  <Text style={styles.texttwo}>Route Post Suggestions</Text>
+</TouchableOpacity>
  
 
           </View>

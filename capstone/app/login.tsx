@@ -13,13 +13,14 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from '../axiosConfig';
-import { RootStackParamList } from '../app';
+import { RootStackParamList } from './app';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 // Updated: Use expo-router's useRouter instead of useNavigation
 import { useRouter } from 'expo-router';
 import { LogBox } from 'react-native';
-import { AuthContext } from '../AuthContext';
+import { AuthContext, AuthContextType  } from "../contexts/AuthContext"; // Ensure the path is correct
+
 
 LogBox.ignoreLogs([
   'textShadow*',
@@ -110,7 +111,9 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
         await AsyncStorage.setItem("token", response.data.token);
         
         // I-update ang global auth state gamit ang login function mula sa AuthContext
-        login(formData.email);
+       {/* login(formData.email); */}
+        login(formData.email, response.data.token);
+
         router.replace("/(tabs)");
       }
     } catch (error: any) {

@@ -9,12 +9,12 @@ import {
   Text,
 } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { AuthContext } from '../AuthContext'; // adjust path as needed
+
+import { AuthContext, AuthContextType  } from "../contexts/AuthContext"; // Ensure the path is correct
+
 
 interface FeedbackItem {
   id: number;
-  upvotes: number;
-  downvotes: number;
   content: string;
   userName: string;
   userHandle: string;
@@ -28,8 +28,6 @@ interface ModalComponentProps {
   onSubmit: (text: string, rating: number) => void;
   onNewFeedback?: (newFeedback: FeedbackItem) => void;
 }
-
-
 
 /**
  * A modal for collecting user feedback (text + star rating).
@@ -47,7 +45,13 @@ const ModalComponent: React.FC<ModalComponentProps> = ({
   const suggestionInputRef = useRef<TextInput>(null);
 
   // Access user data from AuthContext
-  const { isLoggedIn, userName, userHandle, userInitials } = useContext(AuthContext);
+
+  const authContext = useContext(AuthContext) as AuthContextType | null;
+
+if (!authContext) return null; // Prevents errors if context is null
+
+const { isLoggedIn, userName, userHandle, userInitials, authToken } = authContext;
+  
 
   // Focus the text input when the modal becomes visible
   useEffect(() => {
@@ -71,8 +75,6 @@ const ModalComponent: React.FC<ModalComponentProps> = ({
     if (suggestion.trim()) {
       const newFeedback: FeedbackItem = {
         id: Date.now(),
-        upvotes: 0,
-        downvotes: 0,
         // Use user data if logged in; else fallback to Guest
         initials: isLoggedIn && userInitials ? userInitials : 'G',
         userName: isLoggedIn && userName ? userName : 'Guest',
