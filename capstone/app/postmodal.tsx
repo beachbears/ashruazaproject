@@ -52,8 +52,8 @@ interface PostModalProps {
 }
 
 
-export default function PostModal({ visible, onClose, onSubmit, location, destination, originLat, originLon, destLat, destLon, userEmail, userPassword, authToken }: PostModalProps) {
- 
+export default function PostModal({ visible, onClose, onSubmit, location, destination, originLat, originLon, destLat, destLon, userEmail, userPassword, authToken }: PostModalProps) {  console.log("Modal Props - Location:", location); // Check console for this
+  console.log("Modal Props - Destination:", destination); // Check console for this
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
    
@@ -123,11 +123,11 @@ export default function PostModal({ visible, onClose, onSubmit, location, destin
                   <Text style={styles.username}>@ashruaza</Text>
                 </View>
               </View>
-            </View>
-
-
-            <Text style={styles.input}>From: {location}</Text>
-            <Text style={styles.input}>To: {destination}</Text>
+            </View> 
+            <View style={styles.userdetails}>
+  <Text style={styles.username}>From: {location}</Text>
+  <Text style={styles.username}>To: {destination}</Text>
+</View>
 
 
             <TextInput
@@ -300,15 +300,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 });
-
-
-
-
-
-
-
-
-
-
 
 

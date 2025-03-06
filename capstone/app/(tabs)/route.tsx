@@ -628,7 +628,7 @@ const RouteScreen: React.FC = () => {
       params: {
         location: origin, // Pass the origin as location
         destination: destination, // Pass the destination
-       
+        
       },
     });
   }}
