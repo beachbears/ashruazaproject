@@ -1,18 +1,15 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-// Update PostCategory type to include 'experience'
-export type PostCategory = 'community' | 'postsuggestions' | 'experience';
-export type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
-
 export interface Post {
   id?: number;
+    // Add destination
   content: string;
-  location: string;        // Add location
-  destination: string;     // Add destination
-  originLat: number;       // Add origin latitude
-  originLon: number;       // Add origin longitude
-  destLat: number;         // Add destination latitude
-  destLon: number;         // Add destination longitude
+  location: string;
+  destination: string;
+  origin_lat: number; // Use underscores to match the data
+  origin_lon: number; // Use underscores to match the data
+  destination_lat: number;   // Use underscores to match the data
+  destination_lon: number;   // Use underscores to match the data        // Add destination longitude
   userinitial?: string;
   loginusername?: string;
   username?: string;
@@ -38,7 +35,7 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const postWithCategory = {
       ...newPost,
       category: source,
-      isExperienceOnly: false, // Remove if not needed
+    
     };
   
     console.log("Post with Category:", postWithCategory); // Debugging

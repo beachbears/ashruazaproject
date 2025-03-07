@@ -9,72 +9,93 @@ export default function PostSuggestions() {
   const { posts, addPost } = usePostContext();
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
   const [modalVisible, setModalVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get and validate route parameters
   const params = useLocalSearchParams();
-  
-  // Add null checks and decoding
-  if (!params.location || !params.destination) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Missing route parameters. Please go back and try again.</Text>
-      </View>
-    );
-  }
 
   // Decode URL parameters
   const location = decodeURIComponent(params.location as string);
   const destination = decodeURIComponent(params.destination as string);
-  
-  // Convert coordinate parameters with fallbacks
-  const originLat = Number(params.originLat) || 0;
-  const originLon = Number(params.originLon) || 0;
-  const destLat = Number(params.destLat) || 0;
-  const destLon = Number(params.destLon) || 0;
 
-  // Debug logs
-  console.log('Route Parameters:', {
-    location,
-    destination,
-    originLat,
-    originLon,
-    destLat,
-    destLon
-  });
+  // Convert coordinate parameters with fallbacks
+  const origin_lat = Number(params.origin_lat);
+  const origin_lon = Number(params.origin_lon);
+  const destination_lat = Number(params.destination_lat);
+  const destination_lon = Number(params.destination_lon);
+
+  // Filter posts by current location and destination
+  const filteredPosts = posts.filter(
+    post => post.location === location && post.destination === destination
+  );
+  console.log("Filtered Posts:", filteredPosts); // Debugging
 
   const handlePostSubmit = async (formData: Post) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+  
     try {
+      const requestBody = {
+        route_post: {
+          ...formData,
+          location,
+          destination,
+          origin_lat,
+          origin_lon,
+          dest_lat: destination_lat,
+          dest_lon: destination_lon,
+        },
+      };
+  
+      console.log("Request Payload:", JSON.stringify(requestBody, null, 2)); // Debugging
+      console.log("Auth Token:", authToken); // Debugging
+  
       const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ 
-          route_post: {
-            ...formData,
-            origin_lat: originLat,
-            origin_lon: originLon,
-            dest_lat: destLat,
-            dest_lon: destLon
-          }
-        }),
+        body: JSON.stringify(requestBody),
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Server Error Response:", errorData); // Debugging
         throw new Error(errorData.error || 'Failed to create post');
       }
-
+  
       const newPost = await response.json();
-      addPost(newPost, 'postsuggestions');
+      console.log("API Response (New Post):", newPost); // Debugging
+  
+      if (!newPost.location || !newPost.destination) {
+        console.warn("API response is missing location or destination. Adding them manually.");
+        newPost.location = location;
+        newPost.destination = destination;
+      }
+      
+      if (Array.isArray(newPost)) {
+        console.warn('Received an array instead of a single post:', newPost);
+        return;
+      }
+  
+      // Manually add location and destination to the new post
+      const postWithLocationAndDestination = {
+        ...newPost,
+        location, // Add current location
+        destination, // Add current destination
+      };
+  
+      addPost(postWithLocationAndDestination, 'postsuggestions');
       setModalVisible(false);
     } catch (error) {
       console.error('Post submission error:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  return (  
+  return (
     <ScrollView style={styles.maincontainer}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Route Suggestions for</Text>
@@ -83,8 +104,8 @@ export default function PostSuggestions() {
           <Text style={styles.arrow}>→</Text>
           <Text style={styles.routeText}>{destination}</Text>
         </View>
-        <TouchableOpacity 
-          onPress={() => setModalVisible(true)} 
+        <TouchableOpacity
+          onPress={() => setModalVisible(true)}
           style={styles.postbutton}
         >
           <Text style={styles.postButtonText}>+ Add Suggestion</Text>
@@ -92,23 +113,21 @@ export default function PostSuggestions() {
       </View>
 
       <View style={styles.postsContainer}>
-        {posts
-          .filter(post => post.category === 'postsuggestions')
-          .map((post) => (
-            <View key={post.id} style={styles.containerpost}>
-              <View style={styles.detailsContainer}>
-                <View style={styles.locationBlock}>
-                  <Text style={styles.label}>From</Text>
-                  <Text style={styles.locationText}>{location}</Text>
-                </View>
-                <View style={styles.locationBlock}>
-                  <Text style={styles.label}>To</Text>
-                  <Text style={styles.locationText}>{destination}</Text>
-                </View>
+        {filteredPosts.map((post) => (
+          <View key={post.id} style={styles.containerpost}>
+            <View style={styles.detailsContainer}>
+              <View style={styles.locationBlock}>
+                <Text style={styles.label}>From</Text>
+                <Text style={styles.locationText}>{post.location}</Text>
               </View>
-              <Text style={styles.experience}>{post.content}</Text>
+              <View style={styles.locationBlock}>
+                <Text style={styles.label}>To</Text>
+                <Text style={styles.locationText}>{post.destination}</Text>
+              </View>
             </View>
-          ))}
+            <Text style={styles.experience}>{post.content}</Text>
+          </View>
+        ))}
       </View>
 
       <PostModal
@@ -117,15 +136,18 @@ export default function PostSuggestions() {
         onSubmit={handlePostSubmit}
         location={location}
         destination={destination}
-        originLat={originLat}
-        originLon={originLon}
-        destLat={destLat}
-        destLon={destLon}
+        origin_lat={origin_lat}
+        origin_lon={origin_lon}
+        destination_lat={destination_lat}
+        destination_lon={destination_lon}
         authToken={authToken}
+        userEmail={''}
+        userPassword={''}
       />
     </ScrollView>
   );
 }
+ 
 
 const styles = StyleSheet.create({
   maincontainer: {
@@ -217,5 +239,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
+
 
  

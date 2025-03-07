@@ -619,7 +619,7 @@ const RouteScreen: React.FC = () => {
             </TouchableOpacity>
            
 
-                        <TouchableOpacity
+<TouchableOpacity
   style={styles.twobox}
   onPress={() => {
     // Navigate to Route Post Suggestion Page with location and destination
@@ -628,7 +628,10 @@ const RouteScreen: React.FC = () => {
       params: {
         location: origin, // Pass the origin as location
         destination: destination, // Pass the destination
-        
+        destination_lat: route[1].latitude, // Pass the destination latitude
+        destination_lon: route[1].longitude, // Pass the destination longitude
+        origin_lat: route[0].latitude, // Pass the origin latitude
+        origin_lon: route[0].longitude, // Pass the origin longitude
       },
     });
   }}
