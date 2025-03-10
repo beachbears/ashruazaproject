@@ -21,6 +21,8 @@ import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import ReviewModal from '../reviewmodal';
+import { usePostContext } from '../../contexts/PostContext'; 
+ 
 
 const router = useRouter();
 
@@ -75,6 +77,8 @@ export interface Route {
 export interface User {
   id: number;
   username: string;
+  firstname: string;
+  lastname: string;
 }
 
 export interface Post {
@@ -263,10 +267,13 @@ const RouteScreen: React.FC = () => {
   const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>([]);
   const [routeDetails, setRouteDetails] = useState<RouteDetails>({ route: null });
   const [mapResetKey, setMapResetKey] = useState<number>(Date.now());
+  
+  
+
+  
   // Flag para malaman kung na-manual ang origin
   const [manualOrigin, setManualOrigin] = useState<boolean>(false);
   const router = useRouter();
-
   // Animated height para sa map container
   const animatedHeight = useRef(new Animated.Value(400)).current;
 
@@ -444,6 +451,8 @@ const RouteScreen: React.FC = () => {
   // -------------------------------------------------
   // Fetch route details mula sa backend API (kasama ang pag-decode ng geometry)
   // -------------------------------------------------
+
+  const { addPost } = usePostContext();
   const fetchRouteDetails = async (destLat: number, destLon: number) => {
     const params = {
       origin_lat: region.latitude,
@@ -458,6 +467,22 @@ const RouteScreen: React.FC = () => {
         { params }
       );
       console.log("API Response:", response.data);
+  
+      // Process posts immediately after getting the API response
+      const processedPosts = response.data.posts.map(post => ({
+        ...post,
+        location: origin,              // current origin from state
+        destination: destination,      // current destination from state
+        origin_lat: region.latitude,
+        origin_lon: region.longitude,
+        destination_lat: destLat,
+        destination_lon: destLon,
+      }));
+  
+      // Add processedPosts to your PostContext here
+      processedPosts.forEach(p => addPost(p, 'routes'));
+  
+      // Now set route details and process polyline
       setRouteDetails({ route: response.data.route });
       
       if (response.data.polyline && response.data.polyline.length > 0) {
@@ -502,6 +527,7 @@ const RouteScreen: React.FC = () => {
       console.error("Error fetching route details:", error);
     }
   };
+  
 
   // -------------------------------------------------
   // Render dynamic Route Overview gamit ang API data
@@ -626,12 +652,12 @@ const RouteScreen: React.FC = () => {
     router.push({
       pathname: "/postsuggestions",
       params: {
-        location: origin, // Pass the origin as location
-        destination: destination, // Pass the destination
-        destination_lat: route[1].latitude, // Pass the destination latitude
-        destination_lon: route[1].longitude, // Pass the destination longitude
-        origin_lat: route[0].latitude, // Pass the origin latitude
-        origin_lon: route[0].longitude, // Pass the origin longitude
+        location: encodeURIComponent(origin),
+    destination: encodeURIComponent(destination),
+    origin_lat: route[0].latitude.toString(),
+    origin_lon: route[0].longitude.toString(),
+    destination_lat: route[1].latitude.toString(),
+    destination_lon: route[1].longitude.toString(),
       },
     });
   }}

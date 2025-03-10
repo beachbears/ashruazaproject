@@ -3,38 +3,32 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import { usePostContext, type Post } from './../contexts/PostContext';
 import PostModal from './postmodal';
 import { AuthContext, AuthContextType } from './../contexts/AuthContext';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function PostSuggestions() {
   const { posts, addPost } = usePostContext();
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
   const [modalVisible, setModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Get and validate route parameters
+   const router = useRouter();
+   
+  // Retrieve and decode route parameters.
   const params = useLocalSearchParams();
-
-  // Decode URL parameters
   const location = decodeURIComponent(params.location as string);
   const destination = decodeURIComponent(params.destination as string);
-
-  // Convert coordinate parameters with fallbacks
   const origin_lat = Number(params.origin_lat);
   const origin_lon = Number(params.origin_lon);
   const destination_lat = Number(params.destination_lat);
   const destination_lon = Number(params.destination_lon);
 
-  // Filter posts by current location and destination
-  const filteredPosts = posts.filter(
-    post => post.location === location && post.destination === destination
-  );
-  console.log("Filtered Posts:", filteredPosts); // Debugging
+  console.log("All Posts:", posts);
 
   const handlePostSubmit = async (formData: Post) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-  
+
     try {
+      // Build the request payload using the keys your API expects.
       const requestBody = {
         route_post: {
           ...formData,
@@ -42,14 +36,15 @@ export default function PostSuggestions() {
           destination,
           origin_lat,
           origin_lon,
+          // Send keys that your backend requires.
           dest_lat: destination_lat,
           dest_lon: destination_lon,
         },
       };
-  
-      console.log("Request Payload:", JSON.stringify(requestBody, null, 2)); // Debugging
-      console.log("Auth Token:", authToken); // Debugging
-  
+
+      console.log("Request Payload:", JSON.stringify(requestBody, null, 2));
+      console.log("Auth Token:", authToken);
+
       const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
         method: 'POST',
         headers: {
@@ -58,35 +53,21 @@ export default function PostSuggestions() {
         },
         body: JSON.stringify(requestBody),
       });
-  
+
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Server Error Response:", errorData); // Debugging
+        console.error("Server Error Response:", errorData);
         throw new Error(errorData.error || 'Failed to create post');
       }
-  
+
       const newPost = await response.json();
-      console.log("API Response (New Post):", newPost); // Debugging
-  
-      if (!newPost.location || !newPost.destination) {
-        console.warn("API response is missing location or destination. Adding them manually.");
-        newPost.location = location;
-        newPost.destination = destination;
-      }
-      
-      if (Array.isArray(newPost)) {
-        console.warn('Received an array instead of a single post:', newPost);
-        return;
-      }
-  
-      // Manually add location and destination to the new post
-      const postWithLocationAndDestination = {
-        ...newPost,
-        location, // Add current location
-        destination, // Add current destination
-      };
-  
-      addPost(postWithLocationAndDestination, 'postsuggestions');
+      console.log("API Response (New Post):", newPost);
+
+      // If the API response is missing location or destination, add them.
+      if (!newPost.location) newPost.location = location;
+      if (!newPost.destination) newPost.destination = destination;
+
+      addPost(newPost, 'postsuggestions');
       setModalVisible(false);
     } catch (error) {
       console.error('Post submission error:', error);
@@ -104,17 +85,14 @@ export default function PostSuggestions() {
           <Text style={styles.arrow}>→</Text>
           <Text style={styles.routeText}>{destination}</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => setModalVisible(true)}
-          style={styles.postbutton}
-        >
+        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
           <Text style={styles.postButtonText}>+ Add Suggestion</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.postsContainer}>
-        {filteredPosts.map((post) => (
-          <View key={post.id} style={styles.containerpost}>
+        {posts.map((post, index) => (
+          <View key={`${post.id}-${index}`} style={styles.containerpost}>
             <View style={styles.detailsContainer}>
               <View style={styles.locationBlock}>
                 <Text style={styles.label}>From</Text>
@@ -125,7 +103,12 @@ export default function PostSuggestions() {
                 <Text style={styles.locationText}>{post.destination}</Text>
               </View>
             </View>
-            <Text style={styles.experience}>{post.content}</Text>
+            <Text style={styles.postContent}>Content: {post.content}</Text>
+            <Text style={styles.postUser}>
+              User: {post.user?.firstname} {post.user?.lastname} ({post.user?.username})
+            </Text>
+            <Text style={styles.postVotes}>Votes: {post.votes ?? 0}</Text>
+            <Text style={styles.postDate}>Created at: {post.created_at}</Text>
           </View>
         ))}
       </View>
@@ -147,24 +130,12 @@ export default function PostSuggestions() {
     </ScrollView>
   );
 }
- 
 
 const styles = StyleSheet.create({
   maincontainer: {
     flex: 1,
     padding: 16,
     backgroundColor: '#F8F9FA',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    color: '#DC3545',
-    fontSize: 16,
-    textAlign: 'center',
   },
   sectionHeader: {
     marginBottom: 24,
@@ -233,12 +204,23 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     fontWeight: '500',
   },
-  experience: {
+  postContent: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  postUser: {
     fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
+    color: '#555',
+    marginBottom: 4,
+  },
+  postVotes: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  postDate: {
+    fontSize: 12,
+    color: '#888',
   },
 });
-
-
- 
