@@ -45,11 +45,16 @@ export default function CommunityPage() {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Community Page</Text>
       
-      <TouchableOpacity style={styles.button} onPress={handleGoToRouteFinder}>
-        <Text style={styles.buttonText}>Go to Route Finder</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
+      {/* Updated Create Post button to navigate to RouteScreen */}
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={() => {
+          router.push({
+            pathname: '/route',
+            params: { fromCommunity: 'true' }
+          });
+        }}
+      >
         <Text style={styles.buttonText}>Create Post</Text>
       </TouchableOpacity>
       

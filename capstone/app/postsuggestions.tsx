@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { usePostContext, type Post } from './../contexts/PostContext';
 import PostModal from './postmodal';
@@ -10,7 +10,7 @@ export default function PostSuggestions() {
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
   const [modalVisible, setModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-   const router = useRouter();
+  const router = useRouter();
    
   // Retrieve and decode route parameters.
   const params = useLocalSearchParams();
@@ -21,7 +21,23 @@ export default function PostSuggestions() {
   const destination_lat = Number(params.destination_lat);
   const destination_lon = Number(params.destination_lon);
 
+  // Additional useEffect to auto-open modal based on URL parameter
+  const autoOpenModal = params.autoOpenModal === 'true';
+  useEffect(() => {
+    if (autoOpenModal) {
+      setModalVisible(true);
+    }
+  }, [autoOpenModal]);
+
   console.log("All Posts:", posts);
+
+  // Filter posts based on current route coordinates
+  const filteredPosts = posts.filter(post => 
+    post.origin_lat === origin_lat &&
+    post.origin_lon === origin_lon &&
+    post.destination_lat === destination_lat &&
+    post.destination_lon === destination_lon
+  );
 
   const handlePostSubmit = async (formData: Post) => {
     if (isSubmitting) return;
@@ -91,7 +107,7 @@ export default function PostSuggestions() {
       </View>
 
       <View style={styles.postsContainer}>
-        {posts.map((post, index) => (
+        {filteredPosts.map((post, index) => (
           <View key={`${post.id}-${index}`} style={styles.containerpost}>
             <View style={styles.detailsContainer}>
               <View style={styles.locationBlock}>

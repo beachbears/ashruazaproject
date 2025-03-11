@@ -7,10 +7,11 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  LogBox,
   TouchableWithoutFeedback,
   Image,
-  Animated
+  Animated,
+  Modal,
+  LogBox
 } from 'react-native';
 import axios from 'axios';
 import { WebView } from 'react-native-webview';
@@ -23,7 +24,6 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import ReviewModal from '../reviewmodal';
 import { usePostContext } from '../../contexts/PostContext'; 
  
-
 const router = useRouter();
 
 const polyline = require('@mapbox/polyline'); // Using require for CommonJS module
@@ -251,8 +251,9 @@ const SuggestionList = ({
 // Main RouteScreen Component
 //
 const RouteScreen: React.FC = () => {
-  const { destination: destParam, attraction } = useLocalSearchParams();
+  const { destination: destParam, attraction, fromCommunity } = useLocalSearchParams();
   const [modalVisible, setModalVisible] = useState(false);
+  const [showInstructionModal, setShowInstructionModal] = useState(false); // New state for modal
   const [region, setRegion] = useState<Region>({
     latitude: 14.6760,
     longitude: 121.0437,
@@ -268,9 +269,6 @@ const RouteScreen: React.FC = () => {
   const [routeDetails, setRouteDetails] = useState<RouteDetails>({ route: null });
   const [mapResetKey, setMapResetKey] = useState<number>(Date.now());
   
-  
-
-  
   // Flag para malaman kung na-manual ang origin
   const [manualOrigin, setManualOrigin] = useState<boolean>(false);
   const router = useRouter();
@@ -285,6 +283,13 @@ const RouteScreen: React.FC = () => {
       setMapResetKey(Date.now());
     }
   }, [destParam]);
+
+  // Show instruction modal if fromCommunity equals 'true'
+  useEffect(() => {
+    if (fromCommunity === 'true') {
+      setShowInstructionModal(true);
+    }
+  }, [fromCommunity]);
 
   // Kung may attraction, i-parse at i-set ang destination at route
   useEffect(() => {
@@ -382,14 +387,11 @@ const RouteScreen: React.FC = () => {
     setOriginSuggestions(suggestions);
   };
 
-  // Kapag natapos ang pag-edit ng Origin (submit o blur), i-update ang route state at region gamit ang bagong coordinate.
   const updateOriginRoute = async () => {
     const suggestions = await geocodeAddress(origin);
     if (suggestions && suggestions.length > 0) {
       const selected = suggestions[0];
-      // I-update ang region state upang gamitin sa API call
       setRegion(prev => ({ ...prev, latitude: selected.lat, longitude: selected.lon }));
-      // I-update ang route state: ang unang coordinate ay magiging bagong origin
       setRoute(prev => {
         if (prev.length > 0) {
           return [{ latitude: selected.lat, longitude: selected.lon }, ...prev.slice(1)];
@@ -451,7 +453,6 @@ const RouteScreen: React.FC = () => {
   // -------------------------------------------------
   // Fetch route details mula sa backend API (kasama ang pag-decode ng geometry)
   // -------------------------------------------------
-
   const { addPost } = usePostContext();
   const fetchRouteDetails = async (destLat: number, destLon: number) => {
     const params = {
@@ -471,18 +472,16 @@ const RouteScreen: React.FC = () => {
       // Process posts immediately after getting the API response
       const processedPosts = response.data.posts.map(post => ({
         ...post,
-        location: origin,              // current origin from state
-        destination: destination,      // current destination from state
+        location: origin,
+        destination: destination,
         origin_lat: region.latitude,
         origin_lon: region.longitude,
         destination_lat: destLat,
         destination_lon: destLon,
       }));
   
-      // Add processedPosts to your PostContext here
       processedPosts.forEach(p => addPost(p, 'routes'));
   
-      // Now set route details and process polyline
       setRouteDetails({ route: response.data.route });
       
       if (response.data.polyline && response.data.polyline.length > 0) {
@@ -528,7 +527,6 @@ const RouteScreen: React.FC = () => {
     }
   };
   
-
   // -------------------------------------------------
   // Render dynamic Route Overview gamit ang API data
   // -------------------------------------------------
@@ -643,29 +641,25 @@ const RouteScreen: React.FC = () => {
             <TouchableOpacity style={styles.twobox} onPress={() => setModalVisible(true)}>
               <Text style={styles.texttwo}>Review</Text>
             </TouchableOpacity>
-           
-
-<TouchableOpacity
-  style={styles.twobox}
-  onPress={() => {
-    // Navigate to Route Post Suggestion Page with location and destination
-    router.push({
-      pathname: "/postsuggestions",
-      params: {
-        location: encodeURIComponent(origin),
-    destination: encodeURIComponent(destination),
-    origin_lat: route[0].latitude.toString(),
-    origin_lon: route[0].longitude.toString(),
-    destination_lat: route[1].latitude.toString(),
-    destination_lon: route[1].longitude.toString(),
-      },
-    });
-  }}
->
-  <Text style={styles.texttwo}>Route Post Suggestions</Text>
-</TouchableOpacity>
- 
-
+            <TouchableOpacity
+              style={styles.twobox}
+              onPress={() => {
+                router.push({
+                  pathname: "/postsuggestions",
+                  params: {
+                    location: encodeURIComponent(origin),
+                    destination: encodeURIComponent(destination),
+                    origin_lat: route[0].latitude.toString(),
+                    origin_lon: route[0].longitude.toString(),
+                    destination_lat: route[1].latitude.toString(),
+                    destination_lon: route[1].longitude.toString(),
+                    autoOpenModal: fromCommunity ? 'true' : 'false',
+                  },
+                });
+              }}
+            >
+              <Text style={styles.texttwo}>Route Post Experiences</Text>
+            </TouchableOpacity>
           </View>
           <ReviewModal visible={modalVisible} onClose={() => setModalVisible(false)} />
         </View>
@@ -685,35 +679,72 @@ const RouteScreen: React.FC = () => {
   if (hasRoute) {
     return (
       <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        
+        {showInstructionModal && (
+          <Modal visible={true} transparent animationType="fade">
+            <View style={styles.modalOverlay}>
+              <View style={styles.instructionModal}>
+                <Text style={styles.modalText}>
+                  Please search for an origin and destination first. 
+                  After setting both, click "Route Post Experiences" to continue.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.modalButton}
+                  onPress={() => setShowInstructionModal(false)}
+                >
+                  <Text style={styles.modalButtonText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
         <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
-        <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
-          <MapComponent
-            initialRegion={region}
-            route={route}
-            roadPath={roadPath}
-            mapResetKey={mapResetKey}
-            style={styles.map}
-          />
-        </Animated.View>
+          <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
+            <MapComponent
+              initialRegion={region}
+              route={route}
+              roadPath={roadPath}
+              mapResetKey={mapResetKey}
+              style={styles.map}
+            />
+          </Animated.View>
           {detailsContent}
         </ScrollView>
       </View>
     );
   } else {
     return (
-      <ScrollView style={[styles.maincontainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
-        <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
-          <MapComponent
-            initialRegion={region}
-            route={route}
-            roadPath={roadPath}
-            mapResetKey={mapResetKey}
-            style={styles.map}
-          />
-        </Animated.View>
-        {detailsContent}
-      </ScrollView>
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        {showInstructionModal && (
+          <Modal visible={true} transparent animationType="fade">
+            <View style={styles.modalOverlay}>
+              <View style={styles.instructionModal}>
+                <Text style={styles.modalText}>
+                  Please search for an origin and destination first. 
+                  After setting both, click "Route Post Experiences" to continue.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.modalButton}
+                  onPress={() => setShowInstructionModal(false)}
+                >
+                  <Text style={styles.modalButtonText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
+        <ScrollView style={[styles.maincontainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
+          <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
+            <MapComponent
+              initialRegion={region}
+              route={route}
+              roadPath={roadPath}
+              mapResetKey={mapResetKey}
+              style={styles.map}
+            />
+          </Animated.View>
+          {detailsContent}
+        </ScrollView>
+      </View>
     );
   }
 };
@@ -876,5 +907,32 @@ const styles = StyleSheet.create({
     color: '#44457D',
     marginBottom: 4,
     lineHeight: 18,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  instructionModal: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: '#3B82F6',
+    padding: 10,
+    borderRadius: 5,
+    alignSelf: 'flex-end',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: '500',
   },
 });
