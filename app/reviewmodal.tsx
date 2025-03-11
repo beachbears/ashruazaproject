@@ -1,5 +1,5 @@
 // Place this at the very top of the file to ignore warnings globally
-import { LogBox, Platform } from 'react-native';
+import { LogBox, Platform, Linking } from 'react-native';
 LogBox.ignoreLogs([
   '"textShadow*" style props are deprecated. Use "textShadow".',
   '"shadow*" style props are deprecated. Use "boxShadow".'
@@ -32,14 +32,14 @@ interface ReviewModalProps {
   destinationCoords?: Coordinates;
 }
 
-// Updated RouteData interface now uses the API-provided URL property.
-// The image_url property is required, with a fallback provided in the fetch.
+// Updated RouteData interface with additional fields for link and feedbacks.
 interface RouteData {
   name: string;
   description: string;
   trivia: string;
   image_url: string;
   link?: string;
+  feedbacks?: string[];
 }
 
 const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoords, destinationCoords }) => {
@@ -74,9 +74,12 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoord
           name: spot.name,
           description: spot.description,
           trivia: spot.trivia || 'Interesting fact about this location',
-          // Use the API-provided URL, fallback to a remote placeholder if missing.
           image_url: spot.image_url || 'https://via.placeholder.com/300x200.png?text=No+Image',
           link: spot.link,
+          // If feedbacks is a string, wrap it into an array. If it's already an array, use it.
+          feedbacks: typeof spot.feedbacks === 'string'
+            ? [spot.feedbacks]
+            : (Array.isArray(spot.feedbacks) ? spot.feedbacks : [])
         }));
         setRouteData(formattedData);
       } else {
@@ -88,6 +91,14 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoord
       setLoading(false);
     }
   };
+
+  // Renders individual feedback items.
+  const renderFeedback = (feedback: string, index: number) => (
+    <View key={index} style={styles.feedbackItem}>
+      <Ionicons name="chatbubble-ellipses" size={14} color="#4B5563" />
+      <Text style={styles.feedbackText}>{feedback}</Text>
+    </View>
+  );
 
   return (
     <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
@@ -110,6 +121,28 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoord
                   <Text style={styles.attractionDescription}>
                     {item.description || 'No description available.'}
                   </Text>
+                  
+                  {/* Link Section */}
+                  {item.link && (
+                    <TouchableOpacity 
+                      style={styles.linkButton}
+                      onPress={() => Linking.openURL(item.link!)}
+                    >
+                      <Text style={styles.linkText}>Official Website</Text>
+                      <Ionicons name="open-outline" size={16} color="#3B82F6" />
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Feedback Section */}
+                  <View style={styles.feedbackContainer}>
+                    <Text style={styles.sectionTitle}>Visitor Feedback</Text>
+                    {item.feedbacks && item.feedbacks.length > 0 ? (
+                      item.feedbacks.map(renderFeedback)
+                    ) : (
+                      <Text style={styles.feedbackText}>No feedback available.</Text>
+                    )}
+                  </View>
+
                   <View style={styles.triviaContainer}>
                     <View style={styles.triviaHeader}>
                       <Ionicons name="sparkles-sharp" size={14} color="#21de6b" />
@@ -176,6 +209,42 @@ const styles = StyleSheet.create({
     color: '#686A9C', 
     marginBottom: 10,
   },
+  linkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    marginVertical: 8
+  },
+  linkText: {
+    color: '#3B82F6',
+    fontWeight: '500'
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8
+  },
+  feedbackContainer: {
+    marginTop: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12
+  },
+  feedbackItem: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    marginBottom: 8
+  },
+  feedbackText: {
+    color: '#4B5563',
+    fontSize: 14,
+    flex: 1
+  },
   triviaContainer: {
     flexDirection: 'column',
     borderWidth: 1,
@@ -183,6 +252,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0fae5',
     borderRadius: 8,
     padding: 8,
+    marginTop: 10,
   },
   triviaHeader: {
     flexDirection: 'row',
