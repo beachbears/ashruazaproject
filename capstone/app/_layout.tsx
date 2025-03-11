@@ -37,7 +37,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <PostProvider>
-        <RouteProvider>
+        
           <View style={{ flex: 1 }}>
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -67,7 +67,7 @@ export default function RootLayout() {
               </View>
             )}
           </View>
-        </RouteProvider>
+       
       </PostProvider>
     </AuthProvider>
   );

@@ -477,7 +477,7 @@ const RouteScreen: React.FC = () => {
         origin_lon: region.longitude,
         destination_lat: destLat,
         destination_lon: destLon,
-      }));
+          }));
   
       // Add processedPosts to your PostContext here
       processedPosts.forEach(p => addPost(p, 'routes'));
