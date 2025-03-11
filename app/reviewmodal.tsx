@@ -32,12 +32,14 @@ interface ReviewModalProps {
   destinationCoords?: Coordinates;
 }
 
-// We'll use this interface for our attraction data.
+// Updated RouteData interface now uses the API-provided URL property.
+// The image_url property is required, with a fallback provided in the fetch.
 interface RouteData {
   name: string;
   description: string;
   trivia: string;
-  image?: string;
+  image_url: string;
+  link?: string;
 }
 
 const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoords, destinationCoords }) => {
@@ -55,26 +57,30 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoord
     setLoading(true);
     setError(null);
     try {
-      // Build the URL with the required query parameters
-      const url = `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${originCoords!.latitude}&origin_lon=${originCoords!.longitude}&destination_lat=${destinationCoords!.latitude}&destination_lon=${destinationCoords!.longitude}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Failed to fetch route data');
+      if (!originCoords || !destinationCoords) {
+        throw new Error('Missing coordinates');
       }
+      // Build the URL with the required query parameters
+      const url = `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${originCoords.latitude}&origin_lon=${originCoords.longitude}&destination_lat=${destinationCoords.latitude}&destination_lon=${destinationCoords.longitude}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch route data');
+      
       const data = await response.json();
-      console.log('Fetched route data:', data); // Check the API response structure
-
+      console.log('Fetched route data:', data);
+      
       // Check if there are nearby spots available.
-      if (data.nearby_spots && data.nearby_spots.length > 0) {
+      if (data.nearby_spots?.length) {
         const formattedData: RouteData[] = data.nearby_spots.map((spot: any) => ({
           name: spot.name,
           description: spot.description,
-          trivia: 'Trivia not available', // Placeholder if trivia data isn't provided.
-          image: spot.image || undefined,
+          trivia: spot.trivia || 'Interesting fact about this location',
+          // Use the API-provided URL, fallback to a remote placeholder if missing.
+          image_url: spot.image_url || 'https://via.placeholder.com/300x200.png?text=No+Image',
+          link: spot.link,
         }));
         setRouteData(formattedData);
       } else {
-        setError('No nearby spots found');
+        setError('No nearby attractions found');
       }
     } catch (err: any) {
       setError(err.message);
@@ -96,8 +102,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoord
               routeData.map((item, index) => (
                 <View key={index} style={styles.attractionCard}>
                   <Image 
-                    source={ item.image ? { uri: item.image } : require('../assets/images/intramuros.jpg') } 
-                    style={styles.attractionImage} 
+                    source={{ uri: item.image_url }}
+                    style={styles.attractionImage}
+                    defaultSource={{ uri: 'https://via.placeholder.com/300x200.png?text=Loading...' }}
                   />
                   <Text style={styles.attractionName}>{item.name}</Text>
                   <Text style={styles.attractionDescription}>
