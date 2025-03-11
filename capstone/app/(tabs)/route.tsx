@@ -79,6 +79,7 @@ export interface User {
   username: string;
   firstname: string;
   lastname: string;
+  email: string;
 }
 
 export interface Post {
@@ -477,6 +478,10 @@ const RouteScreen: React.FC = () => {
         origin_lon: region.longitude,
         destination_lat: destLat,
         destination_lon: destLon,
+        user: {
+          ...post.user,
+          email: post.user.email || '' // Ensure email exists (fallback to empty string)
+        }
           }));
   
       // Add processedPosts to your PostContext here
