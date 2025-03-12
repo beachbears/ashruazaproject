@@ -76,10 +76,10 @@ export default function CommunityPage() {
 
   // Use routeDetails if available; otherwise, try URL params or fall back to default names.
   const origin_address =
-    routeDetails?.origin_address ||
+    routeDetails?.location ||
     (params.origin_address ? decodeURIComponent(params.origin_address as string) : 'Unknown Origin');
   const destination_address =
-    routeDetails?.destination_address ||
+    routeDetails?.destination ||
     (params.destination_address ? decodeURIComponent(params.destination_address as string) : 'Unknown Destination');
   const origin_lat = routeDetails?.origin_lat ?? (params.origin_lat ? Number(params.origin_lat) : 0);
   const origin_lon = routeDetails?.origin_lon ?? (params.origin_lon ? Number(params.origin_lon) : 0);
@@ -125,15 +125,17 @@ export default function CommunityPage() {
 
   // Handle post submission
   const handlePostSubmit = (formData: { content: string }) => {
-    const newPost = {
-      ...formData,
-      origin_address,
-      destination_address,
-      origin_lat,
-      origin_lon,
-      destination_lat,
-      destination_lon,
-    };
+  const newPost = {
+    ...formData,
+    origin_address,
+    destination_address,
+    origin_lat,
+    origin_lon,
+    destination_lat,
+    destination_lon,
+    location: location.toString(),
+    destination: destination_address, // Add this line
+  };
     addPost(newPost, 'postsuggestions');
     setModalVisible(false);
   };
@@ -239,25 +241,10 @@ export default function CommunityPage() {
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
-        <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-          <Text style={styles.postButtonText}>Post</Text>
-        </TouchableOpacity>
+        
       </View>
 
-      <PostModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSubmit={handlePostSubmit}
-        origin_address={origin_address}
-        destination_address={destination_address}
-        origin_lat={origin_lat}
-        origin_lon={origin_lon}
-        destination_lat={destination_lat}
-        destination_lon={destination_lon}
-        authToken={authToken}
-        userEmail={''}
-        userPassword={''}
-      />
+       
 
       {isLoading && (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
@@ -288,8 +275,8 @@ export default function CommunityPage() {
                   {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
                 </Text>
               </View>
-              <Text style={styles.postLocation}>From: {post.origin_address}</Text>
-              <Text style={styles.postDestination}>To: {post.destination_address}</Text>
+              <Text style={styles.postLocation}>From: {post.location}</Text>
+              <Text style={styles.postDestination}>To: {post.destination}</Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
                 <Text style={styles.label}>Their experience</Text>
@@ -509,6 +496,5 @@ const styles = StyleSheet.create({
     color: '#44457D',
   },
 });
-
 
 

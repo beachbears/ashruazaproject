@@ -9,7 +9,7 @@ import {
   Text,
 } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { AuthContext } from '../context/AuthContext'; // adjust path as needed
+import { AuthContext } from '../contexts/AuthContext'; // adjust path as needed
 
 interface FeedbackItem {
   id: number;

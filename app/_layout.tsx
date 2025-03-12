@@ -2,7 +2,7 @@ import { Slot, Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View, LogBox } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AuthProvider } from '../context/AuthContext';
+import { AuthProvider } from '../contexts/AuthContext';
 import { PostProvider } from '../contexts/PostContext';
 import { RouteProvider } from '../contexts/RouteContext'; // Import your RouteProvider
 
@@ -47,6 +47,20 @@ export default function RootLayout() {
                 options={{
                   headerShown: false,
                   title: 'Suggestions'
+                }}
+              />
+              <Stack.Screen
+                name="login"
+                options={{
+                  headerShown: false,
+                  title: 'login'
+                }}
+              />
+              <Stack.Screen
+                name="signup"
+                options={{
+                  headerShown: false,
+                  title: 'signup'
                 }}
               />
               <Slot />
