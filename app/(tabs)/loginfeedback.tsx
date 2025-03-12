@@ -15,18 +15,23 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import FeedbackComponent from '../feedbackmodal'; // Your modal component
-import axiosInstance from '../../axiosConfig';         // Update path as needed
+import axiosInstance from '../../axiosConfig'; // Update path as needed
 
 LogBox.ignoreLogs(['textShadow*', 'shadow*']);
 
 type FeedbackItem = {
   id: number;
   content: string;
-  userId: string;
-  userName: string;
-  userHandle: string;
-  initials: string;
   rating: number;
+  user?: {
+    id: string;
+    username: string;
+    firstname: string;
+    lastname: string;
+    email: string;
+    initials?: string;
+    handle?: string;
+  };
   deleted?: boolean;
 };
 
@@ -36,7 +41,7 @@ const Feedback: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
 
-  // Load feedback from AsyncStorage on mount
+  // Load feedback mula sa AsyncStorage on mount
   useEffect(() => {
     const loadFeedback = async () => {
       try {
@@ -51,14 +56,13 @@ const Feedback: React.FC = () => {
     loadFeedback();
   }, []);
 
-  // Fetch feedback from API on mount
+  // Fetch feedback mula sa API on mount
   useEffect(() => {
     const fetchFeedback = async () => {
       try {
         setLoadingFeedback(true);
         const response = await axiosInstance.get('/api/feedbacks');
         if (response.data) {
-          console.log("Fetched feedback:", response.data);
           setFeedbackData(response.data);
         }
       } catch (error) {
@@ -70,7 +74,7 @@ const Feedback: React.FC = () => {
     fetchFeedback();
   }, []);
 
-  // Save feedback to AsyncStorage when feedbackData changes
+  // I-save ang feedback sa AsyncStorage kapag nagbago ang feedbackData
   useEffect(() => {
     const storeFeedback = async () => {
       try {
@@ -82,77 +86,86 @@ const Feedback: React.FC = () => {
     storeFeedback();
   }, [feedbackData]);
 
-  const postFeedback = async (feedback: FeedbackItem) => {
+  // Function para kunin ang token mula sa AsyncStorage, kasama ang guest check.
+  const getToken = async () => {
     try {
-      const response = await axiosInstance.post('/api/feedbacks', feedback);
+      const token = await AsyncStorage.getItem('token');
+      console.log('getToken - Retrieved token:', token);
+      if (
+        token &&
+        token.trim() !== '' &&
+        token.trim().toLowerCase() !== 'uu@gmail.com' &&
+        token.trim().toLowerCase() !== 'null' &&
+        token.trim().toLowerCase() !== 'undefined'
+      ) {
+        return token;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error retrieving token:', error);
+      return null;
+    }
+  };
+
+  // Function para mag-post ng feedback, sine-check muna ang token.
+  const postFeedback = async (feedbackPayload: { content: string; rating: number }) => {
+    const token = await getToken();
+    console.log('postFeedback - token:', token);
+    if (!token) {
+      console.error('Walang valid token. Hindi naka-login.');
+      return;
+    }
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const response = await axiosInstance.post(
+        '/api/feedbacks',
+        { feedback: feedbackPayload },
+        config
+      );
       return response.data;
     } catch (error) {
       console.error('Error posting feedback:', error);
     }
   };
 
+  // Kapag nagsubmit ng feedback, sine-check muna ang token bago iproseso.
   const handleSubmit = async (text: string, rating: number) => {
     if (!text.trim()) return;
-    
-    // Kunin ang user details mula sa AsyncStorage; kung wala, gamitin ang default values
-    const storedUserName = await AsyncStorage.getItem('userName');
-    const storedUserEmail = await AsyncStorage.getItem('userEmail');
-    const storedUserId = await AsyncStorage.getItem('userId');
-
-    const userNameToUse = storedUserName || 'DefaultUser';
-    const userEmailToUse = storedUserEmail || 'user@gmail.com';
-    const userIdToUse = storedUserId || 'defaultUserId';
-
-    // Compute initials at userHandle base sa userNameToUse
-    let initials = userNameToUse
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase();
-    if (initials.length < 2 && userNameToUse.length >= 2) {
-      initials = userNameToUse.slice(0, 2).toUpperCase();
+    const token = await getToken();
+    console.log('handleSubmit - token:', token);
+    if (!token) {
+      router.push('/login');
+      return;
     }
-    const userHandle = userNameToUse.toLowerCase().replace(/\s+/g, '');
-
-    const newFeedback: FeedbackItem = {
-      id: Date.now(), // or let backend assign id
-      content: text,
-      rating,
-      userId: userIdToUse,
-      userName: userNameToUse,
-      userHandle,
-      initials,
-      deleted: false,
-    };
-
-    // Update local state and post the feedback
-    setFeedbackData(prev => [newFeedback, ...prev]);
+    const feedbackPayload = { content: text, rating };
+    const createdFeedback = await postFeedback(feedbackPayload);
+    if (createdFeedback) {
+      setFeedbackData(prev => [createdFeedback, ...prev]);
+    }
     setModalVisible(false);
-    await postFeedback(newFeedback);
   };
 
-  const handleFeedbackPress = () => {
-    // Kung wala kang token sa AsyncStorage, ipush sa login
-    AsyncStorage.getItem('token').then(token => {
-      if (!token) {
-        router.push('/login');
-      } else {
-        setModalVisible(true);
-      }
-    });
+  // Kapag pinindot ang "Submit Feedback" button, sine-check muna ang token.
+  const handleFeedbackPress = async () => {
+    const token = await getToken();
+    console.log('handleFeedbackPress - token:', token);
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    setModalVisible(true);
   };
 
   const FeedbackCard: React.FC<{ feedback: FeedbackItem }> = ({ feedback }) => {
-    // Diretso nating gamitin ang naka-save na user details mula sa feedback object
-    const displayName = feedback.userName || 'User';
-    const displayEmail = feedback.userHandle || 'user@gmail.com';
-    const content = feedback.content || 'No content';
+    const displayName = feedback.user?.username || 'User';
+    const displayEmail = feedback.user?.email || 'user@gmail.com';
+    const initials = feedback.user?.initials || displayName.slice(0, 2).toUpperCase();
 
     return (
       <View style={styles.feedbackcontainer}>
         <View style={styles.suggestordetails}>
           <View style={styles.profile}>
-            <Text style={styles.initial}>{feedback.initials}</Text>
+            <Text style={styles.initial}>{initials}</Text>
           </View>
           <View style={styles.suggestor}>
             <Text style={styles.suggestorname}>{displayName}</Text>
@@ -164,7 +177,7 @@ const Feedback: React.FC = () => {
         ) : (
           <>
             <View style={{ flexDirection: 'row', marginLeft: 48, marginVertical: 3 }}>
-              {[1, 2, 3, 4, 5].map((star) => (
+              {[1, 2, 3, 4, 5].map(star => (
                 <AntDesign
                   key={star}
                   name="star"
@@ -173,7 +186,7 @@ const Feedback: React.FC = () => {
                 />
               ))}
             </View>
-            <Text style={styles.usersuggestion}>{content}</Text>
+            <Text style={styles.usersuggestion}>{feedback.content}</Text>
           </>
         )}
       </View>
@@ -201,7 +214,7 @@ const Feedback: React.FC = () => {
         </TouchableOpacity>
       </View>
       <View style={{ marginBottom: 150 }}>
-        {feedbackData.map((feedback) => (
+        {feedbackData.map(feedback => (
           <FeedbackCard key={feedback.id} feedback={feedback} />
         ))}
       </View>
