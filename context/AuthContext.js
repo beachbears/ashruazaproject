@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem('userEmail', email);
       await AsyncStorage.setItem('userInitials', initials);
       await AsyncStorage.setItem('userId', id);
+      // Dito rin karaniwang sine-save ang token (gamit ang ibang mekanismo)
     } catch (error) {
       console.error('Error saving user data:', error);
     }
@@ -59,6 +60,8 @@ export const AuthProvider = ({ children }) => {
     setUserInitials('');
     setUserId('');
     try {
+      // Tinatanggal din natin ang token upang hindi magamit sa mga susunod na request.
+      await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('isLoggedIn');
       await AsyncStorage.removeItem('userName');
       await AsyncStorage.removeItem('userEmail');
