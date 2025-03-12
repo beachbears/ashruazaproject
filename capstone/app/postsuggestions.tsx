@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect,  useContext,  } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert,   ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useEffect, useContext } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import PostModal from './postmodal';
 import { AuthContext, AuthContextType } from './../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -54,17 +54,16 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 type VoteType = 'upvote' | 'downvote';
 
 export default function PostSuggestions() {
-  // Manage posts locally via API response only
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Time');
-  const { authToken } = React.useContext(AuthContext) as AuthContextType;
+  const { authToken } = useContext(AuthContext) as AuthContextType;
   const [modalVisible, setModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
-    const authContext = useContext(AuthContext) as AuthContextType | null;
+  const authContext = useContext(AuthContext) as AuthContextType | null;
   
-    if (!authContext) return null; // Prevents errors if context is null
-  const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
+  if (!authContext) return null;
+  const { isLoggedIn, userName, userHandle, userInitials } = authContext;
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
@@ -80,7 +79,38 @@ export default function PostSuggestions() {
     setSelectedOption(option);
   };
 
-  // Fetch posts from the API; assume API returns already filtered posts.
+  // Helper function for dynamic background and border colors based on status.
+  const getStatusStyle = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "pending review":
+        return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
+      case "community approved":
+        return { backgroundColor: "#dbeafe", borderColor: "#dbeafe" };
+      case "flagged":
+        return { backgroundColor: "#fee2e2", borderColor: "#fee2e2" };
+      case "admin approved":
+        return { backgroundColor: "#dcfce7", borderColor: "#dcfce7" };
+      default:
+        return {};
+    }
+  };
+
+  // Helper function for dynamic text colors based on status.
+  const getStatusTextColor = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "flagged":
+        return { color: "#b31b1b" };
+      case "admin approved":
+        return { color: "#166534" };
+      case "pending review":
+        return { color: "#a44d0e" };
+      case "community approved":
+        return { color: "#4f40af" };
+      default:
+        return {};
+    }
+  };
+
   const fetchPosts = async () => {
     setIsLoading(true);
     try {
@@ -89,7 +119,6 @@ export default function PostSuggestions() {
       );
       if (!response.ok) throw new Error('Failed to fetch posts');
       const postsData = await response.json();
-      // Transform the API response to match your Post interface
       const transformedPosts: Post[] = (postsData.posts || []).map((p: any) => ({
         id: p.id,
         content: p.content,
@@ -99,10 +128,9 @@ export default function PostSuggestions() {
           firstname: p.user.firstname,
           lastname: p.user.lastname,
           email: p.user.email,
-          
-          // Include additional fields if needed (or omit if not required)
         },
         votes: p.votes,
+        status: p.status,
         comments_count: p.comments_count,
         created_at: p.created_at,
       }));
@@ -114,7 +142,6 @@ export default function PostSuggestions() {
     }
   };
   
-
   useEffect(() => {
     fetchPosts();
   }, [location, destination]);
@@ -150,7 +177,6 @@ export default function PostSuggestions() {
         throw new Error(errorData.error || 'Failed to create post');
       }
 
-      // Let the API manage which posts are shown by re-fetching.
       await response.json();
       fetchPosts();
       setModalVisible(false);
@@ -180,7 +206,6 @@ export default function PostSuggestions() {
       }
 
       await response.json();
-      // Re-fetch posts after voting to update the view.
       fetchPosts();
       Alert.alert('Success', 'Your vote has been registered.');
       return true;
@@ -191,7 +216,6 @@ export default function PostSuggestions() {
     }
   };
 
-  // Only sort posts; do not filter further since API handles that.
   const sortedPosts = useMemo(() => {
     return [...posts].sort((a, b) => {
       switch (selectedOption) {
@@ -230,12 +254,12 @@ export default function PostSuggestions() {
       }
     }
   };
+
   const handlePostPress = (postId: number, action: VoteType) => {
     if (!isLoggedIn) {
       router.push('/login');
       return;
     }
-   
     handleVote(postId, action);
   };
   
@@ -249,20 +273,15 @@ export default function PostSuggestions() {
 
   return (
     <ScrollView style={styles.maincontainer}>
-       {isLoading && (
+      {isLoading && (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
       )}
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
       <View style={styles.sectionHeader}>
+        <Text style={styles.label}>Your experiences</Text>
         <View style={styles.detailsContainer}>
-          <View style={{ flexDirection: 'column' }}>
-            <Text style={styles.label}>From:</Text>
-            <Text style={styles.locationText}>{location}</Text>
-          </View>
-          <View style={{ flexDirection: 'column' }}>
-            <Text style={styles.label}>To:</Text>
-            <Text style={styles.locationText}>{destination}</Text>
-          </View>
+          <Text style={styles.locationText}>{location}</Text>
+          <Text style={styles.locationText}>{destination}</Text>
         </View>
       </View>
       <View style={{ flexDirection:'row', justifyContent:'space-between', marginBottom: 10, alignItems: 'center' }}>
@@ -270,10 +289,9 @@ export default function PostSuggestions() {
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
         <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-  <Text style={styles.postButtonText}>Post</Text>
-</TouchableOpacity>
+          <Text style={styles.postButtonText}>Post</Text>
+        </TouchableOpacity>
       </View>
-
       
       <View style={{ marginBottom: 200 }}>
         {sortedPosts.map((post) => (
@@ -300,51 +318,46 @@ export default function PostSuggestions() {
                 {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
               </Text>
             </View>
-            <Text>From: {post.location}</Text>
-            <Text>To: {post.destination}</Text>
+            <Text>{post.location}</Text>
+            <Text>{post.destination}</Text>
             <View style={{ flexDirection: 'column', gap: 8 }}>
               <Text style={styles.label}>Your experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={styles.content}>
-                <View style={styles.badge}>
-                  <Entypo name="check" size={16} color="#03C04A" />
-                  <Text style={styles.cert}>Certified {APP_NAME}</Text>
+                <View style={[styles.badge, getStatusStyle(post.status || '')]}>
+                  <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
                 </View>
               </View>
               <View style={styles.arrowcontainer}>
-                
-              <TouchableOpacity
-  style={[
-    styles.arrowup,
-    post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
-  ]}
-  onPress={() => post.id && handlePostPress(post.id, 'upvote')}
->
-  <AntDesign
-    name="arrowup"
-    size={13}
-    color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
-  />
-</TouchableOpacity>
-<Text style={styles.arrowupnum}>{post.votes}</Text>
-<TouchableOpacity
-  style={[
-    styles.arrowdown,
-    post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
-  ]}
-  onPress={() => post.id && handlePostPress(post.id, 'downvote')}
->
-  <AntDesign
-    name="arrowdown"
-    size={13}
-    color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
-  />
-</TouchableOpacity>
-
- 
-
+                <TouchableOpacity
+                  style={[
+                    styles.arrowup,
+                    post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
+                  ]}
+                  onPress={() => post.id && handlePostPress(post.id, 'upvote')}
+                >
+                  <AntDesign
+                    name="arrowup"
+                    size={13}
+                    color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.arrowupnum}>{post.votes}</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.arrowdown,
+                    post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
+                  ]}
+                  onPress={() => post.id && handlePostPress(post.id, 'downvote')}
+                >
+                  <AntDesign
+                    name="arrowdown"
+                    size={13}
+                    color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
+                  />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -557,9 +570,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     width: '100%',
     marginTop: 16,
   },
@@ -570,17 +582,14 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   cert: {
-    color: '#22c55e',
     fontWeight: '500',
     fontSize: 11,
   },
   badge: {
     borderWidth: 1,
-    borderColor: '#ABEBA2',
     borderRadius: 6,
     paddingHorizontal: 3,
     paddingVertical: 1,
-    backgroundColor: '#ecfdf5',
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 4,

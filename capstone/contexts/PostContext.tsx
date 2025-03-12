@@ -22,6 +22,7 @@ export interface Post {
     email: string;
     created_at?: string;
   }
+  status?: string;
   email?: string;
   username?: string;        // or you can use loginusername/userinitial if preferred
   votes?: number;
