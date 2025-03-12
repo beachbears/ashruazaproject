@@ -62,7 +62,7 @@ export interface Segment {
   from_stop?: Stop;
   to_stop?: Stop;
   steps?: { step_number: number; instruction: string }[];
-  alternatives?: any[]; // May laman kung may alternative routes
+  alternatives?: any[];
   fare?: number;
 }
 
@@ -75,7 +75,7 @@ export interface Route {
     total_distance: number;
     total_distance_km: number;
     vehicle_types: string[];
-  }
+  };
 }
 
 export interface User {
@@ -143,12 +143,44 @@ function formatDuration(seconds: number): string {
   if (mins >= 60) {
     const hours = Math.floor(mins / 60);
     const remainingMins = mins % 60;
-    return `${hours} hr ${remainingMins} min`;
+    return `${hours}h ${remainingMins}m`;
   } else if (mins > 0) {
-    return `${mins} min ${secs}s`;
+    return `${mins}min ${secs}s`;
   } else {
     return `${secs}s`;
   }
+}
+
+/**
+ * Shorten an address by returning only the first part
+ * (e.g., "Emerald Street, San Bartolome, ..." becomes "Emerald Street")
+ */
+function shortenAddress(address: string) {
+  return address.split(',')[0];
+}
+
+/**
+ * Generates a concise label for each segment.
+ * For vehicles, it uses the vehicleType (if provided) or capitalized type.
+ * For walking, it returns "Walk".
+ * If both origin and destination exist, returns:
+ *    "Label: ShortFrom - ShortTo"
+ */
+function getSegmentLabel(
+  type: string,
+  fromStopName?: string,
+  toStopName?: string,
+  vehicleType?: string | null
+) {
+  const mainLabel = ['jeep', 'bus', 'ejeep', 'lrt', 'mrt'].includes(type.toLowerCase())
+    ? vehicleType
+      ? vehicleType.charAt(0).toUpperCase() + vehicleType.slice(1)
+      : type.charAt(0).toUpperCase() + type.slice(1)
+    : 'Walk';
+  if (fromStopName && toStopName) {
+    return `${mainLabel}: ${shortenAddress(fromStopName)} - ${shortenAddress(toStopName)}`;
+  }
+  return mainLabel;
 }
 
 const getMapHTML = (
@@ -172,7 +204,6 @@ const getMapHTML = (
       `;
     }
   }
-
   let polylineJS = "";
   if (
     (typeof roadPath === "string" && roadPath.length > 0) ||
@@ -183,14 +214,9 @@ const getMapHTML = (
       const decoded = polyline.decode(roadPath);
       polylineCoordinates = decoded.map((coord: number[]) => [coord[0], coord[1]]);
     } else if (Array.isArray(roadPath) && roadPath.length > 0) {
-      if (Array.isArray(roadPath[0])) {
-        polylineCoordinates = roadPath;
-      } else {
-        polylineCoordinates = roadPath.map((coord: any) => [
-          coord.latitude,
-          coord.longitude,
-        ]);
-      }
+      polylineCoordinates = Array.isArray(roadPath[0])
+        ? roadPath
+        : roadPath.map((coord: any) => [coord.latitude, coord.longitude]);
     }
     if (polylineCoordinates && polylineCoordinates.length > 0) {
       polylineJS = `var roadPolyline = L.polyline(${JSON.stringify(
@@ -203,7 +229,6 @@ const getMapHTML = (
       [${route[1].latitude}, ${route[1].longitude}]
     ], { color: '${polylineColor}', weight: 3 }).addTo(map);`;
   }
-
   let fitBoundsJS = `
     if (typeof roadPolyline !== 'undefined') {
       map.fitBounds(roadPolyline.getBounds());
@@ -211,7 +236,6 @@ const getMapHTML = (
       map.fitBounds(polyline.getBounds());
     }
   `;
-
   return `
     <!DOCTYPE html>
     <html>
@@ -276,12 +300,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
-            {
-              opacity: fadeAnim,
-              backgroundColor: '#fff',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }
+            { opacity: fadeAnim, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }
           ]}
         >
           <ActivityIndicator size="large" color="#6366F1" />
@@ -291,24 +310,15 @@ const MapComponent: React.FC<MapComponentProps> = ({
   );
 };
 
-// Cache para hindi paulit-ulit ang geocode
+// Cache for geocoding results
 const locationCacheRef = { current: {} as { [key: string]: any[] } };
 
-const SuggestionList = ({
-  suggestions,
-  onSelect,
-}: {
-  suggestions: any[];
-  onSelect: (item: any) => void;
-}) => {
+const SuggestionList: React.FC<{ suggestions: any[]; onSelect: (item: any) => void; }> = ({ suggestions, onSelect }) => {
   if (!suggestions.length) return null;
   return (
     <ScrollView style={styles.suggestionList} keyboardShouldPersistTaps="handled">
       {suggestions.map((item, index) => (
-        <TouchableWithoutFeedback
-          key={`${item.name}-${index}`}
-          onPress={() => onSelect(item)}
-        >
+        <TouchableWithoutFeedback key={`${item.name}-${index}`} onPress={() => onSelect(item)}>
           <View style={styles.suggestionItem}>
             <Text style={styles.suggestionText}>{item.name}</Text>
           </View>
@@ -344,8 +354,12 @@ const RouteScreen: React.FC = () => {
 
   const router = useRouter();
   const animatedHeight = useRef(new Animated.Value(400)).current;
+  const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
 
-  // Kapag may destination parameter
+  const toggleSegment = (index: number) => {
+    setExpandedSegments(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
   useEffect(() => {
     if (destParam) {
       setDestination(destParam as string);
@@ -354,23 +368,20 @@ const RouteScreen: React.FC = () => {
       geocodeAddress(destParam as string).then((suggestions: any) => {
         if (suggestions && suggestions.length > 0) {
           const selected = suggestions[0];
-          setRoute(prev => {
-            if (prev.length > 0) {
-              return [prev[0], { latitude: selected.lat, longitude: selected.lon }];
-            } else {
-              return [
-                { latitude: region.latitude, longitude: region.longitude },
-                { latitude: selected.lat, longitude: selected.lon }
-              ];
-            }
-          });
+          setRoute(prev =>
+            prev.length > 0
+              ? [prev[0], { latitude: selected.lat, longitude: selected.lon }]
+              : [
+                  { latitude: region.latitude, longitude: region.longitude },
+                  { latitude: selected.lat, longitude: selected.lon }
+                ]
+          );
           fetchRouteDetails(selected.lat, selected.lon);
         }
       });
     }
   }, [destParam]);
 
-  // Kapag may attraction parameter
   useEffect(() => {
     if (attraction) {
       try {
@@ -388,7 +399,6 @@ const RouteScreen: React.FC = () => {
     }
   }, [attraction]);
 
-  // Kunin ang kasalukuyang lokasyon
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -402,20 +412,12 @@ const RouteScreen: React.FC = () => {
       const addresses = await Location.reverseGeocodeAsync({ latitude, longitude });
       const locAddr =
         addresses && addresses.length > 0
-          ? `${addresses[0].name ? addresses[0].name + ', ' : ''}${
-              addresses[0].street ? addresses[0].street + ', ' : ''
-            }${addresses[0].city}, ${addresses[0].region}`
+          ? `${addresses[0].name ? addresses[0].name + ', ' : ''}${addresses[0].street ? addresses[0].street + ', ' : ''}${addresses[0].city}, ${addresses[0].region}`
           : 'Unknown Location';
       setRegion(prev => ({ ...prev, latitude, longitude }));
       if (!manualOrigin && !origin) {
         setOrigin(locAddr);
-        setRoute(prev => {
-          if (prev.length > 0) {
-            return [{ latitude, longitude }, ...prev.slice(1)];
-          } else {
-            return [{ latitude, longitude }];
-          }
-        });
+        setRoute(prev => (prev.length > 0 ? [{ latitude, longitude }, ...prev.slice(1)] : [{ latitude, longitude }]));
       }
     })();
   }, []);
@@ -428,12 +430,8 @@ const RouteScreen: React.FC = () => {
     }).start();
   }, [route, animatedHeight]);
 
-  // FUNCTIONS
-
   async function geocodeAddress(address: string) {
-    if (locationCacheRef.current[address]) {
-      return locationCacheRef.current[address];
-    }
+    if (locationCacheRef.current[address]) return locationCacheRef.current[address];
     try {
       const { data } = await axios.get<LocationSuggestion[]>(
         'https://comgu20-production.up.railway.app/api/locations/search',
@@ -458,7 +456,6 @@ const RouteScreen: React.FC = () => {
 
   const handleOriginChange = async (text: string) => {
     setOrigin(text);
-    // If the origin is cleared, also clear the "To" field and reset related states.
     if (!text) {
       setOriginSuggestions([]);
       setDestination('');
@@ -474,7 +471,6 @@ const RouteScreen: React.FC = () => {
     setIsOriginLoading(false);
   };
 
-  // Updated clear button for "From" that clears both fields
   const clearOrigin = () => {
     setOrigin('');
     setOriginSuggestions([]);
@@ -516,16 +512,14 @@ const RouteScreen: React.FC = () => {
     setDestination(item.name);
     setDestinationSuggestions([]);
     setRoadPath([]);
-    setRoute(prev => {
-      if (prev.length > 0) {
-        return [prev[0], { latitude: item.lat, longitude: item.lon }];
-      } else {
-        return [
-          { latitude: region.latitude, longitude: region.longitude },
-          { latitude: item.lat, longitude: item.lon }
-        ];
-      }
-    });
+    setRoute(prev =>
+      prev.length > 0
+        ? [prev[0], { latitude: item.lat, longitude: item.lon }]
+        : [
+            { latitude: region.latitude, longitude: region.longitude },
+            { latitude: item.lat, longitude: item.lon }
+          ]
+    );
     await fetchRouteDetails(item.lat, item.lon);
     setMapResetKey(Date.now());
   };
@@ -546,28 +540,20 @@ const RouteScreen: React.FC = () => {
       );
       console.log("API Response:", response.data);
       const routeData = response.data.route;
-      if (routeData && routeData.segments) {
-        console.log('Segments from API:', routeData.segments);
-      }
       setRouteDetails({ route: routeData });
 
-      // Metrics
       if (routeData && routeData.summary) {
         const summary = routeData.summary;
         const formattedDuration = formatDuration(summary.total_duration);
         let totalWalkingDistance = 0;
-        if (routeData.segments && routeData.segments.length > 0) {
-          routeData.segments.forEach(segment => {
-            if (segment.type.toLowerCase() === "walking" && segment.distance) {
-              totalWalkingDistance += segment.distance;
-            }
-          });
-        }
         let busDuration = 0;
         if (routeData.segments && routeData.segments.length > 0) {
           routeData.segments.forEach(segment => {
             const segType = segment.type.toLowerCase();
-            if (["bus", "jeep", "ejeep", "lrt", "mrt"].includes(segType) && segment.duration) {
+            if (segType === 'walking' && segment.distance) {
+              totalWalkingDistance += segment.distance;
+            }
+            if (['bus', 'jeep', 'ejeep', 'lrt', 'mrt'].includes(segType) && segment.duration) {
               busDuration += segment.duration;
             }
           });
@@ -576,9 +562,7 @@ const RouteScreen: React.FC = () => {
         setRouteMetrics({
           distance: summary.total_distance_km || 0,
           fare: summary.total_fare || 0,
-          walkingTime: totalWalkingDistance
-            ? `${(totalWalkingDistance / 1000).toFixed(2)} km`
-            : '',
+          walkingTime: totalWalkingDistance ? `${(totalWalkingDistance / 1000).toFixed(2)} km` : '',
           carTime: formattedDuration,
           busTime: busFormattedDuration
         });
@@ -586,7 +570,6 @@ const RouteScreen: React.FC = () => {
         setRouteMetrics(null);
       }
 
-      // Polyline color
       if (routeData && routeData.segments && routeData.segments.length > 0) {
         const allWalking = routeData.segments.every(seg => seg.walking);
         setPolylineColor(allWalking ? "#808080" : "#6366F1");
@@ -594,7 +577,6 @@ const RouteScreen: React.FC = () => {
         setPolylineColor("#6366F1");
       }
 
-      // Polyline path
       if (response.data.polyline && response.data.polyline.length > 0) {
         setRoadPath(response.data.polyline);
       } else if (routeData && routeData.segments && routeData.segments.length > 0) {
@@ -637,9 +619,6 @@ const RouteScreen: React.FC = () => {
     }
   };
 
-  // -------------------------
-  // RENDER ROUTE OVERVIEW
-  // -------------------------
   const renderRouteOverview = () => {
     if (isRouteLoading) {
       return <ActivityIndicator size="small" color="#6366F1" />;
@@ -647,78 +626,91 @@ const RouteScreen: React.FC = () => {
     if (!routeDetails.route) {
       return <Text style={styles.overviewText}>No route overview available</Text>;
     }
+
     const { segments } = routeDetails.route;
 
     return (
       <View>
         {segments && segments.map((segment, idx) => {
           const segType = segment.type.toLowerCase();
+          const segLabel = getSegmentLabel(
+            segType,
+            segment.from_stop?.name,
+            segment.to_stop?.name,
+            segment.vehicle_type
+          );
+          const isExpanded = expandedSegments[idx];
 
-          // Walking segment
-          if (segType === "walking") {
-            return (
-              <View key={idx} style={styles.walkingSegmentContainer}>
-                <View style={styles.bulletIcon} />
-                <Text style={styles.walkingSegmentText}>
-                  Walk from {segment.from_stop?.name} to {segment.to_stop?.name}
-                </Text>
-                {segment.alternatives && segment.alternatives.length > 0 && (
-                  <View style={styles.alternativesContainer}>
-                    {segment.alternatives.map((alt, altIdx) => {
-                      const routeName = alt.route_name ? alt.route_name.split('-')[0] : '';
-                      return (
-                        <Text key={altIdx} style={styles.alternativeText}>
-                          Alternative {altIdx + 1}: {alt.type} {routeName}
+          return (
+            <View key={idx} style={styles.segmentCard}>
+              <TouchableOpacity
+                style={styles.segmentHeaderRow}
+                onPress={() => toggleSegment(idx)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                  size={18}
+                  color="#6366F1"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.segmentCardHeaderText}>{segLabel}</Text>
+              </TouchableOpacity>
+
+              {isExpanded && (
+                <View style={styles.segmentCardBody}>
+                  {segType === 'walking' && (
+                    <>
+                      <Text style={[styles.onOffInstruction, { marginVertical: 4 }]}>
+                        From: {segment.from_stop?.name} to {segment.to_stop?.name}
+                      </Text>
+                      {segment.steps && segment.steps.length > 0 ? (
+                        <View style={styles.stepsContainer}>
+                          {segment.steps.map((step, stepIdx) => (
+                            <View key={stepIdx} style={styles.stepRow}>
+                              <Text style={styles.bulletIcon}>•</Text>
+                              <Text style={styles.stepText}>{step.instruction}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      ) : (
+                        <Text style={styles.stepText}>No walking steps available.</Text>
+                      )}
+                    </>
+                  )}
+
+                  {['jeep', 'bus', 'ejeep', 'lrt', 'mrt'].includes(segType) && (
+                    <>
+                      <View style={styles.getOnOffContainer}>
+                        <Text style={[styles.onOffTitle, { color: 'green' }]}>Get on</Text>
+                        <Text style={styles.onOffInstruction}>
+                          Ride a {segment.vehicle_type ? segment.vehicle_type.toLowerCase() : segType} from {segment.from_stop?.name} going towards {segment.to_stop?.name}.
                         </Text>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-            );
-          }
-          // Jeep/Bus/Ejeep/LRT/MRT segment with connected bullets
-          else if (["jeep", "bus", "ejeep", "lrt", "mrt"].includes(segType)) {
-            return (
-              <View key={idx} style={{ marginBottom: 20 }}>
-                <View style={styles.segmentContainer}>
-                  <View style={styles.bulletLineContainer}>
-                    <View style={styles.greenBullet} />
-                    <View style={styles.verticalLine} />
-                    <View style={styles.blueBullet} />
-                  </View>
-                  <View style={styles.onOffTextContainer}>
-                    <Text style={[styles.segmentTitle, { color: 'green' }]}>Get on</Text>
-                    <Text style={styles.segmentInstruction}>
-                      Ride a {segment.vehicle_type ? segment.vehicle_type.toLowerCase() : segType} from {segment.from_stop?.name} going towards {segment.to_stop?.name}.
-                    </Text>
-                    <Text style={[styles.segmentTitle, { color: 'blue', marginTop: 16 }]}>
-                      Get off
-                    </Text>
-                    <Text style={styles.segmentInstruction}>
-                      Arrive at {segment.to_stop?.name}, then get off at your stop.
-                    </Text>
-                  </View>
+                        <Text style={[styles.onOffTitle, { color: 'blue', marginTop: 8 }]}>Get off</Text>
+                        <Text style={styles.onOffInstruction}>
+                          Arrive at {segment.to_stop?.name}, then get off at your stop.
+                        </Text>
+                      </View>
+                    </>
+                  )}
+
+                  {segment.alternatives && segment.alternatives.length > 0 && (
+                    <View style={styles.alternativesContainer}>
+                      <Text style={styles.alternativeHeader}>Alternative Routes:</Text>
+                      {segment.alternatives.map((alt, altIdx) => {
+                        const routeName = alt.route_name ? alt.route_name.split('-')[0] : '';
+                        return (
+                          <Text key={altIdx} style={styles.alternativeText}>
+                            • {alt.type} {routeName}
+                          </Text>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
-                {segment.alternatives && segment.alternatives.length > 0 && (
-                  <View style={styles.alternativesContainer}>
-                    {segment.alternatives.map((alt, altIdx) => {
-                      const routeName = alt.route_name ? alt.route_name.split('-')[0] : '';
-                      return (
-                        <Text key={altIdx} style={styles.alternativeText}>
-                          Alternative {altIdx + 1}: {alt.type} {routeName}
-                        </Text>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-            );
-          }
-          // Fallback for unknown types
-          else {
-            return null;
-          }
+              )}
+            </View>
+          );
         })}
       </View>
     );
@@ -727,7 +719,6 @@ const RouteScreen: React.FC = () => {
   const detailsContent = (
     <View style={styles.container}>
       <Text style={styles.text}>Details</Text>
-      {/* Origin Input */}
       <Text style={styles.label}>From</Text>
       <View style={styles.searchContainer}>
         <View style={styles.inputContainer}>
@@ -750,7 +741,6 @@ const RouteScreen: React.FC = () => {
         </View>
         <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
       </View>
-      {/* Destination Input */}
       <Text style={styles.label}>To</Text>
       <View style={styles.searchContainer}>
         <View style={styles.inputContainer}>
@@ -783,7 +773,6 @@ const RouteScreen: React.FC = () => {
         </View>
         <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
       </View>
-      {/* Route Metrics */}
       {route.length >= 2 && routeMetrics && (
         <View style={styles.topInfoRow}>
           <View style={styles.infoBox}>
@@ -808,7 +797,6 @@ const RouteScreen: React.FC = () => {
           </View>
         </View>
       )}
-      {/* Route Overview */}
       {route.length >= 2 ? (
         <View style={styles.routecontainer}>
           <Text style={{ fontSize: 13, fontWeight: '500', color: '#6B7280', marginBottom: 18 }}>
@@ -834,11 +822,7 @@ const RouteScreen: React.FC = () => {
         </View>
       ) : (
         <View style={styles.oopsContainer}>
-          <Image
-            source={require('../../assets/images/opz.png')}
-            style={styles.illustration}
-            resizeMode="contain"
-          />
+          <Image source={require('../../assets/images/opz.png')} style={styles.illustration} resizeMode="contain" />
           <Text style={styles.errorText}>Oops!</Text>
           <Text style={styles.errorSubText}>Search for your location and destination.</Text>
         </View>
@@ -889,238 +873,45 @@ export default RouteScreen;
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
-  maincontainer: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-  },
-  detailsContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  contentContainer: {
-    paddingBottom: 30,
-  },
-  mapContainer: {
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    backgroundColor: '#FFFFFF',
-    width: '100%',
-    marginTop: 15,
-  },
-  map: {
-    height: '100%',
-    width: '100%',
-  },
-  text: {
-    color: '#44457D',
-    fontWeight: '500',
-    fontSize: 16,
-  },
-  container: {
-    padding: 15,
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginTop: 10,
-  },
-  searchContainer: {
-    position: 'relative',
-    width: '100%',
-    marginBottom: 20,
-  },
-  inputContainer: {
-    width: '100%',
-  },
-  userInput: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-    paddingRight: 30,
-    height: 40,
-  },
-  clearButton: {
-    position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: [{ translateY: -10 }],
-  },
-  loadingIndicator: {
-    position: 'absolute',
-    right: 40,
-    top: '50%',
-    transform: [{ translateY: -10 }],
-  },
-  suggestionList: {
-    position: 'absolute',
-    top: 45,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    zIndex: 10,
-    borderRadius: 8,
-    elevation: 4,
-    maxHeight: 150,
-  },
-  suggestionItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-  },
-  suggestionText: {
-    color: '#444',
-  },
-  topInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 18,
-  },
-  infoBox: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F4F6FF',
-    borderRadius: 8,
-    padding: 10,
-    width: 65,
-  },
-  infoBoxLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#44457D',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  routecontainer: {
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 16,
-    width: '100%',
-    marginTop: 18,
-    marginBottom: 100,
-  },
-  overviewText: {
-    fontSize: 12,
-    color: '#44457D',
-    marginVertical: 4,
-  },
-  // Walking segment styles
-  walkingSegmentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  bulletIcon: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#6366F1',
-    marginRight: 8,
-    marginTop: 2,
-  },
-  walkingSegmentText: {
-    fontSize: 12,
-    color: '#44457D',
-    lineHeight: 18,
-    flex: 1,
-  },
-  // Container for alternatives
-  alternativesContainer: {
-    marginTop: 6,
-    backgroundColor: '#F5F7FF',
-    padding: 6,
-    borderRadius: 4,
-    width: '100%',
-  },
-  alternativeText: {
-    fontSize: 12,
-    color: '#374151',
-    marginBottom: 2,
-  },
-  // Vehicle segment styles with connected bullets
-  segmentContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  bulletLineContainer: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  greenBullet: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: 'green',
-  },
-  verticalLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: 'green',
-    marginVertical: 2,
-  },
-  blueBullet: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: 'blue',
-    marginTop: 2,
-  },
-  onOffTextContainer: {
-    flex: 1,
-  },
-  segmentTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  segmentInstruction: {
-    fontSize: 13,
-    color: '#4B5563',
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  twobox: {
-    borderRadius: 6,
-    backgroundColor: '#E0E7FF',
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    margin: 4,
-  },
-  texttwo: {
-    fontSize: 12,
-    color: '#6366F1',
-    fontWeight: '500',
-  },
-  oopsContainer: {
-    alignItems: 'center',
-    padding: 16,
-    marginBottom: 30,
-  },
-  illustration: {
-    width: 150,
-    height: 120,
-    marginBottom: 10,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 4,
-  },
-  errorSubText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    marginHorizontal: 20,
-  },
+  maincontainer: { width: '100%', backgroundColor: '#FFFFFF' },
+  detailsContainer: { flex: 1, backgroundColor: '#FFFFFF' },
+  contentContainer: { paddingBottom: 30 },
+  mapContainer: { borderWidth: 2, borderColor: '#FFFFFF', backgroundColor: '#FFFFFF', width: '100%', marginTop: 15 },
+  map: { height: '100%', width: '100%' },
+  text: { color: '#44457D', fontWeight: '500', fontSize: 16 },
+  container: { padding: 15, marginBottom: 20 },
+  label: { fontSize: 12, fontWeight: '500', color: '#6B7280', marginTop: 10 },
+  searchContainer: { position: 'relative', width: '100%', marginBottom: 20 },
+  inputContainer: { width: '100%' },
+  userInput: { backgroundColor: '#F5F7FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 8, fontSize: 11, color: '#374151', marginVertical: 8, paddingRight: 30, height: 40 },
+  clearButton: { position: 'absolute', right: 10, top: '50%', transform: [{ translateY: -10 }] },
+  loadingIndicator: { position: 'absolute', right: 40, top: '50%', transform: [{ translateY: -10 }] },
+  suggestionList: { position: 'absolute', top: 45, left: 0, right: 0, backgroundColor: '#FFFFFF', zIndex: 10, borderRadius: 8, elevation: 4, maxHeight: 150 },
+  suggestionItem: { padding: 10, borderBottomWidth: 1, borderColor: '#ddd' },
+  suggestionText: { color: '#444' },
+  topInfoRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 18 },
+  infoBox: { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F6FF', borderRadius: 8, padding: 10, width: 65 },
+  infoBoxLabel: { fontSize: 11, fontWeight: '700', color: '#44457D', marginTop: 4, textAlign: 'center' },
+  routecontainer: { borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 16, width: '100%', marginTop: 18, marginBottom: 100 },
+  overviewText: { fontSize: 12, color: '#44457D', marginVertical: 4 },
+  oopsContainer: { alignItems: 'center', padding: 16, marginBottom: 30 },
+  illustration: { width: 150, height: 120, marginBottom: 10 },
+  errorText: { fontSize: 18, fontWeight: 'bold', color: '#000', marginBottom: 4 },
+  errorSubText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', marginHorizontal: 20 },
+  segmentCard: { marginBottom: 15, borderRadius: 8, backgroundColor: '#FFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 3 },
+  segmentHeaderRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E0E7FF', borderTopLeftRadius: 8, borderTopRightRadius: 8, padding: 10 },
+  segmentCardHeaderText: { fontSize: 12, fontWeight: 'bold', color: '#111827' },
+  segmentCardBody: { padding: 10 },
+  getOnOffContainer: { marginTop: 8 },
+  onOffTitle: { fontSize: 13, fontWeight: '600' },
+  onOffInstruction: { fontSize: 12, color: '#374151', marginTop: 2, lineHeight: 18 },
+  stepsContainer: { marginTop: 6, marginLeft: 6 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+  bulletIcon: { marginRight: 6, fontSize: 14, color: '#6366F1', lineHeight: 20 },
+  stepText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 18 },
+  alternativesContainer: { marginTop: 8, padding: 6, backgroundColor: '#F3F4F6', borderRadius: 4 },
+  alternativeHeader: { fontSize: 12, fontWeight: '700', marginBottom: 4, color: '#111827' },
+  alternativeText: { fontSize: 12, color: '#374151', marginBottom: 2 },
+  twobox: { borderRadius: 6, backgroundColor: '#E0E7FF', paddingVertical: 5, paddingHorizontal: 12, margin: 4 },
+  texttwo: { fontSize: 12, color: '#6366F1', fontWeight: '500' }
 });
