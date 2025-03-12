@@ -55,7 +55,7 @@ const Home = () => {
   // Updated list of tourist attractions with sample coordinates
   const touristAttractions: Attraction[] = [
     { id: 1, name: "Sanctuario de San Ezekiel Moreno", city: "Manila", image: require('../../assets/images/attractions/Sanctuario.jpg'), latitude: 14.473, longitude: 120.980 },
-    { id: 2, name: "Rizal Park", city: "Manila", image: require('../../assets/images/rizalpark.png'), latitude: 14.582, longitude: 120.975 },
+    { id: 2, name: "Rizal Park", city: "Manila", image: require('../../assets/images/rizalpark.jpg'), latitude: 14.582, longitude: 120.975 },
     { id: 3, name: "National Museum of Fine Arts", city: "Manila", image: require('../../assets/images/nationalmos.jpg'), latitude: 14.580, longitude: 120.978 },
     { id: 4, name: "SM Mall of Asia", city: "Pasay", image: require('../../assets/images/smallasia.jpg'), latitude: 14.536, longitude: 120.982 },
     { id: 5, name: "Bonifacio High Street", city: "Taguig", image: require('../../assets/images/hs.jpg'), latitude: 14.550, longitude: 121.050 },

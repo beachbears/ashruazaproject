@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "capstone",
-    "slug": "capstone",
+    "slug": "kommutsera",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "myapp",
@@ -10,8 +10,10 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "This app requires access to your location to provide navigation services."
-      }
+        "NSLocationWhenInUseUsageDescription": "This app requires access to your location to provide navigation services.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.capstone.Kommutsera"
     },
     "android": {
       "permissions": [
@@ -60,8 +62,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "6948d28a-110b-4430-b860-7d75e6a68182"
+        "projectId": "45ad4487-68b8-4845-a8a0-90dc90730c7d"
       }
-    }
+    },
+    "owner": "kommutsera1"
   }
 }
