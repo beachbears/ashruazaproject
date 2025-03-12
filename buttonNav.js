@@ -1,18 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import HomeScreen from './views/home';
+import HomeScreen from './views/home';  // Home screen
 import RoutesScreen from './views/route';
 import AboutScreen from './views/about';
 import FeedbackScreen from './views/feedback';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { View, Text, StyleSheet, Dimensions, SafeAreaView, Image, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
 
 // Reusable Header Component
-const Header = ({ title, onToggleDropdown, showDropdown, isLoggedIn, navigation }) => {
-  const profileInitial = isLoggedIn ? 'U' : 'G'; // Replace 'U' with the user's initial if logged in
+const Header = ({ title }) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState({ initial: 'A' }); // Default guest user
+  const navigation = useNavigation();
+
+  // Load user data from AsyncStorage
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        setIsLoggedIn(true);
+        setUser({ initial: 'U' }); // Logged-in user
+      }
+    };
+    checkLoginStatus();
+  }, []);
+
+  const toggleDropdown = () => {
+    setShowDropdown(!showDropdown);
+  };
+
+  const handleLogin = async () => {
+    setIsLoggedIn(true);
+    setUser({ initial: 'U' }); // Set user initial to 'U' for logged-in user
+    await AsyncStorage.setItem('token', 'token'); // Store token
+    setShowDropdown(false); // Hide dropdown after login
+    navigation.replace('Login'); // Redirect to home after login
+  };
+
+  const handleLogout = async () => {
+    setIsLoggedIn(false);
+    setUser({ initial: 'G' }); // Reset user initial to 'G' for guest
+    await AsyncStorage.removeItem('token'); // Remove token
+    setShowDropdown(false); // Hide dropdown after logout
+    navigation.replace('home'); // Redirect to home after logout
+  };
+
+  const profileInitial = isLoggedIn && user ? user.initial : 'G'; // Handle when 'user' is undefined
 
   return (
     <View style={styles.header}>
@@ -21,7 +60,7 @@ const Header = ({ title, onToggleDropdown, showDropdown, isLoggedIn, navigation 
         <Text style={styles.headerTitle}>{title}</Text>
       </View>
       <View>
-        <TouchableOpacity onPress={onToggleDropdown} style={styles.profileIconContainer}>
+        <TouchableOpacity onPress={toggleDropdown} style={styles.profileIconContainer}>
           <View style={styles.profileCircle}>
             <Text style={styles.profileInitial}>{profileInitial}</Text>
           </View>
@@ -35,10 +74,7 @@ const Header = ({ title, onToggleDropdown, showDropdown, isLoggedIn, navigation 
             {isLoggedIn ? (
               <TouchableOpacity
                 style={styles.dropdownButton}
-                onPress={() => {
-                  console.log('Logout clicked');
-                  // Handle logout logic here
-                }}
+                onPress={handleLogout}
               >
                 <Text style={styles.dropdownButtonText}>Logout</Text>
               </TouchableOpacity>
@@ -46,7 +82,7 @@ const Header = ({ title, onToggleDropdown, showDropdown, isLoggedIn, navigation 
               <>
                 <TouchableOpacity
                   style={styles.dropdownButton}
-                  onPress={() => navigation.navigate('Login')}
+                  onPress={handleLogin}
                 >
                   <Text style={styles.dropdownButtonText}>Login</Text>
                 </TouchableOpacity>
@@ -65,14 +101,7 @@ const Header = ({ title, onToggleDropdown, showDropdown, isLoggedIn, navigation 
   );
 };
 
-const ButtonNav = ({ navigation }) => {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Simulate login state
-
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown);
-  };
-
+const ButtonNav = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F6FB' }}>
       <Tab.Navigator
@@ -103,15 +132,7 @@ const ButtonNav = ({ navigation }) => {
           component={HomeScreen}
           options={{
             headerShown: true,
-            header: () => (
-              <Header
-                title="Logo Name"
-                onToggleDropdown={toggleDropdown}
-                showDropdown={showDropdown}
-                isLoggedIn={isLoggedIn}
-                navigation={navigation}
-              />
-            ),
+            header: () => <Header title="Logo Name" />,
           }}
         />
         <Tab.Screen
@@ -119,15 +140,7 @@ const ButtonNav = ({ navigation }) => {
           component={RoutesScreen}
           options={{
             headerShown: true,
-            header: () => (
-              <Header
-                title="Routes"
-                onToggleDropdown={toggleDropdown}
-                showDropdown={showDropdown}
-                isLoggedIn={isLoggedIn}
-                navigation={navigation}
-              />
-            ),
+            header: () => <Header title="Routes" />,
           }}
         />
         <Tab.Screen
@@ -135,15 +148,7 @@ const ButtonNav = ({ navigation }) => {
           component={AboutScreen}
           options={{
             headerShown: true,
-            header: () => (
-              <Header
-                title="About"
-                onToggleDropdown={toggleDropdown}
-                showDropdown={showDropdown}
-                isLoggedIn={isLoggedIn}
-                navigation={navigation}
-              />
-            ),
+            header: () => <Header title="About" />,
           }}
         />
         <Tab.Screen
@@ -151,15 +156,7 @@ const ButtonNav = ({ navigation }) => {
           component={FeedbackScreen}
           options={{
             headerShown: true,
-            header: () => (
-              <Header
-                title="Feedback"
-                onToggleDropdown={toggleDropdown}
-                showDropdown={showDropdown}
-                isLoggedIn={isLoggedIn}
-                navigation={navigation}
-              />
-            ),
+            header: () => <Header title="Feedback" />,
           }}
         />
       </Tab.Navigator>
@@ -180,10 +177,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-evenly',
     alignItems: 'center',
     marginHorizontal: width * 0.2,
-    // shadowColor: '#000',
-    // shadowOffset: { width: 0, height: 4 },
-    // shadowOpacity: 0.2,
-    // shadowRadius: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
     elevation: 5,
     borderTopWidth: 0,
   },
@@ -198,10 +195,10 @@ const styles = StyleSheet.create({
   },
   focusedIcon: {
     backgroundColor: '#6A5AE0',
-    // shadowColor: '#6A5AE0',
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.3,
-    // shadowRadius: 4,
+    shadowColor: '#6A5AE0',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
     elevation: 4,
   },
   header: {
@@ -249,10 +246,10 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    // shadowColor: '#000',
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.2,
-    // shadowRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
     elevation: 5,
     padding: 16,
     zIndex: 10,

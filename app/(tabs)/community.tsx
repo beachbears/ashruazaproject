@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,TextInput,FlatList} from 'react-native';
-import Octicons from '@expo/vector-icons/Octicons';
-import Entypo from '@expo/vector-icons/Entypo';
+import React, { useState, useEffect, useContext, useMemo} from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView,   ActivityIndicator, Alert } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import PostModal from '../postmodal';
+import { AuthContext, AuthContextType } from '../../contexts/AuthContext';
+import { usePostContext, type Post } from '../../contexts/PostContext';
+import { useRouteContext } from '../../contexts/RouteContext';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import Entypo from '@expo/vector-icons/Entypo';
 import { APP_NAME } from "../../constants";
-import RouteUserScreen from '../routeuser';
-import ModalComponent from '../postmodal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { FontAwesome5 } from '@expo/vector-icons';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
-
-type VehicleType = "Jeep" | "E-jeep" | "Bus" | "UV Exp." | "Train";
+const dropdownOptions = ['Popularity', 'Time'];
 
 interface DropdownProps {
   options: string[];
@@ -31,7 +28,8 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
     setIsOpen(false);
     if (onSelect) onSelect(option);
   };
-
+ 
+ 
   return (
     <View style={styles.dropdowncontainer}>
       <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
@@ -41,9 +39,9 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
       {isOpen && (
         <View style={styles.dropdownList}>
           {options.map((option, index) => (
-            <TouchableOpacity 
-              key={index} 
-              onPress={() => selectOption(option)} 
+            <TouchableOpacity
+              key={index}
+              onPress={() => selectOption(option)}
               style={styles.option}
             >
               <Text style={styles.optionText}>{option}</Text>
@@ -55,334 +53,462 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   );
 };
 
-const dropdownOptions = ['Destination', 'Fare Cost', 'Popularity', 'Time'];
-interface PostItem {
-  id: number;
-  upvotes: number;
-  downvotes: number;
-  userinitial: string;
-  loginusername: string;
-  username: string;
-  location: string;
-  fare: number;
-  destination: string;
-  description: string;
-  suggestiontextbox: string;
-  timestamp: number;
-  vehicles: VehicleType[];
-}
-
-const vehicleIcons: Record<VehicleType, JSX.Element> = {
-  "Jeep": <MaterialCommunityIcons name="jeepney" size={24} color="#4F46E5" />,
-  "E-jeep": <FontAwesome5 name="bus" size={20} color="#4F46E5" />,
-  "Bus": <FontAwesome5 name="bus-alt" size={22} color="#4F46E5" />,
-  "UV Exp.": <FontAwesome5 name="car" size={22} color="#4F46E5" />,
-  "Train": <FontAwesome6 name="train-subway" size={24} color="#4F46E5" />
-};
-
-interface PostCardProps {
-  post: PostItem;
-  handleUpvote: (id: number) => void;
-  handleDownvote: (id: number) => void;
-  onSelect: (post: PostItem) => void;
-}
-
-const timeAgo = (timestamp: number | string): string => {
-  if (!timestamp) return 'Unknown time';
-  const postDate = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  const diffInHours = Math.floor(diffInSeconds / 3600);
-  const diffInDays = Math.floor(diffInSeconds / 86400);
-
-  if (diffInMinutes < 1) return 'Just now';
-  if (diffInHours < 1) return `${diffInMinutes} minute's ago`;
-  if (diffInHours < 24) return `${diffInHours} hour's ago`;
-  if (diffInDays < 7) return `${diffInDays} day's ago`;
-  if (diffInDays === 7) return '1 week ago';
-  return '1 month ago';
-};
-
-const PostCard: React.FC<PostCardProps> = ({ post, handleUpvote, handleDownvote, onSelect }) => {
-  const [timeString, setTimeString] = useState<string>(timeAgo(post.timestamp));
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeString(timeAgo(post.timestamp));
-    }, 60000);
-    return () => clearInterval(timer);
-  }, [post.timestamp]);
-
-  return (
-    <TouchableOpacity style={styles.containerpost} onPress={() => onSelect(post)}>
-      <View style={styles.suggestordetails}>
-        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1}}>
-          <View style={styles.profile}>
-            <Text style={styles.initial}>{post.userinitial}</Text>
-          </View>
-          <View style={styles.suggestor}>
-            <Text style={styles.suggestorname}>{post.loginusername}</Text>
-            <Text style={styles.suggestorusername}>{post.username}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-          <Text style={styles.postTimestamp}>{timeString}</Text>
-        </View>
-      </View>
-
-      <View style={styles.detailsContainer}>
-          <View style={{flexDirection: 'column', marginRight: 90}}>
-              <Text style={styles.label}>Location</Text>
-              <Text style={styles.locationText}>{post.location}</Text>
-              </View>
-              <View style={{flexDirection: 'column', }}>
-              <Text style={styles.label}>Destination</Text>
-              <Text style={styles.locationText}>{post.destination}</Text>
-              </View>
-              </View>
-
-      <View style={styles.routecontainer}>
-           <View style={styles.position}> 
-              <Text style={styles.conlabel}>Types of Vehicles</Text>
-              <Text style={styles.fare}>Fare: ₱{post.fare}.00</Text>
-              </View>
+type VoteType = 'upvote' | 'downvote';
+export default function CommunityPage() {
+  const { posts: contextPosts, addPost } = usePostContext();
+  const { routeDetails } = useRouteContext();
+  const { authToken } = React.useContext(AuthContext) as AuthContextType;
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const [modalVisible, setModalVisible] = useState(false);
+   const [isLoading, setIsLoading] = useState(false);
+    const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
+      const authContext = useContext(AuthContext) as AuthContextType | null;
       
-              <View style={styles.vehiclesContainer}>
-              {post.vehicles?.length > 0 ? (
-                post.vehicles.map((vehicle, index) => (
-                  <View key={index} style={styles.vehicleItem}>
-                    {vehicleIcons[vehicle]}
-                    <Text style={styles.vehicleText}>{vehicle}</Text>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.vehicleText}>No vehicles selected</Text>
-              )}
-            </View>
-            <Text style={styles.estimatedTime}>Estimated Time: 45 minutes to 1.5 hours depending on traffic.</Text>
-            <View style={{ marginTop: 20, marginBottom: 10 }}>
-                    <Text style={styles.conlabel}>Route Overview</Text>
-                </View>
-      
-               
-              <Text style={styles.description}>{post.description}</Text>
-            
-            </View>
+        if (!authContext) return null; // Prevents errors if context is null
+    const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
+    const [selectedOption, setSelectedOption] = useState<string>('Time');
+  
+    
+  const handleOptionSelect = (option: string) => {
+    setSelectedOption(option);
+  };
+  
+  // Use routeDetails if available; otherwise, try URL params or fall back to default names.
+  const location =
+    routeDetails?.location ||
+    (params.location ? decodeURIComponent(params.location as string) : 'Unknown Origin');
+  const destination =
+    routeDetails?.destination ||
+    (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination');
+  const origin_lat = routeDetails?.origin_lat ?? (params.origin_lat ? Number(params.origin_lat) : 0);
+  const origin_lon = routeDetails?.origin_lon ?? (params.origin_lon ? Number(params.origin_lon) : 0);
+  const destination_lat =
+    routeDetails?.destination_lat ?? (params.destination_lat ? Number(params.destination_lat) : 0);
+  const destination_lon =
+    routeDetails?.destination_lon ?? (params.destination_lon ? Number(params.destination_lon) : 0);
 
-             <View style={{flexDirection: 'column', gap: 8, marginTop: 20}}>
-                    <Text style={{fontSize: 14, fontWeight: 500, color: '#44457D'}}>Your Experiences </Text>
-                    <Text style={styles.experience}>{post.suggestiontextbox}</Text>
-                    </View>
-
-      <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={styles.content}>
-          <Octicons name="shield-check" size={18} color="#6366F1" />
-          <Text style={styles.status}>Status</Text>
-          <View style={styles.badge}>
-            <Entypo name="check" size={14} color="#03C04A" />
-            <Text style={styles.cert}>Certified {APP_NAME}</Text>
-          </View>
-        </View>
-        <View style={styles.arrowcontainer}>
-          <TouchableOpacity style={styles.arrowup} onPress={() => handleUpvote(post.id)}>
-            <AntDesign name="arrowup" size={12} color="#22C55E" />
-            <Text style={[styles.arrowupnum, { color: '#22C55E' }]}>{post.upvotes}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.arrowdown} onPress={() => handleDownvote(post.id)}>
-            <AntDesign name="arrowdown" size={12} color="#C52222" />
-            <Text style={[styles.arrowdownnum, { color: '#C52222' }]}>{post.downvotes}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-export default function TabTwoScreen() {
-  const [posts, setPosts] = useState<PostItem[]>([
-    {
-      id: 1,
-      upvotes: 0,
-      downvotes: 0,
-      userinitial: 'AR',
-      loginusername: 'Ashley Ruaza',
-      username: '@ashruaza',
-      location: 'North Olympus',
-      fare: 500,
-      destination: 'National Museum',
-      description: 'Good',
-      suggestiontextbox: 'Some suggestion text here.',
-      timestamp: Date.now() - 7 * 24 * 60 * 60 * 1000,  
-      vehicles: ["Jeep"],
-    },
-  ]);
-
-  useEffect(() => {
-    const loadPosts = async () => {
-      try {
-        const savedPosts = await AsyncStorage.getItem('posts');
-        if (savedPosts) {
-          setPosts(JSON.parse(savedPosts));
-        }
-      } catch (error) {
-        console.error('Error loading posts:', error);
+  // Fetch old posts from the API when the component mounts.
+  async function fetchOldPosts() {
+    try {
+      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
+      if (!response.ok) {
+        console.error('Error fetching posts:', response.status);
+        return;
       }
-    };
+      const data = await response.json();
+      // Reverse the array so that addPost (which prepends) maintains the API’s descending order
+      data.reverse().forEach((post: any) => {
+        // Transform API fields to match your Post type
+        const transformedPost: Post = {
+          ...post,
+          destination_lat: post.dest_lat,
+          destination_lon: post.dest_lon,
+          // If API response is missing these fields, fallback to our current values
+          location: post.location || location,
+          destination: post.destination || destination,
+        };
+        addPost(transformedPost, 'postsuggestions');
+      });
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
+  }
 
-    loadPosts();
+  useEffect(() => {
+    fetchOldPosts();
   }, []);
 
-   
   useEffect(() => {
-    const savePosts = async () => {
-      try {
-        await AsyncStorage.setItem('posts', JSON.stringify(posts));
-      } catch (error) {
-        console.error('Error saving posts:', error);
-      }
+    fetchOldPosts();
+  }, [location, destination]);
+
+  // Handle post submission
+  const handlePostSubmit = (formData: { content: string }) => {
+    const newPost = {
+      ...formData,
+      location,
+      destination,
+      origin_lat,
+      origin_lon,
+      destination_lat,
+      destination_lon,
     };
-
-    savePosts();
-  }, [posts]);
-
-  const handleUpvote = (id: number): void => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === id ? { ...post, upvotes: post.upvotes + 1 } : post
-      )
-    );
-  };
-
-  const handleDownvote = (id: number): void => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === id ? { ...post, downvotes: post.downvotes + 1 } : post
-      )
-    );
-  };
-
-  const handleSubmitPost = (newPost: PostItem) => {
-    setPosts(prevPosts => [...prevPosts, { ...newPost, id: prevPosts.length + 1 }]);
+    addPost(newPost, 'postsuggestions');
     setModalVisible(false);
   };
 
-
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [selectedPost, setSelectedPost] = useState<PostItem | null>(null);
-
-    
-
-  const handleOptionSelect = (option: string) => {
-    setPosts(prevPosts => {
-      const sortedPosts = [...prevPosts];
-      switch (option) {
-        case 'Time':
-          return sortedPosts.sort((a, b) => b.timestamp - a.timestamp);
-        case 'Fare Cost':
-          return sortedPosts.sort((a, b) => a.fare - b.fare);
-        case 'Popularity':
-          return sortedPosts.sort((a, b) => b.upvotes - a.upvotes);
-        case 'Destination':
-          return sortedPosts.sort((a, b) => a.destination.localeCompare(b.destination));
-        default:
-          return sortedPosts;
+  const handleVote = async (id: number, action: VoteType) => {
+    if (selectedVotes[id] === action) {
+      const success = await sendVoteRequest(id.toString(), action);
+      if (success) {
+        // Maintain current vote highlight.
       }
-    });
+    } else {
+      const success = await sendVoteRequest(id.toString(), action);
+      if (success) {
+        setSelectedVotes(prev => ({ ...prev, [id]: action }));
+      }
+    }
   };
 
-  if (selectedPost) {
-    return <RouteUserScreen post={selectedPost} onBack={() => setSelectedPost(null)} />;
-  }
+  const sendVoteRequest = async (postId: string, action: VoteType) => {
+      const endpoint = `https://comgu20-production.up.railway.app/api/route_posts/${postId}/${action}`;
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+  
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Failed to send vote:', response.status, errorText);
+          Alert.alert('Error', 'There was a problem registering your vote.');
+          return false;
+        }
+  
+        await response.json();
+        // Re-fetch posts after voting to update the view.
+        fetchOldPosts();
+        Alert.alert('Success', 'Your vote has been registered.');
+        return true;
+      } catch (error) {
+        console.error('Vote error:', error);
+        Alert.alert('Error', 'There was a problem sending your vote.');
+        return false;
+      }
+    };
+  
+
+  // Navigate to Route Finder if needed.
+  const handleGoToRouteFinder = () => {
+    router.push('/route');
+  };
+
+  const handlePostButtonPress = () => {
+    const isLoggedIn = !!authToken;
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    setModalVisible(true);
+  };
+
+  const handlePostPress = (postId: number, action: VoteType) => {
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+   
+    handleVote(postId, action);
+  };
+
+   const sortedPosts = useMemo(() => {
+      return [...contextPosts].sort((a, b) => {
+        switch (selectedOption) {
+          case 'Time':
+            return (new Date(b.created_at ?? 0).getTime() || 0) - (new Date(a.created_at ?? 0).getTime() || 0);
+          case 'Popularity':
+            return (b.votes ?? 0) - (a.votes ?? 0);
+          default:
+            return 0;
+        }
+      });
+    }, [contextPosts, selectedOption]);
+
+  const timeAgo = (timestamp: number): string => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (diff < minute) return 'Just now';
+    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+    return `${Math.floor(diff / day)}d ago`;
+  };
 
   return (
     <ScrollView style={styles.maincontainer}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Route Post Suggestion</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
-            <Text style={styles.postButtonText}>Post</Text>
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.sectionTitle}>Discover Experiences</Text>
 
-      <View style={{ zIndex: 1000, }}>
-          <Dropdown
-            options={dropdownOptions}
-            onSelect={handleOptionSelect}
-            defaultValue="Select Option"
-          />
-        </View>
+      <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems: 'center', marginTop: 10}}>
+             <View style={{ zIndex: 1000 }}>
+               <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
+             </View>
+             <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+       <Text style={styles.postButtonText}>Post</Text>
+     </TouchableOpacity>
+           </View>
 
-    <View style={{marginBottom: 200}}>
-    {posts.map((item) => (
-  <PostCard
-    key={item.id}  
-    post={item}
-    handleUpvote={handleUpvote}
-    handleDownvote={handleDownvote}
-    onSelect={setSelectedPost}
-  />
-))}
-
-</View>
-      <ModalComponent 
-        visible={modalVisible} 
-        onClose={() => setModalVisible(false)} 
-        onSubmit={handleSubmitPost} 
+      <PostModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSubmit={handlePostSubmit}
+        location={location}
+        destination={destination}
+        origin_lat={origin_lat}
+        origin_lon={origin_lon}
+        destination_lat={destination_lat}
+        destination_lon={destination_lon}
+        authToken={authToken}
+        userEmail={''}
+        userPassword={''}
       />
+
+ {isLoading && (
+        <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
+      )}
+        <View style={{ marginBottom: 200 }}>
+          <View style={styles.postsContainer}>
+            {sortedPosts.map((post, index) => (
+              <View key={`${post.id}-${index}`} style={styles.containerpost}>
+                <View style={styles.suggestordetails}> 
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                  <View style={styles.profile}>
+                                    <Text style={styles.initial}>
+                                      {post.user?.firstname && post.user?.lastname
+                                        ? post.user.firstname[0].toUpperCase() + post.user.lastname[0].toUpperCase()
+                                        : "G"}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.suggestor}>
+                                    <Text style={styles.suggestorname}>
+                                      {post.user?.firstname && post.user?.lastname
+                                        ? `${post.user.firstname} ${post.user.lastname}`
+                                        : "Guest"}
+                                    </Text>
+                                    <Text style={styles.suggestorusername}>{post.user?.email}</Text>
+                                  </View>
+                                </View>
+                                 <Text style={styles.postTimestamp}>
+                                                {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+                                              </Text>
+                </View>
+                  <Text style={styles.postLocation}>From: {post.location}</Text>
+                  <Text style={styles.postDestination}>To: {post.destination}</Text>
+                  
+                    <View style={{ flexDirection: 'column', gap: 8 }}>
+                                <Text style={styles.label}>Your experiences</Text>
+                                <Text style={styles.experience}>{post.content}</Text>
+                              </View>
+                 
+                  <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+                               <View style={styles.content}>
+                                 <View style={styles.badge}>
+                                   <Entypo name="check" size={16} color="#03C04A" />
+                                   <Text style={styles.cert}>Certified {APP_NAME}</Text>
+                                 </View>
+                               </View>
+                               <View style={styles.arrowcontainer}>
+                                 
+                               <TouchableOpacity
+                   style={[
+                     styles.arrowup,
+                     post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
+                   ]}
+                   onPress={() => post.id && handlePostPress(post.id, 'upvote')}
+                 >
+                   <AntDesign
+                     name="arrowup"
+                     size={13}
+                     color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
+                   />
+                 </TouchableOpacity>
+                 <Text style={styles.arrowupnum}>{post.votes}</Text>
+                 <TouchableOpacity
+                   style={[
+                     styles.arrowdown,
+                     post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
+                   ]}
+                   onPress={() => post.id && handlePostPress(post.id, 'downvote')}
+                 >
+                   <AntDesign
+                     name="arrowdown"
+                     size={13}
+                     color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
+                   />
+                 </TouchableOpacity>
+                 
+                  
+                 
+                               </View>
+                             </View>
+
+
+                
+              
+                </View>
+              
+            ))}
+          </View>
+        </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  maincontainer: {flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15},
-  content: {flexDirection: 'row',alignItems: 'center',gap: 4},
-  headerText: {color: '#44457D',fontWeight: '500',fontSize: 16,},
-  postbutton: {backgroundColor: '#6366F1',paddingHorizontal: 14,paddingVertical: 6,borderRadius: 10,justifyContent: 'center',alignItems: 'center'},
-  postButtonText: {color: 'white',fontSize: 12, },
-  detailsContainer: { marginBottom: 16, flexDirection: 'row',  paddingHorizontal: 10, },
-  locationText: {fontSize: 12, fontWeight: '400', color: '#44457D'},
-  label: { fontSize: 14, fontWeight: '500', color: '#44457D',  marginTop: 10},
   
-  routecontainer:{borderWidth: 1, borderColor: '#C7D2FE',borderRadius: 8, padding:10, flexDirection: 'column', width: '100%', },
-  position: { flexDirection: 'row', justifyContent: 'space-between',},
-  fare: {fontSize: 12, fontWeight: '400', color: '#44457D',},
-  estimatedTime: {fontSize: 10,color: '#44457D', textAlign: 'center',},
-  conlabel: {fontSize: 13, fontWeight: '400', color: '#44457D'},
-  vehiclesContainer: {  flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#EEF2FF', borderRadius: 8, padding: 4, marginTop:10},
-  vehicleItem: { alignItems: 'center', marginTop: 4},
-  vehicleText: {fontSize: 11, color: '#44457D', marginVertical: 4,},
-  getOnOff: {fontSize: 12, fontWeight: 'bold',  },
-  description: {fontSize: 12,color: '#44457D', marginBottom: 6},
-  experience: {fontSize: 12,color: '#6B7280', fontWeight: 400},
-
-  status: {fontSize: 11,color: '#404163',flexDirection: 'row',alignItems: 'center',fontWeight: '700',},
-  badge: {borderWidth: 1,borderColor: '#ABEBA2',borderRadius: 6,paddingHorizontal: 3,paddingVertical: 1,backgroundColor: '#ecfdf5',flexDirection: 'row',alignItems: 'center',marginLeft: 4,},
-  dropdowncontainer: {justifyContent: 'flex-end', flexDirection: 'row', marginBottom: 10},
-  dropdownButton: {backgroundColor: '#F5F7FF',borderWidth: 1,borderColor: '#C7D2FE',borderRadius: 8,width: 125, alignItems: 'center',flexDirection: 'row',justifyContent: 'space-between',padding: 6,},
-  buttonText: {color: '#44457D',fontSize: 12,fontWeight: '400',},
-  dropdownList: {position: 'absolute',backgroundColor: '#fff',borderWidth: 1,borderRadius: 8,borderColor: '#E5E7EB',zIndex: 1000,width: 125, boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)", elevation: 4,top: 40, },
-  option: {borderBottomWidth: 1,borderBottomColor: '#E5E7EB',padding: 4,alignItems: 'center',},
-  optionText: {fontSize: 13,color: '#44457D',},
+  maincontainer: {flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15,},
+  containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#C7D2FE', padding: 12, elevation: 4, marginBottom: 20, width: '100%', borderWidth: 1},
+  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2, justifyContent: "space-between" },
   profile: {width: 36,height: 36,borderRadius: 24,backgroundColor: '#6366f1',alignItems: 'center',justifyContent: 'center',marginRight: 16,},
   username: {fontSize: 12,color: '#6B7280',},
-  suggestion: {fontSize: 12,color: '#6B7280',flexWrap: 'wrap',marginLeft: 50,},
-  suggestorsdestination: {fontSize: 12,color: '#6B7280',fontWeight: '500',marginLeft: 50,marginTop: 10,marginBottom: 6,},
-  cert: { color: '#22c55e', fontWeight: '500', fontSize: 11, }, 
-  arrowup: {  borderWidth: 1,  borderColor: '#4ade80',  borderRadius: 6,  paddingHorizontal: 3,  paddingVertical: 1, flexDirection: 'row',  alignItems: 'center',},
-  arrowdown: {borderWidth: 1,borderColor: '#f47357',borderRadius: 6,paddingHorizontal: 3,paddingVertical: 1,flexDirection: 'row',alignItems: 'center', },
-  arrowcontainer: {  flexDirection: 'row',  alignItems: 'center',  gap: 4,},
-  arrowupnum: { marginLeft: 6, fontSize: 10, fontWeight: '700',},
-  arrowdownnum: { marginLeft: 6, fontSize: 10, fontWeight: '700', },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16,},
-  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 16,},
-  dest: { fontSize: 12, color: '#6B7280', fontWeight: '500', marginLeft: 50, },
-  usersuggestion: {  fontSize: 12, marginVertical: 4, color: '#6B7280', fontWeight: '500', marginLeft: 50, },
-  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2, justifyContent: "space-between" },
-  containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#C7D2FE', padding: 12, elevation: 4, marginBottom: 20, width: '100%', borderWidth: 1},
-  suggestor: { flexDirection: 'column' },
   initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
   suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
   suggestorusername: { fontSize: 11, color: '#6B7280' },
-  suggestordestination: {  fontSize: 11, color: '#6B7280', flexWrap: 'wrap', marginLeft: 0 },
-  postTimestamp: { fontSize: 10, color: '#999', marginTop: 5, textAlign: 'right' }
+  suggestor: { flexDirection: 'column' },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#44457D',
+  },
+  experience: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '400',
+  },
+  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 18,textAlign: 'center'},
+  postbutton: {backgroundColor: '#6366F1',paddingHorizontal: 14,paddingVertical: 6,borderRadius: 10,justifyContent: 'center',alignItems: 'center'},
+  postButtonText: {color: 'white',fontSize: 12, },
+  loadingIndicator: {
+    marginVertical: 20,
+  },
+  badge: {
+    borderWidth: 1,
+    borderColor: '#ABEBA2',
+    borderRadius: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    backgroundColor: '#ecfdf5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  postsContainer: {
+    marginTop: 10,
+  },
+  postTimestamp: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 5,
+    textAlign: 'right',
+  },
+  postContainer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  postContent: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  cert: {
+    color: '#22c55e',
+    fontWeight: '500',
+    fontSize: 11,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  postLocation: {
+    fontSize: 14,
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  postDestination: {
+    fontSize: 14,
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  arrowup: {
+    borderWidth: 1,
+    borderColor: '#4ade80',
+    borderRadius: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  arrowdown: {
+    borderWidth: 1,
+    borderColor: '#f47357',
+    borderRadius: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  arrowcontainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  arrowupnum: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6B7280',
+  },
+  arrowdownnum: {
+    marginLeft: 6,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  dropdowncontainer: {
+    justifyContent: 'flex-end',
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  dropdownButton: {
+    backgroundColor: '#F5F7FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 8,
+    width: 125,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 6,
+  },
+  buttonText: {
+    color: '#44457D',
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  dropdownList: {
+    position: 'absolute',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    zIndex: 1000,
+    width: 125,
+    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+    elevation: 4,
+    top: 40,
+  },
+  option: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    padding: 4,
+    alignItems: 'center',
+  },
+  optionText: {
+    fontSize: 13,
+    color: '#44457D',
+  },
 });
+
+
+ 
