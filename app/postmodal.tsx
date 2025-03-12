@@ -8,8 +8,8 @@ interface PostModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (formData: Post) => void;
-  location: string;
-  destination: string;
+  origin_address: string;
+  destination_address: string;
   origin_lat: number;
   origin_lon: number;
   destination_lat: number;
@@ -23,8 +23,8 @@ export default function PostModal({
   visible,
   onClose,
   onSubmit,
-  location,
-  destination,
+  origin_address,
+  destination_address,
   origin_lat,
   origin_lon,
   destination_lat,
@@ -44,8 +44,8 @@ export default function PostModal({
       origin_lon,
       destination_lon,
       destination_lat,
-      location,
-      destination,
+      origin_address,
+      destination_address,
     };
 
     onSubmit(newPost);
@@ -61,9 +61,9 @@ export default function PostModal({
           <ScrollView>
 
             <Text style={styles.label}>From:</Text>
-            <Text style={styles.locationText}>{location}</Text>
+            <Text style={styles.locationText}>{origin_address}</Text>
             <Text style={styles.label}>To: </Text>
-            <Text style={styles.locationText}>{destination}</Text>
+            <Text style={styles.locationText}>{destination_address}</Text>
 
             <Text style={styles.exp}>Your Experiences:</Text>
             <TextInput

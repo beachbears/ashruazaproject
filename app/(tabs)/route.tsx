@@ -547,8 +547,8 @@ const RouteScreen: React.FC = () => {
 
       const processedPosts = response.data.posts.map(post => ({
         ...post,
-        location: origin,              // current origin from state
-        destination: destination,      // current destination from state
+        origin_address: origin,              // current origin from state
+        destination_address: destination,      // current destination from state
         origin_lat: region.latitude,
         origin_lon: region.longitude,
         destination_lat: destLat,

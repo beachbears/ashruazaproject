@@ -75,12 +75,12 @@ export default function CommunityPage() {
   };
 
   // Use routeDetails if available; otherwise, try URL params or fall back to default names.
-  const location =
-    routeDetails?.location ||
-    (params.location ? decodeURIComponent(params.location as string) : 'Unknown Origin');
-  const destination =
-    routeDetails?.destination ||
-    (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination');
+  const origin_address =
+    routeDetails?.origin_address ||
+    (params.origin_address ? decodeURIComponent(params.origin_address as string) : 'Unknown Origin');
+  const destination_address =
+    routeDetails?.destination_address ||
+    (params.destination_address ? decodeURIComponent(params.destination_address as string) : 'Unknown Destination');
   const origin_lat = routeDetails?.origin_lat ?? (params.origin_lat ? Number(params.origin_lat) : 0);
   const origin_lon = routeDetails?.origin_lon ?? (params.origin_lon ? Number(params.origin_lon) : 0);
   const destination_lat =
@@ -105,8 +105,8 @@ export default function CommunityPage() {
           destination_lat: post.dest_lat,
           destination_lon: post.dest_lon,
           // If API response is missing these fields, fallback to our current values
-          location: post.location || location,
-          destination: post.destination || destination,
+          origin_address: post.origin_address || origin_address,
+          destination_address: post.destination_address || destination_address,
         };
         addPost(transformedPost, 'postsuggestions');
       });
@@ -121,14 +121,14 @@ export default function CommunityPage() {
 
   useEffect(() => {
     fetchOldPosts();
-  }, [location, destination]);
+  }, [origin_address, destination_address]);
 
   // Handle post submission
   const handlePostSubmit = (formData: { content: string }) => {
     const newPost = {
       ...formData,
-      location,
-      destination,
+      origin_address,
+      destination_address,
       origin_lat,
       origin_lon,
       destination_lat,
@@ -248,8 +248,8 @@ export default function CommunityPage() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handlePostSubmit}
-        location={location}
-        destination={destination}
+        origin_address={origin_address}
+        destination_address={destination_address}
         origin_lat={origin_lat}
         origin_lon={origin_lon}
         destination_lat={destination_lat}
@@ -288,8 +288,8 @@ export default function CommunityPage() {
                   {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
                 </Text>
               </View>
-              <Text style={styles.postLocation}>From: {post.location}</Text>
-              <Text style={styles.postDestination}>To: {post.destination}</Text>
+              <Text style={styles.postLocation}>From: {post.origin_address}</Text>
+              <Text style={styles.postDestination}>To: {post.destination_address}</Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
                 <Text style={styles.label}>Your experiences</Text>

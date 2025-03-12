@@ -61,7 +61,7 @@ export default function PostSuggestions() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const authContext = useContext(AuthContext) as AuthContextType | null;
-  
+
   if (!authContext) return null;
   const { isLoggedIn, userName, userHandle, userInitials } = authContext;
   const [isLoading, setIsLoading] = useState(false);
@@ -81,7 +81,7 @@ export default function PostSuggestions() {
 
   // Helper function for dynamic background and border colors based on status.
   const getStatusStyle = (status: string) => {
-    switch(status.toLowerCase()) {
+    switch (status.toLowerCase()) {
       case "pending review":
         return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
       case "community approved":
@@ -97,7 +97,7 @@ export default function PostSuggestions() {
 
   // Helper function for dynamic text colors based on status.
   const getStatusTextColor = (status: string) => {
-    switch(status.toLowerCase()) {
+    switch (status.toLowerCase()) {
       case "flagged":
         return { color: "#b31b1b" };
       case "admin approved":
@@ -141,7 +141,7 @@ export default function PostSuggestions() {
       setIsLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchPosts();
   }, [location, destination]);
@@ -262,7 +262,7 @@ export default function PostSuggestions() {
     }
     handleVote(postId, action);
   };
-  
+
   const handlePostButtonPress = () => {
     if (!isLoggedIn) {
       router.push('/login');
@@ -284,7 +284,7 @@ export default function PostSuggestions() {
           <Text style={styles.locationText}>{destination}</Text>
         </View>
       </View>
-      <View style={{ flexDirection:'row', justifyContent:'space-between', marginBottom: 10, alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
@@ -292,7 +292,7 @@ export default function PostSuggestions() {
           <Text style={styles.postButtonText}>Post</Text>
         </TouchableOpacity>
       </View>
-      
+
       <View style={{ marginBottom: 200 }}>
         {sortedPosts.map((post) => (
           <View key={post.id} style={styles.containerpost}>
@@ -318,8 +318,8 @@ export default function PostSuggestions() {
                 {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
               </Text>
             </View>
-            <Text>{post.location}</Text>
-            <Text>{post.destination}</Text>
+            <Text>{post.origin_address}</Text>
+            <Text>{post.destination_address}</Text>
             <View style={{ flexDirection: 'column', gap: 8 }}>
               <Text style={styles.label}>Your experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
@@ -363,13 +363,13 @@ export default function PostSuggestions() {
           </View>
         ))}
       </View>
-       
+
       <PostModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handlePostSubmit}
-        location={location}
-        destination={destination}
+        origin_address={location}
+        destination_address={destination}
         origin_lat={origin_lat}
         origin_lon={origin_lon}
         destination_lat={destination_lat}
