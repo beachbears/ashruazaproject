@@ -141,7 +141,7 @@ Say goodbye to stress and confusion with { APP_NAME}, your perfect guide for has
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
-              source={require('../../assets/images/valeza.jpg')} // Replace with actual image URL
+              source={require('../../assets/images/Valeza.jpg')} // Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Joshua Emmanuel P. Valeza</Text>
