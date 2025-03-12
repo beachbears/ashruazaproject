@@ -19,6 +19,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import ReviewModal from '../reviewmodal';
+import { usePostContext } from '@/contexts/PostContext';
 
 const polyline = require('@mapbox/polyline');
 
@@ -527,6 +528,7 @@ const RouteScreen: React.FC = () => {
     setMapResetKey(Date.now());
   };
 
+  const { addPost } = usePostContext();
   const fetchRouteDetails = async (destLat: number, destLon: number) => {
     setIsRouteLoading(true);
     const params = {
@@ -542,6 +544,24 @@ const RouteScreen: React.FC = () => {
         { params }
       );
       console.log("API Response:", response.data);
+
+      const processedPosts = response.data.posts.map(post => ({
+        ...post,
+        location: origin,              // current origin from state
+        destination: destination,      // current destination from state
+        origin_lat: region.latitude,
+        origin_lon: region.longitude,
+        destination_lat: destLat,
+        destination_lon: destLon,
+        user: {
+          ...post.user,
+          email: post.user.email || '' // Ensure email exists (fallback to empty string)
+        }
+      }));
+
+      // Add processedPosts to your PostContext here
+      processedPosts.forEach(p => addPost(p, 'routes'));
+
       const routeData = response.data.route;
       setRouteDetails({ route: routeData });
 
@@ -810,8 +830,25 @@ const RouteScreen: React.FC = () => {
             <TouchableOpacity style={styles.twobox} onPress={() => setModalVisible(true)}>
               <Text style={styles.texttwo}>Nearby Attractions</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.twobox} onPress={() => router.push('/postsuggestion')}>
-              <Text style={styles.texttwo}>Experiences</Text>
+
+            <TouchableOpacity
+              style={styles.twobox}
+              onPress={() => {
+                // Navigate to Route Post Suggestion Page with location and destination
+                router.push({
+                  pathname: "/postsuggestions",
+                  params: {
+                    location: encodeURIComponent(origin),
+                    destination: encodeURIComponent(destination),
+                    origin_lat: route[0].latitude.toString(),
+                    origin_lon: route[0].longitude.toString(),
+                    destination_lat: route[1].latitude.toString(),
+                    destination_lon: route[1].longitude.toString(),
+                  },
+                });
+              }}
+            >
+              <Text style={styles.texttwo}>Route Post Suggestions</Text>
             </TouchableOpacity>
           </View>
           {route.length >= 2 && (

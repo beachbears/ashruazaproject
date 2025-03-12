@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, View, LogBox } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '../context/AuthContext';
-import { PostProvider } from '../context/PostContext';
-import { RouteProvider } from '../context/RouteContext'; // Import your RouteProvider
+import { PostProvider } from '../contexts/PostContext';
+import { RouteProvider } from '../contexts/RouteContext'; // Import your RouteProvider
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
