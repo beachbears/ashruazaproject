@@ -65,6 +65,7 @@ export default function PostSuggestions() {
   
     if (!authContext) return null; // Prevents errors if context is null
   const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
+  const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -81,6 +82,7 @@ export default function PostSuggestions() {
 
   // Fetch posts from the API; assume API returns already filtered posts.
   const fetchPosts = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(
         `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${origin_lat}&origin_lon=${origin_lon}&destination_lat=${destination_lat}&destination_lon=${destination_lon}`
@@ -107,6 +109,8 @@ export default function PostSuggestions() {
       setPosts(transformedPosts);
     } catch (error) {
       console.error('Error loading posts:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -245,6 +249,9 @@ export default function PostSuggestions() {
 
   return (
     <ScrollView style={styles.maincontainer}>
+       {isLoading && (
+        <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
+      )}
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
       <View style={styles.sectionHeader}>
         <View style={styles.detailsContainer}>
@@ -265,8 +272,9 @@ export default function PostSuggestions() {
         <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
   <Text style={styles.postButtonText}>Post</Text>
 </TouchableOpacity>
-
       </View>
+
+      
       <View style={{ marginBottom: 200 }}>
         {sortedPosts.map((post) => (
           <View key={post.id} style={styles.containerpost}>
@@ -292,8 +300,8 @@ export default function PostSuggestions() {
                 {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
               </Text>
             </View>
-            <Text>From: {location}</Text>
-            <Text>To: {destination}</Text>
+            <Text>From: {post.location}</Text>
+            <Text>To: {post.destination}</Text>
             <View style={{ flexDirection: 'column', gap: 8 }}>
               <Text style={styles.label}>Your experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
@@ -335,12 +343,14 @@ export default function PostSuggestions() {
   />
 </TouchableOpacity>
 
+ 
 
               </View>
             </View>
           </View>
         ))}
       </View>
+       
       <PostModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -360,6 +370,9 @@ export default function PostSuggestions() {
 }
 
 const styles = StyleSheet.create({
+  loadingIndicator: {
+    marginVertical: 20,
+  },
   maincontainer: {
     flexDirection: 'column',
     backgroundColor: '#F9FAFB',
@@ -553,7 +566,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#44457D',
     fontWeight: '500',
-    fontSize: 16,
+    fontSize: 18,
+    textAlign: 'center'
   },
   cert: {
     color: '#22c55e',
