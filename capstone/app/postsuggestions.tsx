@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useMemo, useState, useEffect,  useContext,  } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert,   ActivityIndicator } from 'react-native';
 import PostModal from './postmodal';
 import { AuthContext, AuthContextType } from './../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -61,6 +61,10 @@ export default function PostSuggestions() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
+    const authContext = useContext(AuthContext) as AuthContextType | null;
+  
+    if (!authContext) return null; // Prevents errors if context is null
+  const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
 
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -92,6 +96,8 @@ export default function PostSuggestions() {
           username: p.user.username,
           firstname: p.user.firstname,
           lastname: p.user.lastname,
+          email: p.user.email,
+          
           // Include additional fields if needed (or omit if not required)
         },
         votes: p.votes,
@@ -220,6 +226,22 @@ export default function PostSuggestions() {
       }
     }
   };
+  const handlePostPress = (postId: number, action: VoteType) => {
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+   
+    handleVote(postId, action);
+  };
+  
+  const handlePostButtonPress = () => {
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    setModalVisible(true);
+  };
 
   return (
     <ScrollView style={styles.maincontainer}>
@@ -240,9 +262,10 @@ export default function PostSuggestions() {
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
-          <Text style={styles.postButtonText}>Post</Text>
-        </TouchableOpacity>
+        <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+  <Text style={styles.postButtonText}>Post</Text>
+</TouchableOpacity>
+
       </View>
       <View style={{ marginBottom: 200 }}>
         {sortedPosts.map((post) => (
@@ -283,33 +306,36 @@ export default function PostSuggestions() {
                 </View>
               </View>
               <View style={styles.arrowcontainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.arrowup,
-                    post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
-                  ]}
-                  onPress={() => post.id && handleVote(post.id, 'upvote')}
-                >
-                  <AntDesign
-                    name="arrowup"
-                    size={13}
-                    color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.arrowupnum}>{post.votes}</Text>
-                <TouchableOpacity
-                  style={[
-                    styles.arrowdown,
-                    post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
-                  ]}
-                  onPress={() => post.id && handleVote(post.id, 'downvote')}
-                >
-                  <AntDesign
-                    name="arrowdown"
-                    size={13}
-                    color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
-                  />
-                </TouchableOpacity>
+                
+              <TouchableOpacity
+  style={[
+    styles.arrowup,
+    post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
+  ]}
+  onPress={() => post.id && handlePostPress(post.id, 'upvote')}
+>
+  <AntDesign
+    name="arrowup"
+    size={13}
+    color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
+  />
+</TouchableOpacity>
+<Text style={styles.arrowupnum}>{post.votes}</Text>
+<TouchableOpacity
+  style={[
+    styles.arrowdown,
+    post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
+  ]}
+  onPress={() => post.id && handlePostPress(post.id, 'downvote')}
+>
+  <AntDesign
+    name="arrowdown"
+    size={13}
+    color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
+  />
+</TouchableOpacity>
+
+
               </View>
             </View>
           </View>

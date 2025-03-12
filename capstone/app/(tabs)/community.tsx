@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import PostModal from '../postmodal';
 import { AuthContext, AuthContextType } from '../../contexts/AuthContext';
-import { usePostContext } from '../../contexts/PostContext';
+import { usePostContext, type Post } from '../../contexts/PostContext';
 import { useRouteContext } from '../../contexts/RouteContext';
 
 export default function CommunityPage() {
@@ -11,15 +11,52 @@ export default function CommunityPage() {
   const { routeDetails } = useRouteContext();
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Fallback if routeDetails is not yet set
-  const location = routeDetails?.location || '';
-  const destination = routeDetails?.destination || '';
-  const origin_lat = routeDetails?.origin_lat || 0;
-  const origin_lon = routeDetails?.origin_lon || 0;
-  const destination_lat = routeDetails?.destination_lat || 0;
-  const destination_lon = routeDetails?.destination_lon || 0;
+  // Use routeDetails if available; otherwise, try URL params or fall back to default names.
+  const location =
+    routeDetails?.location ||
+    (params.location ? decodeURIComponent(params.location as string) : 'Unknown Origin');
+  const destination =
+    routeDetails?.destination ||
+    (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination');
+  const origin_lat = routeDetails?.origin_lat ?? (params.origin_lat ? Number(params.origin_lat) : 0);
+  const origin_lon = routeDetails?.origin_lon ?? (params.origin_lon ? Number(params.origin_lon) : 0);
+  const destination_lat =
+    routeDetails?.destination_lat ?? (params.destination_lat ? Number(params.destination_lat) : 0);
+  const destination_lon =
+    routeDetails?.destination_lon ?? (params.destination_lon ? Number(params.destination_lon) : 0);
+
+  // Fetch old posts from the API when the component mounts.
+  useEffect(() => {
+    async function fetchOldPosts() {
+      try {
+        const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
+        if (!response.ok) {
+          console.error('Error fetching posts:', response.status);
+          return;
+        }
+        const data = await response.json();
+        // Reverse the array so that addPost (which prepends) maintains the API’s descending order
+        data.reverse().forEach((post: any) => {
+          // Transform API fields to match your Post type
+          const transformedPost: Post = {
+            ...post,
+            destination_lat: post.dest_lat,
+            destination_lon: post.dest_lon,
+            // If API response is missing these fields, fallback to our current values
+            location: post.location || location,
+            destination: post.destination || destination,
+          };
+          addPost(transformedPost, 'postsuggestions');
+        });
+      } catch (error) {
+        console.error('Fetch error:', error);
+      }
+    }
+    fetchOldPosts();
+  }, []);
 
   // Handle post submission
   const handlePostSubmit = (formData: { content: string }) => {
@@ -36,7 +73,7 @@ export default function CommunityPage() {
     setModalVisible(false);
   };
 
-  // Optionally, you can navigate to your route page if needed.
+  // Navigate to Route Finder if needed.
   const handleGoToRouteFinder = () => {
     router.push('/route');
   };
@@ -44,15 +81,11 @@ export default function CommunityPage() {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Community Page</Text>
-      
-      <TouchableOpacity style={styles.button} onPress={handleGoToRouteFinder}>
-        <Text style={styles.buttonText}>Go to Route Finder</Text>
-      </TouchableOpacity>
-      
+
       <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
         <Text style={styles.buttonText}>Create Post</Text>
       </TouchableOpacity>
-      
+
       <PostModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -89,16 +122,16 @@ export default function CommunityPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 16, 
-    backgroundColor: '#F8F9FA' 
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#F8F9FA',
   },
-  title: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    marginBottom: 24, 
-    textAlign: 'center' 
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    textAlign: 'center',
   },
   button: {
     backgroundColor: '#3B82F6',
@@ -107,13 +140,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'center',
   },
-  buttonText: { 
-    color: '#fff', 
-    fontSize: 16, 
-    fontWeight: '500' 
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
   },
-  postsContainer: { 
-    marginTop: 24 
+  postsContainer: {
+    marginTop: 24,
   },
   postContainer: {
     backgroundColor: '#fff',
@@ -126,9 +159,9 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  postContent: { 
-    fontSize: 16, 
-    marginBottom: 4 
+  postContent: {
+    fontSize: 16,
+    marginBottom: 4,
   },
   postLocation: {
     fontSize: 14,
