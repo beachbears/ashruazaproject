@@ -805,10 +805,10 @@ const RouteScreen: React.FC = () => {
           {renderRouteOverview()}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
             <TouchableOpacity style={styles.twobox} onPress={() => setModalVisible(true)}>
-              <Text style={styles.texttwo}>Review</Text>
+              <Text style={styles.texttwo}>Nearby Attractions</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.twobox} onPress={() => router.push('/postsuggestion')}>
-              <Text style={styles.texttwo}>Route Post Suggestions</Text>
+              <Text style={styles.texttwo}>Experiences</Text>
             </TouchableOpacity>
           </View>
           {route.length >= 2 && (
