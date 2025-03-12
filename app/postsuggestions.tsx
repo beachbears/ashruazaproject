@@ -278,7 +278,7 @@ export default function PostSuggestions() {
       )}
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
       <View style={styles.sectionHeader}>
-        <Text style={styles.label}>Your experiences</Text>
+        <Text style={styles.label}>Their experience</Text>
         <View style={styles.detailsContainer}>
           <Text style={styles.locationText}>{location}</Text>
           <Text style={styles.locationText}>{destination}</Text>
@@ -321,7 +321,7 @@ export default function PostSuggestions() {
             <Text>{post.origin_address}</Text>
             <Text>{post.destination_address}</Text>
             <View style={{ flexDirection: 'column', gap: 8 }}>
-              <Text style={styles.label}>Your experiences</Text>
+              <Text style={styles.label}>Their experience</Text>
               <Text style={styles.experience}>{post.content}</Text>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>

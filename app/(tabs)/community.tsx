@@ -292,7 +292,7 @@ export default function CommunityPage() {
               <Text style={styles.postDestination}>To: {post.destination_address}</Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
-                <Text style={styles.label}>Your experiences</Text>
+                <Text style={styles.label}>Their experience</Text>
                 <Text style={styles.experience}>{post.content}</Text>
               </View>
 
