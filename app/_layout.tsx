@@ -2,9 +2,9 @@ import { Slot, Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View, LogBox } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AuthProvider } from '../contexts/AuthContext';
-import { PostProvider } from '../contexts/PostContext';
-import { RouteProvider } from '../contexts/RouteContext'; // Import your RouteProvider
+import { AuthProvider } from '../context/AuthContext';
+import { PostProvider } from '../context/PostContext';
+import { RouteProvider } from '../context/RouteContext'; // Import your RouteProvider
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -37,19 +37,19 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <PostProvider>
-        <RouteProvider> 
+        <RouteProvider>
           <View style={{ flex: 1 }}>
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="routeuser" options={{ headerShown: false }} />
-              <Stack.Screen 
-                name="postsuggestions" 
-                options={{ 
+              <Stack.Screen
+                name="postsuggestions"
+                options={{
                   headerShown: false,
                   title: 'Suggestions'
-                }} 
+                }}
               />
-              <Slot />  
+              <Slot />
             </Stack>
             {isLoading && (
               <View
@@ -67,7 +67,7 @@ export default function RootLayout() {
               </View>
             )}
           </View>
-          </RouteProvider>
+        </RouteProvider>
       </PostProvider>
     </AuthProvider>
   );

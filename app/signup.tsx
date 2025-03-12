@@ -11,7 +11,7 @@ import {
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
-  useWindowDimensions
+  useWindowDimensions,
 } from 'react-native';
 import axiosInstance from '../axiosConfig';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,6 @@ LogBox.ignoreLogs([
   'textShadow*',
   'shadow*',
 ]);
-
 
 type SignupForm = {
   firstname: string;
@@ -64,10 +63,10 @@ const RegisterScreen = () => {
     password: '',
     passwordConfirmation: '',
   });
+  const [generalError, setGeneralError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // New: Ensure you're using await properly in checkAuthStatus:
   const checkAuthStatus = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -81,7 +80,6 @@ const RegisterScreen = () => {
     checkAuthStatus();
   }, []);
 
-  // Updated validateForm function with new email validation logic:
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {
       firstname: '',
@@ -125,55 +123,104 @@ const RegisterScreen = () => {
       ...prev,
       [field]: value,
     }));
+    // Clear field error as user types
+    setErrors(prev => ({ ...prev, [field]: '' }));
+    // Clear general error when any input changes
+    setGeneralError('');
   };
 
-const handleSubmit = async () => {
-  if (!validateForm()) return;
-  setIsLoading(true);
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
+    setGeneralError('');
 
-  // Prepare payload as Rails expects:
-  const payload = {
-    user: {
-      firstname: formData.firstname,
-      lastname: formData.lastname,
-      username: formData.username,
-      email: formData.email,
-      password: formData.password,
-      password_confirmation: formData.passwordConfirmation, // note the underscore
-    },
-  };
+    const payload = {
+      user: {
+        firstname: formData.firstname,
+        lastname: formData.lastname,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.passwordConfirmation,
+      },
+    };
 
-  console.log('Payload being sent:', payload); // Debug log
-
-  try {
-    const response = await axiosInstance.post("/api/users", payload);
-    console.log('Response received:', response.data); // Debug log
-
-    if (response.status === 201) {
-      await AsyncStorage.setItem("token", response.data.token);
-      router.replace("/(tabs)/about");
-    }
-  } catch (error: any) {
-    console.error('Registration error:', error); // Debug log
-    let errorMessage = "Registration failed";
-    if (error.response) {
-      errorMessage = error.response.data.message || errorMessage;
-      if (error.response.data.errors) {
-        // Handle field-specific errors from server
-        const serverErrors = error.response.data.errors;
-        setErrors(prev => ({
-          ...prev,
-          ...serverErrors,
-        }));
+    try {
+      const response = await axiosInstance.post("/api/users", payload);
+      if (response.status === 201) {
+        await AsyncStorage.setItem("token", response.data.token);
+        router.replace("/(tabs)");
       }
+    } catch (error: any) {
+      if (__DEV__) {
+        // console.error('Registration error:', error);
+        console.log('Error response data:', error.response?.data);
+      }
+
+      const newErrors: FormErrors = {
+        firstname: '',
+        lastname: '',
+        username: '',
+        email: '',
+        password: '',
+        passwordConfirmation: '',
+      };
+
+      if (error.response && error.response.data) {
+        const data = error.response.data;
+        // Check if data.error is an array and assign errors based on keywords
+        if (data.error && Array.isArray(data.error)) {
+          data.error.forEach((errMsg: string) => {
+            const lowerMsg = errMsg.toLowerCase();
+            if (lowerMsg.includes("email")) {
+              newErrors.email = errMsg;
+            } else if (lowerMsg.includes("username")) {
+              newErrors.username = errMsg;
+            } else if (lowerMsg.includes("password")) {
+              newErrors.password = errMsg;
+            } else {
+              // Append to general error if no field match
+              setGeneralError(prev => prev ? `${prev}, ${errMsg}` : errMsg);
+            }
+          });
+          // Set field errors if any were found
+          if (Object.values(newErrors).some(msg => msg !== '')) {
+            setErrors(newErrors);
+          }
+        } else if (data.error && data.errors) {
+          // Fallback: map errors from data.errors if available
+          Object.keys(data.errors).forEach((field) => {
+            let formField = field === "password_confirmation" ? "passwordConfirmation" : field;
+            if (formField in newErrors) {
+              const errorMsg = Array.isArray(data.errors[field])
+                ? data.errors[field].join(", ")
+                : data.errors[field];
+              newErrors[formField as keyof FormErrors] = mapErrorToFriendlyMessage(field, errorMsg);
+            }
+          });
+          setErrors(newErrors);
+        } else if (data.message) {
+          setGeneralError(data.message);
+        } else {
+          setGeneralError("Please check your details and try again.");
+        }
+      } else {
+        setGeneralError("Unable to reach the server. Please try again later.");
+      }
+    } finally {
+      setIsLoading(false);
     }
-    setErrors(prev => ({ ...prev, form: errorMessage }));
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
-
+  const mapErrorToFriendlyMessage = (field: string, message: string): string => {
+    if (field === "email" && message.includes("taken")) {
+      return "This email is already registered. Please use a different email or log in.";
+    } else if (field === "password" && message.includes("short")) {
+      return "Password must be at least 8 characters long.";
+    } else {
+      return message;
+    }
+  };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'android' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -195,6 +242,14 @@ const handleSubmit = async () => {
               <Text style={[styles.formTitle, { fontSize: width * 0.06 }]}>Register to Kommutsera!</Text>
               <Text style={styles.subtitle}>Please enter your credentials</Text>
 
+              {/* Display general error message if exists */}
+              {generalError ? (
+                <View style={styles.generalErrorContainer}>
+                  <Ionicons name="alert-circle" size={16} color="#FF3B30" style={styles.errorIcon} />
+                  <Text style={styles.generalErrorText}>{generalError}</Text>
+                </View>
+              ) : null}
+
               {Object.keys(formData).map((field) => {
                 const key = field as keyof SignupForm;
                 return (
@@ -203,37 +258,35 @@ const handleSubmit = async () => {
                       {field.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
                     </Text>
 
-                    <View style={styles.passwordContainer}>
-                      <TextInput
-                        style={[styles.input, errors[key] ? styles.inputError : null]}
-                        placeholder={
-                          key === 'firstname'
-                            ? 'E.g John'
-                            : key === 'lastname'
+                    <TextInput
+                      style={[styles.input, errors[key] ? styles.inputError : null]}
+                      placeholder={
+                        key === 'firstname'
+                          ? 'E.g John'
+                          : key === 'lastname'
                             ? 'E.g Doe'
                             : key === 'password'
-                            ? 'Enter a password'
-                            : key === 'passwordConfirmation'
-                            ? 'Confirm your password'
-                            : key === 'email'
-                            ? 'youremail@example.com'
-                            : key === 'username'
-                            ? 'E.g johndoe12'
-                            : ''
-                        }
-                        secureTextEntry={key.toLowerCase().includes('password')}
-                        value={formData[key]}
-                        onChangeText={(value) => handleInputChange(key, value)}
-                        placeholderTextColor="#888"
-                      />
-                    </View>
+                              ? 'Enter a password'
+                              : key === 'passwordConfirmation'
+                                ? 'Confirm your password'
+                                : key === 'email'
+                                  ? 'youremail@example.com'
+                                  : key === 'username'
+                                    ? 'E.g johndoe12'
+                                    : ''
+                      }
+                      secureTextEntry={key.toLowerCase().includes('password')}
+                      value={formData[key]}
+                      onChangeText={(value) => handleInputChange(key, value)}
+                      placeholderTextColor="#888"
+                    />
 
-                    {errors[key] && (
-                      <View style={styles.errorBox}>
-                        <Ionicons name="alert-circle" size={16} color="#FF3B30" />
-                        <Text style={styles.errorText}>{errors[key]}</Text>
+                    {errors[key] ? (
+                      <View style={styles.errorContainer}>
+                        <Ionicons name="alert-circle" size={16} color="#FF3B30" style={styles.errorIcon} />
+                        <Text style={styles.errorMessage}>{errors[key]}</Text>
                       </View>
-                    )}
+                    ) : null}
                   </View>
                 );
               })}
@@ -271,14 +324,9 @@ const getStyles = (width: number) =>
       padding: 16,
       marginTop: 40,
     },
-    passwordContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
     mainContainer: {
       backgroundColor: '#FFFFFF',
       borderRadius: 20,
-      boxShadow: '0 2px 4px rgba(0,0,0,0.25)', // Replaced shadow props with boxShadow
       elevation: 5,
       width: '100%',
       maxWidth: 800,
@@ -300,14 +348,12 @@ const getStyles = (width: number) =>
       right: 20,
     },
     heading: {
-      fontSize: width * 0.06,
       fontWeight: 'bold',
       color: '#FFFFFF',
       marginBottom: 8,
       textAlign: 'left',
     },
     description: {
-      fontSize: width * 0.04,
       color: '#FFFFFF',
       textAlign: 'left',
       lineHeight: 20,
@@ -324,27 +370,39 @@ const getStyles = (width: number) =>
       marginBottom: 20,
     },
     formTitle: {
-      fontSize: width * 0.06,
       fontWeight: 'bold',
       color: '#2D3436',
       textAlign: 'center',
       marginBottom: 8,
     },
     subtitle: {
-      fontSize: width * 0.04,
       color: '#636E72',
       textAlign: 'center',
-      marginBottom: 30,
+      marginBottom: 15,
+    },
+    generalErrorContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#FFEAEA',
+      padding: 10,
+      borderRadius: 5,
+      marginBottom: 15,
+      marginHorizontal: 15,
+    },
+    generalErrorText: {
+      color: '#FF3B30',
+      fontSize: 14,
+      marginLeft: 5,
+      textAlign: 'center',
     },
     inputContainer: {
-      marginBottom: 20,
+      marginBottom: 25,
     },
     inputLabel: {
       fontSize: 12,
       color: '#2D3436',
       marginBottom: 8,
       fontWeight: '600',
-      textAlign: 'left',
       marginLeft: 15,
     },
     input: {
@@ -355,7 +413,6 @@ const getStyles = (width: number) =>
       width: '90%',
       fontSize: 12,
       color: '#2D3436',
-      textAlign: 'left',
       borderWidth: 1,
       borderColor: '#C7D2FE',
       marginLeft: 15,
@@ -363,16 +420,18 @@ const getStyles = (width: number) =>
     inputError: {
       borderColor: '#FF3B30',
     },
-    errorBox: {
+    errorContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 8,
+      marginTop: 4,
+      marginLeft: 15,
     },
-    errorText: {
+    errorIcon: {
+      marginRight: 4,
+    },
+    errorMessage: {
       color: '#FF3B30',
       fontSize: 12,
-      marginLeft: 4,
     },
     submitButton: {
       backgroundColor: '#6266f0',
@@ -402,6 +461,7 @@ const getStyles = (width: number) =>
     linkText: {
       color: '#4B7BEC',
       fontWeight: 'bold',
+      marginLeft: 4,
     },
   });
 

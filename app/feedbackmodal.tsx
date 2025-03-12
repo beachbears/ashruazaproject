@@ -9,12 +9,12 @@ import {
   Text,
 } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
-
-import { AuthContext, AuthContextType  } from "../contexts/AuthContext"; // Ensure the path is correct
-
+import { AuthContext } from '../context/AuthContext'; // adjust path as needed
 
 interface FeedbackItem {
   id: number;
+  upvotes: number;
+  downvotes: number;
   content: string;
   userName: string;
   userHandle: string;
@@ -45,13 +45,7 @@ const ModalComponent: React.FC<ModalComponentProps> = ({
   const suggestionInputRef = useRef<TextInput>(null);
 
   // Access user data from AuthContext
-
-  const authContext = useContext(AuthContext) as AuthContextType | null;
-
-if (!authContext) return null; // Prevents errors if context is null
-
-const { isLoggedIn, userName, userHandle, userInitials, authToken } = authContext;
-  
+  const { isLoggedIn, userName, userHandle, userInitials } = useContext(AuthContext);
 
   // Focus the text input when the modal becomes visible
   useEffect(() => {
@@ -75,6 +69,8 @@ const { isLoggedIn, userName, userHandle, userInitials, authToken } = authContex
     if (suggestion.trim()) {
       const newFeedback: FeedbackItem = {
         id: Date.now(),
+        upvotes: 0,
+        downvotes: 0,
         // Use user data if logged in; else fallback to Guest
         initials: isLoggedIn && userInitials ? userInitials : 'G',
         userName: isLoggedIn && userName ? userName : 'Guest',

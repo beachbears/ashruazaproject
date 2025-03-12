@@ -13,14 +13,13 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from '../axiosConfig';
-import { RootStackParamList } from './app';
+import { RootStackParamList } from '../app';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 // Updated: Use expo-router's useRouter instead of useNavigation
 import { useRouter } from 'expo-router';
 import { LogBox } from 'react-native';
-import { AuthContext, AuthContextType  } from "../contexts/AuthContext"; // Ensure the path is correct
-
+import { AuthContext } from '../context/AuthContext';
 
 LogBox.ignoreLogs([
   'textShadow*',
@@ -109,11 +108,8 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
 
       if (response.data.token) {
         await AsyncStorage.setItem("token", response.data.token);
-        
         // I-update ang global auth state gamit ang login function mula sa AuthContext
-       {/* login(formData.email); */}
-        login(formData.email, response.data.token);
-
+        login(formData.email);
         router.replace("/(tabs)");
       }
     } catch (error: any) {
@@ -194,9 +190,9 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.submitButton, loading && styles.disabledButton, { paddingHorizontal: width * 0.1 }]} 
-              onPress={handleLogin} 
+            <TouchableOpacity
+              style={[styles.submitButton, loading && styles.disabledButton, { paddingHorizontal: width * 0.1 }]}
+              onPress={handleLogin}
               disabled={loading}
             >
               <Text style={styles.submitButtonText}>{loading ? 'Logging in...' : 'Login'}</Text>

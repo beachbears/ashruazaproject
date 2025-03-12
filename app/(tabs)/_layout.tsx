@@ -8,7 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Ionicons } from '@expo/vector-icons';
 import { APP_NAME } from '@/constants';
-import { AuthContext, AuthContextType  } from "../../contexts/AuthContext"; // Ensure the path is correct
+import { AuthContext } from '../../context/AuthContext'; // adjust path as necessary
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -171,6 +171,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: '#F9FAFB',
     paddingHorizontal: 10,
+    marginTop: 30,
   },
   headerContainer: {
     flexDirection: 'row',

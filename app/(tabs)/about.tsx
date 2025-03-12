@@ -1,36 +1,36 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet, Image } from "react-native";
 import { FontAwesome5 } from '@expo/vector-icons'; // Importing FontAwesome5 for icons
-import { APP_NAME} from "../../constants";
+import { APP_NAME } from "../../constants";
 
 const About = () => {
   return (
     <ScrollView style={styles.container}>
       {/* Header Section */}
-   
-        <Text style={styles.headerTitle}>
-          Your Travel, Your Way, it's <Text style={styles.highlight}>{ APP_NAME}!!</Text>
-        </Text>
 
-        <View style={styles.header}>
+      <Text style={styles.headerTitle}>
+        Your Travel, Your Way, it's <Text style={styles.highlight}>{APP_NAME}!!</Text>
+      </Text>
+
+      <View style={styles.header}>
         <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
-        
-        <Text style={styles.nameApp}>{ APP_NAME}</Text>
+
+        <Text style={styles.nameApp}>{APP_NAME}</Text>
 
         <Text style={styles.subtitle}>Founded by</Text>
         <Image source={require('../../assets/images/group.jpg')} style={styles.avatar} />
         <Text style={styles.teamName}>Group 1</Text>
         <Text style={styles.teamRole}>CCS IT-3 Students</Text>
-      
 
-      {/* About Section */}
-      <View style={styles.aboutSection}>
-        <Text style={styles.aboutTitle}>{ APP_NAME}:</Text>
-        <Text style={styles.aboutText}>
-          
-Say goodbye to stress and confusion with { APP_NAME}, your perfect guide for hassle-free commuting. Whether you're a daily commuter or a visitor, { APP_NAME} provides route suggestions and detailed maps to help you navigate the metro with ease. With the quickest, most efficient paths, you’ll enjoy smooth, stress-free travel. Experience a faster, smarter commute { APP_NAME} makes every journey simple, efficient, and enjoyable!
-        </Text>
-      </View>
+
+        {/* About Section */}
+        <View style={styles.aboutSection}>
+          <Text style={styles.aboutTitle}>{APP_NAME}:</Text>
+          <Text style={styles.aboutText}>
+
+            Say goodbye to stress and confusion with {APP_NAME}, your perfect guide for hassle-free commuting. Whether you're a daily commuter or a visitor, {APP_NAME} provides route suggestions and detailed maps to help you navigate the metro with ease. With the quickest, most efficient paths, you’ll enjoy smooth, stress-free travel. Experience a faster, smarter commute {APP_NAME} makes every journey simple, efficient, and enjoyable!
+          </Text>
+        </View>
       </View>
 
       {/* Team Section */}
@@ -178,14 +178,14 @@ Say goodbye to stress and confusion with { APP_NAME}, your perfect guide for has
           <View style={styles.footerBrand}>
             <Image source={require('../../assets/images/logo.png')} style={styles.brandIcon} />
             <View>
-              <Text style={styles.brandTitle}>{ APP_NAME}</Text>
+              <Text style={styles.brandTitle}>{APP_NAME}</Text>
               <Text style={styles.brandDescription}>
-                Conquer the Metro with ease! <Text style={{fontWeight: 900}}>{ APP_NAME}</Text>. Your companion for hassle-free commuting, offering clear routes, and navigation to make every journey stress-free.
+                Conquer the Metro with ease! <Text style={{ fontWeight: 900 }}>{APP_NAME}</Text>. Your companion for hassle-free commuting, offering clear routes, and navigation to make every journey stress-free.
               </Text>
             </View>
           </View>
           <Text style={styles.footerCopyright}>
-            2024 © { APP_NAME}
+            2024 © {APP_NAME}
           </Text>
         </View>
       </View>
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",
- 
+
   },
   header: {
     alignItems: "center",
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     marginBottom: 5,
   },
-  logo:{
+  logo: {
     width: 80,
     height: 80,
     alignItems: "center",
@@ -245,14 +245,14 @@ const styles = StyleSheet.create({
   highlight: {
     color: "#6A5AE0",
   },
-  nameApp:{
-  fontSize: 25,
-  fontWeight:'500',
-  color:'#424368',
+  nameApp: {
+    fontSize: 25,
+    fontWeight: '500',
+    color: '#424368',
   },
   subtitle: {
     marginTop: 20,
-    marginBottom:5,
+    marginBottom: 5,
     fontSize: 14,
     color: "#A0AEC0",
   },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#4A5568",
     marginBottom: 15,
-    textAlign:"center",
+    textAlign: "center",
     marginTop: 20
   },
   aboutText: {
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 40,
     marginBottom: 10,
-    overflow: 'hidden', 
+    overflow: 'hidden',
   },
   memberName: {
     fontSize: 14,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#4A5568",
     textAlign: "center",
-    marginTop:10
+    marginTop: 10
   },
   brandDescription: {
     fontSize: 12,
@@ -388,14 +388,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
     flexWrap: 'wrap'
   },
-  
+
   footerCopyright: {
     fontSize: 12,
     color: "#00000",
     textAlign: "center",
-    marginTop:20,
-    marginBottom:100,
-    fontWeight:"500"
+    marginTop: 20,
+    marginBottom: 100,
+    fontWeight: "500"
   },
 });
 

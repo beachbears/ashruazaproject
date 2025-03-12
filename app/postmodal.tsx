@@ -59,13 +59,13 @@ export default function PostModal({
       <View style={styles.modalContainer}>
         <View style={styles.postContainer}>
           <ScrollView>
-      
-        <Text style={styles.label}>From:</Text>
-        <Text style={styles.locationText}>{location}</Text>
-          <Text style={styles.label}>To: </Text>
-        <Text style={styles.locationText}>{destination}</Text>
- 
-   <Text style={styles.exp}>Your Experiences:</Text>
+
+            <Text style={styles.label}>From:</Text>
+            <Text style={styles.locationText}>{location}</Text>
+            <Text style={styles.label}>To: </Text>
+            <Text style={styles.locationText}>{destination}</Text>
+
+            <Text style={styles.exp}>Your Experiences:</Text>
             <TextInput
               placeholder={
                 "Type here...\n\n\n\n"
@@ -96,15 +96,15 @@ export default function PostModal({
     </Modal>
   );
 }
- 
- 
 
 
 
- 
+
+
+
 
 const styles = StyleSheet.create({
-  
+
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     color: '#44457D',
     marginTop: 14,
   },
-  exp:   {
+  exp: {
     fontSize: 14,
     fontWeight: '500',
     color: '#44457D',
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginVertical: 8,
   },
-  
+
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#22C55E',
     justifyContent: 'center',
   },
-  closeButton: {      
+  closeButton: {
     padding: 3,
     marginTop: 10,
     width: '20%',
@@ -183,16 +183,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  
-  
+
+
 });
 
 
- 
 
 
 
- 
+
+
 
 
 

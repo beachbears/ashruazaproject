@@ -10,36 +10,23 @@ import {
   LogBox,
   TouchableWithoutFeedback,
   Image,
-  Animated
+  Animated,
+  ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
-import Entypo from '@expo/vector-icons/Entypo';
 import { Ionicons } from '@expo/vector-icons';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import ReviewModal from '../reviewmodal';
-import { usePostContext } from '../../contexts/PostContext'; 
- 
 
-const router = useRouter();
-
-const polyline = require('@mapbox/polyline'); // Using require for CommonJS module
+const polyline = require('@mapbox/polyline');
 
 LogBox.ignoreLogs(['textShadow*', 'shadow*']);
 
-const METRO_MANILA_BOUNDS = {
-  minLat: 14.40,
-  maxLat: 14.85,
-  minLon: 120.90,
-  maxLon: 121.20,
-};
-
-//
+// -------------------------
 // Interfaces & Types
-//
+// -------------------------
 interface LocationSuggestion {
   label: string;
   latitude: string;
@@ -64,14 +51,31 @@ export interface Stop {
 }
 
 export interface Segment {
-  geometry: string;
-  walking: boolean | null;
-  vehicle_type: string | null;
+  type: string; // "Jeep" / "Bus" / "Ejeep" / "LRT" / "MRT" / "walking"
+  distance?: number;
+  duration?: number;
+  geometry?: string;
+  walking?: boolean | null;
+  vehicle_type?: string | null;
+  boarding?: string;
+  alighting?: string;
+  from_stop?: Stop;
+  to_stop?: Stop;
+  steps?: { step_number: number; instruction: string }[];
+  alternatives?: any[];
+  fare?: number;
 }
 
 export interface Route {
   stops: Stop[];
   segments: Segment[];
+  summary?: {
+    total_fare: number;
+    total_duration: number;
+    total_distance: number;
+    total_distance_km: number;
+    vehicle_types: string[];
+  };
 }
 
 export interface User {
@@ -113,21 +117,81 @@ export interface LatLng {
 interface MapComponentProps {
   initialRegion: Region;
   route?: LatLng[]; // index 0: origin, index 1: destination
-  roadPath?: LatLng[] | string; // polyline coordinates mula API o encoded string
+  roadPath?: LatLng[] | string;
   style?: any;
   mapResetKey?: number;
+  polylineColor: string;
 }
 
 interface RouteDetails {
   route: Route | null;
 }
 
+interface RouteMetrics {
+  distance: number;
+  fare: number;
+  walkingTime: string;
+  carTime: string;
+  busTime: string;
+}
+
+// -------------------------
+// Helper Functions
+// -------------------------
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-//
-// Build the HTML para sa map gamit ang Leaflet
-//
-const getMapHTML = (region: Region, route: LatLng[] = [], roadPath?: any) => {
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins >= 60) {
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return `${hours}h ${remainingMins}m`;
+  } else if (mins > 0) {
+    return `${mins}min ${secs}s`;
+  } else {
+    return `${secs}s`;
+  }
+}
+
+/**
+ * Shorten an address by returning only the first part
+ * (e.g., "Emerald Street, San Bartolome, ..." becomes "Emerald Street")
+ */
+function shortenAddress(address: string) {
+  return address.split(',')[0];
+}
+
+/**
+ * Generates a concise label for each segment.
+ * For vehicles, it uses the vehicleType (if provided) or capitalized type.
+ * For walking, it returns "Walk".
+ * If both origin and destination exist, returns:
+ *    "Label: ShortFrom - ShortTo"
+ */
+function getSegmentLabel(
+  type: string,
+  fromStopName?: string,
+  toStopName?: string,
+  vehicleType?: string | null
+) {
+  const mainLabel = ['jeep', 'bus', 'ejeep', 'lrt', 'mrt'].includes(type.toLowerCase())
+    ? vehicleType
+      ? vehicleType.charAt(0).toUpperCase() + vehicleType.slice(1)
+      : type.charAt(0).toUpperCase() + type.slice(1)
+    : 'Walk';
+  if (fromStopName && toStopName) {
+    return `${mainLabel}: ${shortenAddress(fromStopName)} - ${shortenAddress(toStopName)}`;
+  }
+  return mainLabel;
+}
+
+const getMapHTML = (
+  region: Region,
+  route: LatLng[] = [],
+  roadPath: any,
+  polylineColor: string
+) => {
   let markersJS = "";
   if (route.length > 0) {
     markersJS += `
@@ -143,30 +207,31 @@ const getMapHTML = (region: Region, route: LatLng[] = [], roadPath?: any) => {
       `;
     }
   }
-  
   let polylineJS = "";
-  if (roadPath) {
+  if (
+    (typeof roadPath === "string" && roadPath.length > 0) ||
+    (Array.isArray(roadPath) && roadPath.length > 0)
+  ) {
     let polylineCoordinates;
     if (typeof roadPath === "string") {
       const decoded = polyline.decode(roadPath);
       polylineCoordinates = decoded.map((coord: number[]) => [coord[0], coord[1]]);
     } else if (Array.isArray(roadPath) && roadPath.length > 0) {
-      if (Array.isArray(roadPath[0])) {
-        polylineCoordinates = roadPath;
-      } else {
-        polylineCoordinates = roadPath.map((coord: any) => [coord.latitude, coord.longitude]);
-      }
+      polylineCoordinates = Array.isArray(roadPath[0])
+        ? roadPath
+        : roadPath.map((coord: any) => [coord.latitude, coord.longitude]);
     }
     if (polylineCoordinates && polylineCoordinates.length > 0) {
-      polylineJS = `var roadPolyline = L.polyline(${JSON.stringify(polylineCoordinates)}, { color: '#6366F1', weight: 3 }).addTo(map);`;
+      polylineJS = `var roadPolyline = L.polyline(${JSON.stringify(
+        polylineCoordinates
+      )}, { color: '${polylineColor}', weight: 3 }).addTo(map);`;
     }
   } else if (route.length === 2) {
     polylineJS = `var polyline = L.polyline([
       [${route[0].latitude}, ${route[0].longitude}],
       [${route[1].latitude}, ${route[1].longitude}]
-    ], { color: '#6366F1', weight: 3 }).addTo(map);`;
+    ], { color: '${polylineColor}', weight: 3 }).addTo(map);`;
   }
-  
   let fitBoundsJS = `
     if (typeof roadPolyline !== 'undefined') {
       map.fitBounds(roadPolyline.getBounds());
@@ -174,7 +239,6 @@ const getMapHTML = (region: Region, route: LatLng[] = [], roadPath?: any) => {
       map.fitBounds(polyline.getBounds());
     }
   `;
-  
   return `
     <!DOCTYPE html>
     <html>
@@ -203,40 +267,59 @@ const getMapHTML = (region: Region, route: LatLng[] = [], roadPath?: any) => {
   `;
 };
 
-//
-// Map Component
-//
 const MapComponent: React.FC<MapComponentProps> = ({
   initialRegion,
   route = [],
   roadPath = [],
   style,
-  mapResetKey
+  mapResetKey,
+  polylineColor
 }) => {
   const mapKey = JSON.stringify({ initialRegion, route, roadPath, mapResetKey });
+  const [loading, setLoading] = useState(true);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const handleLoadEnd = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 500,
+      useNativeDriver: true,
+    }).start(() => {
+      setLoading(false);
+    });
+  };
+
   return (
-    <WebView
-      key={mapKey}
-      originWhitelist={['*']}
-      source={{ html: getMapHTML(initialRegion, route, roadPath) }}
-      style={style}
-    />
+    <View style={{ flex: 1 }}>
+      <WebView
+        key={mapKey}
+        originWhitelist={['*']}
+        source={{ html: getMapHTML(initialRegion, route, roadPath, polylineColor) }}
+        style={style}
+        onLoadStart={() => setLoading(true)}
+        onLoadEnd={handleLoadEnd}
+      />
+      {loading && (
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: fadeAnim, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }
+          ]}
+        >
+          <ActivityIndicator size="large" color="#6366F1" />
+        </Animated.View>
+      )}
+    </View>
   );
 };
 
-//
-// SuggestionList para sa autocomplete
-//
-const SuggestionList = ({
-  suggestions,
-  onSelect,
-}: {
-  suggestions: any[];
-  onSelect: (item: any) => void;
-}) => {
+// Cache for geocoding results
+const locationCacheRef = { current: {} as { [key: string]: any[] } };
+
+const SuggestionList: React.FC<{ suggestions: any[]; onSelect: (item: any) => void; }> = ({ suggestions, onSelect }) => {
   if (!suggestions.length) return null;
   return (
-    <ScrollView style={[styles.suggestionList, { maxHeight: 150 }]} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.suggestionList} keyboardShouldPersistTaps="handled">
       {suggestions.map((item, index) => (
         <TouchableWithoutFeedback key={`${item.name}-${index}`} onPress={() => onSelect(item)}>
           <View style={styles.suggestionItem}>
@@ -248,9 +331,6 @@ const SuggestionList = ({
   );
 };
 
-//
-// Main RouteScreen Component
-//
 const RouteScreen: React.FC = () => {
   const { destination: destParam, attraction } = useLocalSearchParams();
   const [modalVisible, setModalVisible] = useState(false);
@@ -267,27 +347,44 @@ const RouteScreen: React.FC = () => {
   const [roadPath, setRoadPath] = useState<LatLng[] | string>([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>([]);
   const [routeDetails, setRouteDetails] = useState<RouteDetails>({ route: null });
+  const [routeMetrics, setRouteMetrics] = useState<RouteMetrics | null>(null);
   const [mapResetKey, setMapResetKey] = useState<number>(Date.now());
-  
-  
-
-  
-  // Flag para malaman kung na-manual ang origin
   const [manualOrigin, setManualOrigin] = useState<boolean>(false);
-  const router = useRouter();
-  // Animated height para sa map container
-  const animatedHeight = useRef(new Animated.Value(400)).current;
+  const [polylineColor, setPolylineColor] = useState<string>("#6366F1");
+  const [isOriginLoading, setIsOriginLoading] = useState(false);
+  const [isDestinationLoading, setIsDestinationLoading] = useState(false);
+  const [isRouteLoading, setIsRouteLoading] = useState(false);
 
-  // Set destination kung may param
+  const router = useRouter();
+  const animatedHeight = useRef(new Animated.Value(400)).current;
+  const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
+
+  const toggleSegment = (index: number) => {
+    setExpandedSegments(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
   useEffect(() => {
     if (destParam) {
       setDestination(destParam as string);
       setRoadPath([]);
       setMapResetKey(Date.now());
+      geocodeAddress(destParam as string).then((suggestions: any) => {
+        if (suggestions && suggestions.length > 0) {
+          const selected = suggestions[0];
+          setRoute(prev =>
+            prev.length > 0
+              ? [prev[0], { latitude: selected.lat, longitude: selected.lon }]
+              : [
+                { latitude: region.latitude, longitude: region.longitude },
+                { latitude: selected.lat, longitude: selected.lon }
+              ]
+          );
+          fetchRouteDetails(selected.lat, selected.lon);
+        }
+      });
     }
   }, [destParam]);
 
-  // Kung may attraction, i-parse at i-set ang destination at route
   useEffect(() => {
     if (attraction) {
       try {
@@ -305,7 +402,6 @@ const RouteScreen: React.FC = () => {
     }
   }, [attraction]);
 
-  // Request user's location on mount (one-time lang)
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -322,47 +418,38 @@ const RouteScreen: React.FC = () => {
           ? `${addresses[0].name ? addresses[0].name + ', ' : ''}${addresses[0].street ? addresses[0].street + ', ' : ''}${addresses[0].city}, ${addresses[0].region}`
           : 'Unknown Location';
       setRegion(prev => ({ ...prev, latitude, longitude }));
-      // Kung hindi pa manual ang origin, gamitin ang GPS value.
       if (!manualOrigin && !origin) {
         setOrigin(locAddr);
-        setRoute(prev => {
-          if (prev.length > 0) {
-            return [{ latitude, longitude }, ...prev.slice(1)];
-          } else {
-            return [{ latitude, longitude }];
-          }
-        });
+        setRoute(prev => (prev.length > 0 ? [{ latitude, longitude }, ...prev.slice(1)] : [{ latitude, longitude }]));
       }
     })();
   }, []);
 
-  // Animate map container height batay sa kung may route na
-  const hasRoute = route.length >= 2;
   useEffect(() => {
     Animated.timing(animatedHeight, {
-      toValue: hasRoute ? 400 : 200,
+      toValue: route.length >= 2 ? 400 : 200,
       duration: 500,
       useNativeDriver: false,
     }).start();
-  }, [hasRoute, animatedHeight]);
+  }, [route, animatedHeight]);
 
-  // -------------------------------------------------
-  // Geocode helper function
-  // -------------------------------------------------
   async function geocodeAddress(address: string) {
+    if (locationCacheRef.current[address]) return locationCacheRef.current[address];
     try {
       const { data } = await axios.get<LocationSuggestion[]>(
         'https://comgu20-production.up.railway.app/api/locations/search',
         { params: { term: address } }
       );
+      let results: any[] = [];
       if (data && data.length) {
-        return data.map((item: LocationSuggestion) => ({
+        results = data.map((item: LocationSuggestion) => ({
           name: item.label,
           lat: parseFloat(item.latitude),
           lon: parseFloat(item.longitude),
         }));
       }
-      return [];
+      locationCacheRef.current[address] = results;
+      return results;
     } catch (err) {
       console.error('Geocoding error:', err);
       await sleep(1000);
@@ -370,91 +457,78 @@ const RouteScreen: React.FC = () => {
     }
   }
 
-  // -------------------------------------------------
-  // Handlers para sa Origin
-  // -------------------------------------------------
   const handleOriginChange = async (text: string) => {
     setOrigin(text);
     if (!text) {
       setOriginSuggestions([]);
+      setDestination('');
+      setDestinationSuggestions([]);
+      setRoute([]);
+      setRouteDetails({ route: null });
+      setRoadPath([]);
       return;
     }
+    setIsOriginLoading(true);
     const suggestions = await geocodeAddress(text);
     setOriginSuggestions(suggestions);
+    setIsOriginLoading(false);
   };
 
-  // Kapag natapos ang pag-edit ng Origin (submit o blur), i-update ang route state at region gamit ang bagong coordinate.
-  const updateOriginRoute = async () => {
-    const suggestions = await geocodeAddress(origin);
-    if (suggestions && suggestions.length > 0) {
-      const selected = suggestions[0];
-      // I-update ang region state upang gamitin sa API call
-      setRegion(prev => ({ ...prev, latitude: selected.lat, longitude: selected.lon }));
-      // I-update ang route state: ang unang coordinate ay magiging bagong origin
-      setRoute(prev => {
-        if (prev.length > 0) {
-          return [{ latitude: selected.lat, longitude: selected.lon }, ...prev.slice(1)];
-        } else {
-          return [{ latitude: selected.lat, longitude: selected.lon }];
-        }
-      });
-      setManualOrigin(true);
-      setMapResetKey(Date.now());
-    }
+  const clearOrigin = () => {
+    setOrigin('');
+    setOriginSuggestions([]);
+    setDestination('');
+    setDestinationSuggestions([]);
+    setRoute([]);
+    setRouteDetails({ route: null });
+    setRoadPath([]);
   };
 
   const selectOriginSuggestion = async (item: any) => {
     setOrigin(item.name);
     setOriginSuggestions([]);
     setRegion(prev => ({ ...prev, latitude: item.lat, longitude: item.lon }));
-    setRoute(prev => {
-      if (prev.length > 0) {
-        return [{ latitude: item.lat, longitude: item.lon }, ...prev.slice(1)];
-      } else {
-        return [{ latitude: item.lat, longitude: item.lon }];
-      }
-    });
+    const newRoute = route.length > 0
+      ? [{ latitude: item.lat, longitude: item.lon }, ...route.slice(1)]
+      : [{ latitude: item.lat, longitude: item.lon }];
+    setRoute(newRoute);
     setManualOrigin(true);
     setMapResetKey(Date.now());
+    if (newRoute.length >= 2) {
+      await fetchRouteDetails(newRoute[1].latitude, newRoute[1].longitude);
+    }
   };
 
-  // -------------------------------------------------
-  // Handlers para sa Destination
-  // -------------------------------------------------
   const handleDestinationChange = async (text: string) => {
     setDestination(text);
     if (!text) {
       setDestinationSuggestions([]);
       return;
     }
+    setIsDestinationLoading(true);
     const suggestions = await geocodeAddress(text);
     setDestinationSuggestions(suggestions);
+    setIsDestinationLoading(false);
   };
 
   const selectDestinationSuggestion = async (item: any) => {
     setDestination(item.name);
     setDestinationSuggestions([]);
     setRoadPath([]);
-    setRoute(prev => {
-      if (prev.length > 0) {
-        return [prev[0], { latitude: item.lat, longitude: item.lon }];
-      } else {
-        return [
+    setRoute(prev =>
+      prev.length > 0
+        ? [prev[0], { latitude: item.lat, longitude: item.lon }]
+        : [
           { latitude: region.latitude, longitude: region.longitude },
           { latitude: item.lat, longitude: item.lon }
-        ];
-      }
-    });
+        ]
+    );
     await fetchRouteDetails(item.lat, item.lon);
     setMapResetKey(Date.now());
   };
 
-  // -------------------------------------------------
-  // Fetch route details mula sa backend API (kasama ang pag-decode ng geometry)
-  // -------------------------------------------------
-
-  const { addPost } = usePostContext();
   const fetchRouteDetails = async (destLat: number, destLon: number) => {
+    setIsRouteLoading(true);
     const params = {
       origin_lat: region.latitude,
       origin_lon: region.longitude,
@@ -468,37 +542,50 @@ const RouteScreen: React.FC = () => {
         { params }
       );
       console.log("API Response:", response.data);
-  
-      // Process posts immediately after getting the API response
-      const processedPosts = response.data.posts.map(post => ({
-        ...post,
-        location: origin,              // current origin from state
-        destination: destination,      // current destination from state
-        origin_lat: region.latitude,
-        origin_lon: region.longitude,
-        destination_lat: destLat,
-        destination_lon: destLon,
-        user: {
-          ...post.user,
-          email: post.user.email || '' // Ensure email exists (fallback to empty string)
+      const routeData = response.data.route;
+      setRouteDetails({ route: routeData });
+
+      if (routeData && routeData.summary) {
+        const summary = routeData.summary;
+        const formattedDuration = formatDuration(summary.total_duration);
+        let totalWalkingDistance = 0;
+        let busDuration = 0;
+        if (routeData.segments && routeData.segments.length > 0) {
+          routeData.segments.forEach(segment => {
+            const segType = segment.type.toLowerCase();
+            if (segType === 'walking' && segment.distance) {
+              totalWalkingDistance += segment.distance;
+            }
+            if (['bus', 'jeep', 'ejeep', 'lrt', 'mrt'].includes(segType) && segment.duration) {
+              busDuration += segment.duration;
+            }
+          });
         }
-          }));
-  
-      // Add processedPosts to your PostContext here
-      processedPosts.forEach(p => addPost(p, 'routes'));
-  
-      // Now set route details and process polyline
-      setRouteDetails({ route: response.data.route });
-      
+        const busFormattedDuration = busDuration ? formatDuration(busDuration) : '';
+        setRouteMetrics({
+          distance: summary.total_distance_km || 0,
+          fare: summary.total_fare || 0,
+          walkingTime: totalWalkingDistance ? `${(totalWalkingDistance / 1000).toFixed(2)} km` : '',
+          carTime: formattedDuration,
+          busTime: busFormattedDuration
+        });
+      } else {
+        setRouteMetrics(null);
+      }
+
+      if (routeData && routeData.segments && routeData.segments.length > 0) {
+        const allWalking = routeData.segments.every(seg => seg.walking);
+        setPolylineColor(allWalking ? "#808080" : "#6366F1");
+      } else {
+        setPolylineColor("#6366F1");
+      }
+
       if (response.data.polyline && response.data.polyline.length > 0) {
         setRoadPath(response.data.polyline);
-      } else if (
-        response.data.route &&
-        response.data.route.segments &&
-        response.data.route.segments.length > 0
-      ) {
+      } else if (routeData && routeData.segments && routeData.segments.length > 0) {
         let combinedPath: LatLng[] = [];
-        response.data.route.segments.forEach(segment => {
+        const tolerance = 0.0001;
+        routeData.segments.forEach(segment => {
           if (segment.geometry) {
             const decodedCoords = polyline.decode(segment.geometry).map(
               (coord: number[]) => ({
@@ -510,8 +597,8 @@ const RouteScreen: React.FC = () => {
               const lastPoint = combinedPath[combinedPath.length - 1];
               const firstNew = decodedCoords[0];
               if (
-                lastPoint.latitude === firstNew.latitude &&
-                lastPoint.longitude === firstNew.longitude
+                Math.abs(lastPoint.latitude - firstNew.latitude) < tolerance &&
+                Math.abs(lastPoint.longitude - firstNew.longitude) < tolerance
               ) {
                 combinedPath = combinedPath.concat(decodedCoords.slice(1));
               } else {
@@ -530,114 +617,189 @@ const RouteScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("Error fetching route details:", error);
+    } finally {
+      setIsRouteLoading(false);
     }
   };
-  
 
-  // -------------------------------------------------
-  // Render dynamic Route Overview gamit ang API data
-  // -------------------------------------------------
   const renderRouteOverview = () => {
+    if (isRouteLoading) {
+      return <ActivityIndicator size="small" color="#6366F1" />;
+    }
     if (!routeDetails.route) {
       return <Text style={styles.overviewText}>No route overview available</Text>;
     }
-    const stops = routeDetails.route.stops;
-    const segments = routeDetails.route.segments;
+
+    const { segments } = routeDetails.route;
+
     return (
       <View>
-        <Text style={styles.overviewSubtitle}>From: {origin}</Text>
-        <Text style={styles.overviewSubtitle}>To: {stops[stops.length - 1]?.name}</Text>
-        {segments.map((segment, idx) => {
-          const startStop = stops[idx];
-          const endStop = stops[idx + 1];
-          if (segment.walking) {
-            return (
-              <Text key={idx} style={styles.bulletItem}>
-                • Walk from {startStop?.name} to {endStop?.name}
-              </Text>
-            );
-          } else if (segment.vehicle_type) {
-            return (
-              <View key={idx}>
-                <Text style={[styles.overviewTitle, { marginTop: 10, color: 'green' }]}>Get on</Text>
-                <Text style={styles.bulletItem}>
-                  • Get on: {segment.vehicle_type} from {startStop?.name}
-                </Text>
-                <Text style={[styles.overviewTitle, { marginTop: 10, color: 'blue' }]}>Get off</Text>
-                <Text style={styles.bulletItem}>
-                  • Get off: {endStop?.name}
-                </Text>
-              </View>
-            );
-          } else {
-            return (
-              <Text key={idx} style={styles.bulletItem}>
-                • {startStop?.name} to {endStop?.name}
-              </Text>
-            );
-          }
+        {segments && segments.map((segment, idx) => {
+          const segType = segment.type.toLowerCase();
+          const segLabel = getSegmentLabel(
+            segType,
+            segment.from_stop?.name,
+            segment.to_stop?.name,
+            segment.vehicle_type
+          );
+          const isExpanded = expandedSegments[idx];
+
+          return (
+            <View key={idx} style={styles.segmentCard}>
+              <TouchableOpacity
+                style={styles.segmentHeaderRow}
+                onPress={() => toggleSegment(idx)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                  size={18}
+                  color="#6366F1"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.segmentCardHeaderText}>{segLabel}</Text>
+              </TouchableOpacity>
+
+              {isExpanded && (
+                <View style={styles.segmentCardBody}>
+                  {segType === 'walking' && (
+                    <>
+                      <Text style={[styles.onOffInstruction, { marginVertical: 4 }]}>
+                        From: {segment.from_stop?.name} to {segment.to_stop?.name}
+                      </Text>
+                      {segment.steps && segment.steps.length > 0 ? (
+                        <View style={styles.stepsContainer}>
+                          {segment.steps.map((step, stepIdx) => (
+                            <View key={stepIdx} style={styles.stepRow}>
+                              <Text style={styles.bulletIcon}>•</Text>
+                              <Text style={styles.stepText}>{step.instruction}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      ) : (
+                        <Text style={styles.stepText}>No walking steps available.</Text>
+                      )}
+                    </>
+                  )}
+
+                  {['jeep', 'bus', 'ejeep', 'lrt', 'mrt'].includes(segType) && (
+                    <>
+                      <View style={styles.getOnOffContainer}>
+                        <Text style={[styles.onOffTitle, { color: 'green' }]}>Get on</Text>
+                        <Text style={styles.onOffInstruction}>
+                          Ride a {segment.vehicle_type ? segment.vehicle_type.toLowerCase() : segType} from {segment.from_stop?.name} going towards {segment.to_stop?.name}.
+                        </Text>
+                        <Text style={[styles.onOffTitle, { color: 'blue', marginTop: 8 }]}>Get off</Text>
+                        <Text style={styles.onOffInstruction}>
+                          Arrive at {segment.to_stop?.name}, then get off at your stop.
+                        </Text>
+                      </View>
+                    </>
+                  )}
+
+                  {segment.alternatives && segment.alternatives.length > 0 && (
+                    <View style={styles.alternativesContainer}>
+                      <Text style={styles.alternativeHeader}>Alternative Routes:</Text>
+                      {segment.alternatives.map((alt, altIdx) => {
+                        const routeName = alt.route_name ? alt.route_name.split('-')[0] : '';
+                        return (
+                          <Text key={altIdx} style={styles.alternativeText}>
+                            • {alt.type} {routeName}
+                          </Text>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          );
         })}
       </View>
     );
   };
 
-  // -------------------------------------------------
-  // Content: Inputs at Route Overview
-  // -------------------------------------------------
   const detailsContent = (
     <View style={styles.container}>
       <Text style={styles.text}>Details</Text>
-
-      {/* Origin Input */}
-      <Text style={styles.label}>From:</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.userInput}
-          placeholder="Enter origin (default is current location)"
-          placeholderTextColor="#666"
-          value={origin}
-          onChangeText={handleOriginChange}
-          onSubmitEditing={updateOriginRoute}
-          onBlur={updateOriginRoute}
-          multiline={false}
-        />
-        {origin !== '' && (
-          <TouchableOpacity style={styles.clearButton} onPress={() => setOrigin('')}>
-            <Ionicons name="close" size={20} color="#666" />
-          </TouchableOpacity>
-        )}
+      <Text style={styles.label}>From</Text>
+      <View style={styles.searchContainer}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.userInput}
+            placeholder="Type Here..."
+            placeholderTextColor="#666"
+            value={origin}
+            onChangeText={handleOriginChange}
+            multiline={false}
+          />
+          {isOriginLoading && (
+            <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />
+          )}
+          {origin !== '' && (
+            <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
+              <Ionicons name="close" size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
       </View>
-      <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
-
-      {/* Destination Input */}
-      <Text style={styles.label}>To:</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.userInput}
-          placeholder="Intramuros, Manila City"
-          placeholderTextColor="#666"
-          value={destination}
-          onChangeText={handleDestinationChange}
-          multiline={false}
-        />
-        {destination !== '' && (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={() => {
-              setDestination('');
-              setDestinationSuggestions([]);
-              setRoute(prev => (prev.length > 0 ? [prev[0]] : []));
-              setRouteDetails({ route: null });
-              setRoadPath([]);
-              setMapResetKey(Date.now());
-            }}
-          >
-            <Ionicons name="close" size={20} color="#666" />
-          </TouchableOpacity>
-        )}
+      <Text style={styles.label}>To</Text>
+      <View style={styles.searchContainer}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.userInput}
+            placeholder="Type Here..."
+            placeholderTextColor="#666"
+            value={destination}
+            onChangeText={handleDestinationChange}
+            multiline={false}
+          />
+          {isDestinationLoading && (
+            <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />
+          )}
+          {destination !== '' && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => {
+                setDestination('');
+                setDestinationSuggestions([]);
+                setRoute(prev => (prev.length > 0 ? [prev[0]] : []));
+                setRouteDetails({ route: null });
+                setRoadPath([]);
+                setMapResetKey(Date.now());
+              }}
+            >
+              <Ionicons name="close" size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
       </View>
-      <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
-
+      {route.length >= 2 && routeMetrics && (
+        <View style={styles.topInfoRow}>
+          <View style={styles.infoBox}>
+            <FontAwesome5 name="map-marker-alt" size={16} color="#44457D" />
+            <Text style={styles.infoBoxLabel}>{routeMetrics.distance} km</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <FontAwesome5 name="money-bill-wave" size={16} color="#44457D" />
+            <Text style={styles.infoBoxLabel}>Fare: {routeMetrics.fare}</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <FontAwesome5 name="walking" size={16} color="#44457D" />
+            <Text style={styles.infoBoxLabel}>{routeMetrics.walkingTime}</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <FontAwesome5 name="car" size={16} color="#44457D" />
+            <Text style={styles.infoBoxLabel}>{routeMetrics.carTime}</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <FontAwesome5 name="bus" size={16} color="#44457D" />
+            <Text style={styles.infoBoxLabel}>{routeMetrics.busTime}</Text>
+          </View>
+        </View>
+      )}
       {route.length >= 2 ? (
         <View style={styles.routecontainer}>
           <Text style={{ fontSize: 13, fontWeight: '500', color: '#6B7280', marginBottom: 18 }}>
@@ -646,33 +808,20 @@ const RouteScreen: React.FC = () => {
           {renderRouteOverview()}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
             <TouchableOpacity style={styles.twobox} onPress={() => setModalVisible(true)}>
-              <Text style={styles.texttwo}>Review</Text>
+              <Text style={styles.texttwo}>Nearby Attractions</Text>
             </TouchableOpacity>
-           
-
-<TouchableOpacity
-  style={styles.twobox}
-  onPress={() => {
-    // Navigate to Route Post Suggestion Page with location and destination
-    router.push({
-      pathname: "/postsuggestions",
-      params: {
-        location: encodeURIComponent(origin),
-    destination: encodeURIComponent(destination),
-    origin_lat: route[0].latitude.toString(),
-    origin_lon: route[0].longitude.toString(),
-    destination_lat: route[1].latitude.toString(),
-    destination_lon: route[1].longitude.toString(),
-      },
-    });
-  }}
->
-  <Text style={styles.texttwo}>Route Post Suggestions</Text>
-</TouchableOpacity>
- 
-
+            <TouchableOpacity style={styles.twobox} onPress={() => router.push('/postsuggestion')}>
+              <Text style={styles.texttwo}>Experiences</Text>
+            </TouchableOpacity>
           </View>
-          <ReviewModal visible={modalVisible} onClose={() => setModalVisible(false)} />
+          {route.length >= 2 && (
+            <ReviewModal
+              visible={modalVisible}
+              onClose={() => setModalVisible(false)}
+              originCoords={route[0]}
+              destinationCoords={route[1]}
+            />
+          )}
         </View>
       ) : (
         <View style={styles.oopsContainer}>
@@ -684,14 +833,9 @@ const RouteScreen: React.FC = () => {
     </View>
   );
 
-  // -------------------------------------------------
-  // Layout: Map at Details
-  // -------------------------------------------------
-  if (hasRoute) {
+  if (route.length >= 2) {
     return (
       <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        
-        <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
         <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
           <MapComponent
             initialRegion={region}
@@ -699,8 +843,10 @@ const RouteScreen: React.FC = () => {
             roadPath={roadPath}
             mapResetKey={mapResetKey}
             style={styles.map}
+            polylineColor={polylineColor}
           />
         </Animated.View>
+        <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
           {detailsContent}
         </ScrollView>
       </View>
@@ -715,6 +861,7 @@ const RouteScreen: React.FC = () => {
             roadPath={roadPath}
             mapResetKey={mapResetKey}
             style={styles.map}
+            polylineColor={polylineColor}
           />
         </Animated.View>
         {detailsContent}
@@ -724,162 +871,50 @@ const RouteScreen: React.FC = () => {
 };
 
 export default RouteScreen;
- 
+
+// -------------------------
+// Styles
+// -------------------------
 const styles = StyleSheet.create({
-  maincontainer: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-  },
-  detailsContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  contentContainer: {
-    paddingBottom: 30,
-  },
-  mapContainer: {
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    backgroundColor: '#FFFFFF',
-    width: '100%',
-    marginTop: 15,
-  },
-  map: {
-    height: '100%',
-    width: '100%',
-  },
-  text: {
-    color: '#44457D',
-    fontWeight: '500',
-    fontSize: 16,
-  },
-  container: {
-    padding: 15,
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginTop: 10,
-  },
-  inputContainer: {
-    position: 'relative',
-    width: '100%',
-  },
-  userInput: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: '#374151',
-    marginVertical: 8,
-    paddingRight: 30,
-    height: 40,
-  },
-  clearButton: {
-    position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: [{ translateY: -10 }],
-  },
-  suggestionList: {
-    position: 'absolute',
-    top: 90,
-    left: 15,
-    right: 15,
-    backgroundColor: '#FFFFFF',
-    zIndex: 10,
-    borderRadius: 8,
-    elevation: 4,
-  },
-  suggestionItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-  },
-  suggestionText: {
-    color: '#444',
-  },
-  box: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: '#F4F6FF',
-    padding: 8,
-  },
-  boxlabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#44457D',
-  },
-  routecontainer: {
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 16,
-    width: '100%',
-    marginTop: 18,
-    marginBottom: 100,
-  },
-  overviewText: {
-    fontSize: 12,
-    color: '#44457D',
-    marginVertical: 4,
-  },
-  oopsContainer: {
-    alignItems: 'center',
-    padding: 16,
-    marginBottom: 30,
-  },
-  illustration: {
-    width: 150,
-    height: 120,
-    marginBottom: 10,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 4,
-  },
-  errorSubText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    marginHorizontal: 20,
-  },
-  twobox: {
-    borderRadius: 6,
-    backgroundColor: '#E0E7FF',
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    margin: 4,
-  },
-  texttwo: {
-    fontSize: 12,
-    color: '#6366F1',
-    fontWeight: '500',
-  },
-  overviewTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#44457D',
-    marginBottom: 4,
-  },
-  overviewSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginBottom: 6,
-  },
-  bulletItem: {
-    fontSize: 12,
-    color: '#44457D',
-    marginBottom: 4,
-    lineHeight: 18,
-  },
+  maincontainer: { width: '100%', backgroundColor: '#FFFFFF' },
+  detailsContainer: { flex: 1, backgroundColor: '#FFFFFF' },
+  contentContainer: { paddingBottom: 30 },
+  mapContainer: { borderWidth: 2, borderColor: '#FFFFFF', backgroundColor: '#FFFFFF', width: '100%', marginTop: 15 },
+  map: { height: '100%', width: '100%' },
+  text: { color: '#44457D', fontWeight: '500', fontSize: 16 },
+  container: { padding: 15, marginBottom: 20 },
+  label: { fontSize: 12, fontWeight: '500', color: '#6B7280', marginTop: 10 },
+  searchContainer: { position: 'relative', width: '100%', marginBottom: 20 },
+  inputContainer: { width: '100%' },
+  userInput: { backgroundColor: '#F5F7FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 8, fontSize: 11, color: '#374151', marginVertical: 8, paddingRight: 30, height: 40 },
+  clearButton: { position: 'absolute', right: 10, top: '50%', transform: [{ translateY: -10 }] },
+  loadingIndicator: { position: 'absolute', right: 40, top: '50%', transform: [{ translateY: -10 }] },
+  suggestionList: { position: 'absolute', top: 45, left: 0, right: 0, backgroundColor: '#FFFFFF', zIndex: 10, borderRadius: 8, elevation: 4, maxHeight: 150 },
+  suggestionItem: { padding: 10, borderBottomWidth: 1, borderColor: '#ddd' },
+  suggestionText: { color: '#444' },
+  topInfoRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 18 },
+  infoBox: { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F6FF', borderRadius: 8, padding: 10, width: 65 },
+  infoBoxLabel: { fontSize: 11, fontWeight: '700', color: '#44457D', marginTop: 4, textAlign: 'center' },
+  routecontainer: { borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 16, width: '100%', marginTop: 18, marginBottom: 100 },
+  overviewText: { fontSize: 12, color: '#44457D', marginVertical: 4 },
+  oopsContainer: { alignItems: 'center', padding: 16, marginBottom: 30 },
+  illustration: { width: 150, height: 120, marginBottom: 10 },
+  errorText: { fontSize: 18, fontWeight: 'bold', color: '#000', marginBottom: 4 },
+  errorSubText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', marginHorizontal: 20 },
+  segmentCard: { marginBottom: 15, borderRadius: 8, backgroundColor: '#FFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 3 },
+  segmentHeaderRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E0E7FF', borderTopLeftRadius: 8, borderTopRightRadius: 8, padding: 10 },
+  segmentCardHeaderText: { fontSize: 12, fontWeight: 'bold', color: '#111827' },
+  segmentCardBody: { padding: 10 },
+  getOnOffContainer: { marginTop: 8 },
+  onOffTitle: { fontSize: 13, fontWeight: '600' },
+  onOffInstruction: { fontSize: 12, color: '#374151', marginTop: 2, lineHeight: 18 },
+  stepsContainer: { marginTop: 6, marginLeft: 6 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+  bulletIcon: { marginRight: 6, fontSize: 14, color: '#6366F1', lineHeight: 20 },
+  stepText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 18 },
+  alternativesContainer: { marginTop: 8, padding: 6, backgroundColor: '#F3F4F6', borderRadius: 4 },
+  alternativeHeader: { fontSize: 12, fontWeight: '700', marginBottom: 4, color: '#111827' },
+  alternativeText: { fontSize: 12, color: '#374151', marginBottom: 2 },
+  twobox: { borderRadius: 6, backgroundColor: '#E0E7FF', paddingVertical: 5, paddingHorizontal: 12, margin: 4 },
+  texttwo: { fontSize: 12, color: '#6366F1', fontWeight: '500' }
 });

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext, useMemo} from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView,   ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import PostModal from '../postmodal';
 import { AuthContext, AuthContextType } from '../../contexts/AuthContext';
@@ -28,8 +28,8 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
     setIsOpen(false);
     if (onSelect) onSelect(option);
   };
- 
- 
+
+
   return (
     <View style={styles.dropdowncontainer}>
       <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
@@ -61,19 +61,19 @@ export default function CommunityPage() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const [modalVisible, setModalVisible] = useState(false);
-   const [isLoading, setIsLoading] = useState(false);
-    const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
-      const authContext = useContext(AuthContext) as AuthContextType | null;
-      
-        if (!authContext) return null; // Prevents errors if context is null
-    const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
-    const [selectedOption, setSelectedOption] = useState<string>('Time');
-  
-    
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
+  const authContext = useContext(AuthContext) as AuthContextType | null;
+
+  if (!authContext) return null; // Prevents errors if context is null
+  const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
+  const [selectedOption, setSelectedOption] = useState<string>('Time');
+
+
   const handleOptionSelect = (option: string) => {
     setSelectedOption(option);
   };
-  
+
   // Use routeDetails if available; otherwise, try URL params or fall back to default names.
   const location =
     routeDetails?.location ||
@@ -153,35 +153,35 @@ export default function CommunityPage() {
   };
 
   const sendVoteRequest = async (postId: string, action: VoteType) => {
-      const endpoint = `https://comgu20-production.up.railway.app/api/route_posts/${postId}/${action}`;
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
-  
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Failed to send vote:', response.status, errorText);
-          Alert.alert('Error', 'There was a problem registering your vote.');
-          return false;
-        }
-  
-        await response.json();
-        // Re-fetch posts after voting to update the view.
-        fetchOldPosts();
-        Alert.alert('Success', 'Your vote has been registered.');
-        return true;
-      } catch (error) {
-        console.error('Vote error:', error);
-        Alert.alert('Error', 'There was a problem sending your vote.');
+    const endpoint = `https://comgu20-production.up.railway.app/api/route_posts/${postId}/${action}`;
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to send vote:', response.status, errorText);
+        Alert.alert('Error', 'There was a problem registering your vote.');
         return false;
       }
-    };
-  
+
+      await response.json();
+      // Re-fetch posts after voting to update the view.
+      fetchOldPosts();
+      Alert.alert('Success', 'Your vote has been registered.');
+      return true;
+    } catch (error) {
+      console.error('Vote error:', error);
+      Alert.alert('Error', 'There was a problem sending your vote.');
+      return false;
+    }
+  };
+
 
   // Navigate to Route Finder if needed.
   const handleGoToRouteFinder = () => {
@@ -202,22 +202,22 @@ export default function CommunityPage() {
       router.push('/login');
       return;
     }
-   
+
     handleVote(postId, action);
   };
 
-   const sortedPosts = useMemo(() => {
-      return [...contextPosts].sort((a, b) => {
-        switch (selectedOption) {
-          case 'Time':
-            return (new Date(b.created_at ?? 0).getTime() || 0) - (new Date(a.created_at ?? 0).getTime() || 0);
-          case 'Popularity':
-            return (b.votes ?? 0) - (a.votes ?? 0);
-          default:
-            return 0;
-        }
-      });
-    }, [contextPosts, selectedOption]);
+  const sortedPosts = useMemo(() => {
+    return [...contextPosts].sort((a, b) => {
+      switch (selectedOption) {
+        case 'Time':
+          return (new Date(b.created_at ?? 0).getTime() || 0) - (new Date(a.created_at ?? 0).getTime() || 0);
+        case 'Popularity':
+          return (b.votes ?? 0) - (a.votes ?? 0);
+        default:
+          return 0;
+      }
+    });
+  }, [contextPosts, selectedOption]);
 
   const timeAgo = (timestamp: number): string => {
     const now = Date.now();
@@ -235,14 +235,14 @@ export default function CommunityPage() {
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
 
-      <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems: 'center', marginTop: 10}}>
-             <View style={{ zIndex: 1000 }}>
-               <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
-             </View>
-             <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-       <Text style={styles.postButtonText}>Post</Text>
-     </TouchableOpacity>
-           </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+        <View style={{ zIndex: 1000 }}>
+          <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
+        </View>
+        <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+          <Text style={styles.postButtonText}>Post</Text>
+        </TouchableOpacity>
+      </View>
 
       <PostModal
         visible={modalVisible}
@@ -259,104 +259,104 @@ export default function CommunityPage() {
         userPassword={''}
       />
 
- {isLoading && (
+      {isLoading && (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
       )}
-        <View style={{ marginBottom: 200 }}>
-          <View style={styles.postsContainer}>
-            {sortedPosts.map((post, index) => (
-              <View key={`${post.id}-${index}`} style={styles.containerpost}>
-                <View style={styles.suggestordetails}> 
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                                  <View style={styles.profile}>
-                                    <Text style={styles.initial}>
-                                      {post.user?.firstname && post.user?.lastname
-                                        ? post.user.firstname[0].toUpperCase() + post.user.lastname[0].toUpperCase()
-                                        : "G"}
-                                    </Text>
-                                  </View>
-                                  <View style={styles.suggestor}>
-                                    <Text style={styles.suggestorname}>
-                                      {post.user?.firstname && post.user?.lastname
-                                        ? `${post.user.firstname} ${post.user.lastname}`
-                                        : "Guest"}
-                                    </Text>
-                                    <Text style={styles.suggestorusername}>{post.user?.email}</Text>
-                                  </View>
-                                </View>
-                                 <Text style={styles.postTimestamp}>
-                                                {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
-                                              </Text>
+      <View style={{ marginBottom: 200 }}>
+        <View style={styles.postsContainer}>
+          {sortedPosts.map((post, index) => (
+            <View key={`${post.id}-${index}`} style={styles.containerpost}>
+              <View style={styles.suggestordetails}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                  <View style={styles.profile}>
+                    <Text style={styles.initial}>
+                      {post.user?.firstname && post.user?.lastname
+                        ? post.user.firstname[0].toUpperCase() + post.user.lastname[0].toUpperCase()
+                        : "G"}
+                    </Text>
+                  </View>
+                  <View style={styles.suggestor}>
+                    <Text style={styles.suggestorname}>
+                      {post.user?.firstname && post.user?.lastname
+                        ? `${post.user.firstname} ${post.user.lastname}`
+                        : "Guest"}
+                    </Text>
+                    <Text style={styles.suggestorusername}>{post.user?.email}</Text>
+                  </View>
                 </View>
-                  <Text style={styles.postLocation}>From: {post.location}</Text>
-                  <Text style={styles.postDestination}>To: {post.destination}</Text>
-                  
-                    <View style={{ flexDirection: 'column', gap: 8 }}>
-                                <Text style={styles.label}>Your experiences</Text>
-                                <Text style={styles.experience}>{post.content}</Text>
-                              </View>
-                 
-                  <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-                               <View style={styles.content}>
-                                 <View style={styles.badge}>
-                                   <Entypo name="check" size={16} color="#03C04A" />
-                                   <Text style={styles.cert}>Certified {APP_NAME}</Text>
-                                 </View>
-                               </View>
-                               <View style={styles.arrowcontainer}>
-                                 
-                               <TouchableOpacity
-                   style={[
-                     styles.arrowup,
-                     post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
-                   ]}
-                   onPress={() => post.id && handlePostPress(post.id, 'upvote')}
-                 >
-                   <AntDesign
-                     name="arrowup"
-                     size={13}
-                     color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
-                   />
-                 </TouchableOpacity>
-                 <Text style={styles.arrowupnum}>{post.votes}</Text>
-                 <TouchableOpacity
-                   style={[
-                     styles.arrowdown,
-                     post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
-                   ]}
-                   onPress={() => post.id && handlePostPress(post.id, 'downvote')}
-                 >
-                   <AntDesign
-                     name="arrowdown"
-                     size={13}
-                     color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
-                   />
-                 </TouchableOpacity>
-                 
-                  
-                 
-                               </View>
-                             </View>
+                <Text style={styles.postTimestamp}>
+                  {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+                </Text>
+              </View>
+              <Text style={styles.postLocation}>From: {post.location}</Text>
+              <Text style={styles.postDestination}>To: {post.destination}</Text>
+
+              <View style={{ flexDirection: 'column', gap: 8 }}>
+                <Text style={styles.label}>Your experiences</Text>
+                <Text style={styles.experience}>{post.content}</Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={styles.content}>
+                  <View style={styles.badge}>
+                    <Entypo name="check" size={16} color="#03C04A" />
+                    <Text style={styles.cert}>Certified {APP_NAME}</Text>
+                  </View>
+                </View>
+                <View style={styles.arrowcontainer}>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.arrowup,
+                      post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
+                    ]}
+                    onPress={() => post.id && handlePostPress(post.id, 'upvote')}
+                  >
+                    <AntDesign
+                      name="arrowup"
+                      size={13}
+                      color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
+                    />
+                  </TouchableOpacity>
+                  <Text style={styles.arrowupnum}>{post.votes}</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.arrowdown,
+                      post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
+                    ]}
+                    onPress={() => post.id && handlePostPress(post.id, 'downvote')}
+                  >
+                    <AntDesign
+                      name="arrowdown"
+                      size={13}
+                      color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
+                    />
+                  </TouchableOpacity>
 
 
-                
-              
+
                 </View>
-              
-            ))}
-          </View>
+              </View>
+
+
+
+
+            </View>
+
+          ))}
         </View>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  
-  maincontainer: {flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15,},
-  containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#C7D2FE', padding: 12, elevation: 4, marginBottom: 20, width: '100%', borderWidth: 1},
+
+  maincontainer: { flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15, },
+  containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#C7D2FE', padding: 12, elevation: 4, marginBottom: 20, width: '100%', borderWidth: 1 },
   suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2, justifyContent: "space-between" },
-  profile: {width: 36,height: 36,borderRadius: 24,backgroundColor: '#6366f1',alignItems: 'center',justifyContent: 'center',marginRight: 16,},
-  username: {fontSize: 12,color: '#6B7280',},
+  profile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 16, },
+  username: { fontSize: 12, color: '#6B7280', },
   initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
   suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
   suggestorusername: { fontSize: 11, color: '#6B7280' },
@@ -371,9 +371,9 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '400',
   },
-  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 18,textAlign: 'center'},
-  postbutton: {backgroundColor: '#6366F1',paddingHorizontal: 14,paddingVertical: 6,borderRadius: 10,justifyContent: 'center',alignItems: 'center'},
-  postButtonText: {color: 'white',fontSize: 12, },
+  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 18, textAlign: 'center' },
+  postbutton: { backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  postButtonText: { color: 'white', fontSize: 12, },
   loadingIndicator: {
     marginVertical: 20,
   },
@@ -511,4 +511,4 @@ const styles = StyleSheet.create({
 });
 
 
- 
+

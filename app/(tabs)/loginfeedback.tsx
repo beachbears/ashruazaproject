@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Text,
   StyleSheet,
@@ -8,43 +8,40 @@ import {
   KeyboardAvoidingView,
   Platform,
   LogBox,
+  ActivityIndicator,
 } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import FeedbackComponent from '../feedbackmodal'; // Your modal component
-import { AuthContext, AuthContextType  } from "../../contexts/AuthContext"; // Ensure the path is correct
+import axiosInstance from '../../axiosConfig'; // Update path as needed
 
-import axiosInstance from '../../axiosConfig';       // Update path as needed
+LogBox.ignoreLogs(['textShadow*', 'shadow*']);
 
-LogBox.ignoreLogs(['textShadow*', 'shadow*']    );
-
-// Define your FeedbackItem type
 type FeedbackItem = {
   id: number;
   content: string;
-  userName: string;     // e.g. "John Doe"
-  userHandle: string;   // e.g. "@johndoe"
-  initials: string;     // e.g. "JD"
   rating: number;
+  user?: {
+    id: string;
+    username: string;
+    firstname: string;
+    lastname: string;
+    email: string;
+    initials?: string;
+    handle?: string;
+  };
+  deleted?: boolean;
 };
 
 const Feedback: React.FC = () => {
   const router = useRouter();
-  const authContext = useContext(AuthContext) as AuthContextType | null;
-
-  if (!authContext) return null; // Prevents errors if context is null
-  
-  const { isLoggedIn, userName, userHandle, userInitials, authToken } = authContext;
-
-  // Start with an empty array for a dynamic page
   const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
 
-  // ---------------------------------------------
-  // 1. Load feedback from AsyncStorage on mount
-  // ---------------------------------------------
+  // Load feedback mula sa AsyncStorage on mount
   useEffect(() => {
     const loadFeedback = async () => {
       try {
@@ -59,9 +56,25 @@ const Feedback: React.FC = () => {
     loadFeedback();
   }, []);
 
-  // --------------------------------------------------
-  // 2. Persist feedback to AsyncStorage on each change
-  // --------------------------------------------------
+  // Fetch feedback mula sa API on mount
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      try {
+        setLoadingFeedback(true);
+        const response = await axiosInstance.get('/api/feedbacks');
+        if (response.data) {
+          setFeedbackData(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching feedback:', error);
+      } finally {
+        setLoadingFeedback(false);
+      }
+    };
+    fetchFeedback();
+  }, []);
+
+  // I-save ang feedback sa AsyncStorage kapag nagbago ang feedbackData
   useEffect(() => {
     const storeFeedback = async () => {
       try {
@@ -73,125 +86,147 @@ const Feedback: React.FC = () => {
     storeFeedback();
   }, [feedbackData]);
 
-  // Send new feedback to your backend using axiosInstance
-  const postFeedback = async (feedback: FeedbackItem) => {
+  // Function para kunin ang token mula sa AsyncStorage, kasama ang guest check.
+  const getToken = async () => {
     try {
-      const response = await axiosInstance.post('/api/feedbacks', feedback);
+      const token = await AsyncStorage.getItem('token');
+      console.log('getToken - Retrieved token:', token);
+      if (
+        token &&
+        token.trim() !== '' &&
+        token.trim().toLowerCase() !== 'uu@gmail.com' &&
+        token.trim().toLowerCase() !== 'null' &&
+        token.trim().toLowerCase() !== 'undefined'
+      ) {
+        return token;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error retrieving token:', error);
+      return null;
+    }
+  };
+
+  // Function para mag-post ng feedback, sine-check muna ang token.
+  const postFeedback = async (feedbackPayload: { content: string; rating: number }) => {
+    const token = await getToken();
+    console.log('postFeedback - token:', token);
+    if (!token) {
+      console.error('Walang valid token. Hindi naka-login.');
+      return;
+    }
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const response = await axiosInstance.post(
+        '/api/feedbacks',
+        { feedback: feedbackPayload },
+        config
+      );
       return response.data;
     } catch (error) {
       console.error('Error posting feedback:', error);
     }
   };
 
-  // ---------------------------------------------
-  // 3. Handle feedback submission
-  // ---------------------------------------------
+  // Kapag nagsubmit ng feedback, sine-check muna ang token bago iproseso.
   const handleSubmit = async (text: string, rating: number) => {
-    // Only submit if there's text and user is logged in
-    if (text.trim() && userName) {
-      // Generate user initials, e.g. "John Doe" => "JD"
-      const initials = userName
-        .split(' ')
-        .map((word: string) => word[0])
-        .join('')
-        .toUpperCase();
-
-      // Generate a simple user handle (e.g., '@johndoe')
-      const handle = '@' + userName.toLowerCase().replace(/\s+/g, '');
-
-      const newFeedback: FeedbackItem = {
-        id: Date.now(), // or use feedbackData.length + 1, or server ID
-        content: text,
-        userName,
-        userHandle: handle,
-        initials,
-        rating,
-      };
-
-      // Update local state (this also triggers persistence)
-      setFeedbackData((prev) => [newFeedback, ...prev]);
-      setModalVisible(false);
-
-      // Post to backend (optional)
-      await postFeedback(newFeedback);
+    if (!text.trim()) return;
+    const token = await getToken();
+    console.log('handleSubmit - token:', token);
+    if (!token) {
+      router.push('/login');
+      return;
     }
+    const feedbackPayload = { content: text, rating };
+    const createdFeedback = await postFeedback(feedbackPayload);
+    if (createdFeedback) {
+      setFeedbackData(prev => [createdFeedback, ...prev]);
+    }
+    setModalVisible(false);
   };
 
-  // Open the feedback modal if logged in; otherwise, navigate to login
-  const handleFeedbackPress = () => {
-    if (!isLoggedIn) {
+  // Kapag pinindot ang "Submit Feedback" button, sine-check muna ang token.
+  const handleFeedbackPress = async () => {
+    const token = await getToken();
+    console.log('handleFeedbackPress - token:', token);
+    if (!token) {
       router.push('/login');
       return;
     }
     setModalVisible(true);
   };
 
-  // ---------------------------------------------
-  // 4. Render a single feedback item
-  // ---------------------------------------------
-  const FeedbackCard: React.FC<{ feedback: FeedbackItem }> = ({ feedback }) => (
-    <View style={styles.feedbackcontainer}>
-      <View style={styles.suggestordetails}>
-        <View style={styles.profile}>
-          <Text style={styles.initial}>{feedback.initials}</Text>
-        </View>
-        <View style={styles.suggestor}>
-          {/* Show first name in bold */}
-          <Text style={styles.suggestorname}>
-            {feedback.userName.split(' ')[0]}
-          </Text>
-          {/* Show handle prefixed with '@' */}
-          <Text style={styles.suggestorusername}>{feedback.userHandle}</Text>
-        </View>
-      </View>
-      {/* Render rating stars */}
-      <View style={{ flexDirection: 'row', marginLeft: 48, marginVertical: 3, gap: 2 }}>
-        {[1, 2, 3, 4, 5].map((star) => (
-          <AntDesign
-            key={star}
-            name="star"
-            size={14}
-            color={star <= feedback.rating ? '#FFD700' : '#D3D3D3'}
-          />
-        ))}
-      </View>
-      <Text style={styles.usersuggestion}>{feedback.content}</Text>
-    </View>
-  );
+  const FeedbackCard: React.FC<{ feedback: FeedbackItem }> = ({ feedback }) => {
+    const displayName = feedback.user?.username || 'User';
+    const displayEmail = feedback.user?.email || 'user@gmail.com';
+    const initials = feedback.user?.initials || displayName.slice(0, 2).toUpperCase();
 
-  // ---------------------------------------------
-  // 5. Page Layout
-  // ---------------------------------------------
+    return (
+      <View style={styles.feedbackcontainer}>
+        <View style={styles.suggestordetails}>
+          <View style={styles.profile}>
+            <Text style={styles.initial}>{initials}</Text>
+          </View>
+          <View style={styles.suggestor}>
+            <Text style={styles.suggestorname}>{displayName}</Text>
+            <Text style={styles.suggestorusername}>{displayEmail}</Text>
+          </View>
+        </View>
+        {feedback.deleted ? (
+          <Text style={styles.deletedMessage}>Feedback deleted by admin.</Text>
+        ) : (
+          <>
+            <View style={{ flexDirection: 'row', marginLeft: 48, marginVertical: 3 }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <AntDesign
+                  key={star}
+                  name="star"
+                  size={14}
+                  color={star <= feedback.rating ? '#FFD700' : '#D3D3D3'}
+                />
+              ))}
+            </View>
+            <Text style={styles.usersuggestion}>{feedback.content}</Text>
+          </>
+        )}
+      </View>
+    );
+  };
+
+  if (loadingFeedback) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#6366F1" />
+        <Text>Loading feedback...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.headerText}>Feedback</Text>
       <Text style={styles.descriptionText}>
         We appreciate your thoughts! Please submit your feedback below.
       </Text>
-
       <View style={styles.ButtonContainer}>
         <TouchableOpacity style={styles.Button} onPress={handleFeedbackPress}>
           <Text style={styles.ButtonText}>Submit Feedback</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Render existing feedback */}
       <View style={{ marginBottom: 150 }}>
-        {feedbackData.map((feedback) => (
+        {feedbackData.map(feedback => (
           <FeedbackCard key={feedback.id} feedback={feedback} />
         ))}
       </View>
-
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-      <FeedbackComponent
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSubmit={handleSubmit}
-      />
-
+        <FeedbackComponent
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onSubmit={handleSubmit}
+        />
       </KeyboardAvoidingView>
     </ScrollView>
   );
@@ -252,6 +287,12 @@ const styles = StyleSheet.create({
     marginLeft: 50,
     marginBottom: 10,
   },
+  deletedMessage: {
+    marginLeft: 50,
+    fontSize: 11,
+    color: 'red',
+    fontStyle: 'italic',
+  },
   headerText: {
     fontSize: 20,
     fontWeight: '600',
@@ -283,5 +324,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '500',
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
