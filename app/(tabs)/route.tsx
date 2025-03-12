@@ -553,8 +553,6 @@ const RouteScreen: React.FC = () => {
         origin_lon: region.longitude,
         destination_lat: destLat,
         destination_lon: destLon,
-        location: origin,                     // add location property
-        destination: destination,             // add destination property
         user: {
           ...post.user,
           email: post.user.email || '' // Ensure email exists (fallback to empty string)
@@ -744,7 +742,7 @@ const RouteScreen: React.FC = () => {
   const detailsContent = (
     <View style={styles.container}>
       <Text style={styles.text}>Details</Text>
-      <Text style={styles.label}>From:</Text>
+      <Text style={styles.label}>From</Text>
       <View style={styles.searchContainer}>
         <View style={styles.inputContainer}>
           <TextInput
@@ -766,7 +764,7 @@ const RouteScreen: React.FC = () => {
         </View>
         <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
       </View>
-      <Text style={styles.label}>To:</Text>
+      <Text style={styles.label}>To</Text>
       <View style={styles.searchContainer}>
         <View style={styles.inputContainer}>
           <TextInput
@@ -915,15 +913,15 @@ export default RouteScreen;
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
-  maincontainer: { width: '100%', backgroundColor: '#F9FAFB' },
+  maincontainer: { width: '100%', backgroundColor: '#FFFFFF' },
   detailsContainer: { flex: 1, backgroundColor: '#FFFFFF' },
   contentContainer: { paddingBottom: 30 },
-  mapContainer: { borderWidth: 2, borderColor: '#FFFFFF', backgroundColor: '#FFFFFF', width: '100%', },
+  mapContainer: { borderWidth: 2, borderColor: '#FFFFFF', backgroundColor: '#FFFFFF', width: '100%', marginTop: 15 },
   map: { height: '100%', width: '100%' },
   text: { color: '#44457D', fontWeight: '500', fontSize: 16 },
   container: { padding: 15, marginBottom: 20 },
   label: { fontSize: 12, fontWeight: '500', color: '#6B7280', marginTop: 10 },
-  searchContainer: { position: 'relative', width: '100%', },
+  searchContainer: { position: 'relative', width: '100%', marginBottom: 20 },
   inputContainer: { width: '100%' },
   userInput: { backgroundColor: '#F5F7FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 8, fontSize: 11, color: '#374151', marginVertical: 8, paddingRight: 30, height: 40 },
   clearButton: { position: 'absolute', right: 10, top: '50%', transform: [{ translateY: -10 }] },
@@ -931,7 +929,7 @@ const styles = StyleSheet.create({
   suggestionList: { position: 'absolute', top: 45, left: 0, right: 0, backgroundColor: '#FFFFFF', zIndex: 10, borderRadius: 8, elevation: 4, maxHeight: 150 },
   suggestionItem: { padding: 10, borderBottomWidth: 1, borderColor: '#ddd' },
   suggestionText: { color: '#444' },
-  topInfoRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2, marginBottom: 1,},
+  topInfoRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 18 },
   infoBox: { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F6FF', borderRadius: 8, padding: 10, width: 65 },
   infoBoxLabel: { fontSize: 11, fontWeight: '700', color: '#44457D', marginTop: 4, textAlign: 'center' },
   routecontainer: { borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 16, width: '100%', marginTop: 18, marginBottom: 100 },

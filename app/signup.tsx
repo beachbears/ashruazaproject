@@ -322,7 +322,6 @@ const getStyles = (width: number) =>
       backgroundColor: '#F9FAFB',
       alignItems: 'center',
       padding: 16,
-      marginTop: 40,
     },
     mainContainer: {
       backgroundColor: '#FFFFFF',
@@ -368,6 +367,7 @@ const getStyles = (width: number) =>
       height: 80,
       alignSelf: 'center',
       marginBottom: 20,
+      borderRadius: 8
     },
     formTitle: {
       fontWeight: 'bold',

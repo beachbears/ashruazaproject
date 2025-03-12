@@ -185,9 +185,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                 </View>
                 <Text style={[styles.checkboxLabel, { fontSize: width * 0.04 }]}>Remember me?</Text>
               </TouchableOpacity>
-              <TouchableOpacity>
-                <Text style={[styles.linkText, { fontSize: width * 0.04 }]}>Forgot Password?</Text>
-              </TouchableOpacity>
+            
             </View>
 
             <TouchableOpacity

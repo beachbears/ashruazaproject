@@ -99,21 +99,7 @@ const ModalComponent: React.FC<ModalComponentProps> = ({
       <View style={styles.modalBackground}>
         <View style={styles.PostContainer}>
           {/* User details area - display logged in user info or default Guest info */}
-          <View style={styles.userdetails}>
-            <View style={styles.userprofile}>
-              <Text style={styles.userinitial}>
-                {isLoggedIn && userInitials ? userInitials : 'G'}
-              </Text>
-            </View>
-            <View style={styles.user}>
-              <Text style={styles.loginusername}>
-                {isLoggedIn && userName ? userName : 'Guest'}
-              </Text>
-              <Text style={styles.username}>
-                {isLoggedIn && userHandle ? userHandle : '@guest'}
-              </Text>
-            </View>
-          </View>
+           
 
           <Text style={styles.modalText}>Rate your experience</Text>
           <View style={{ flexDirection: 'row', marginBottom: 10 }}>

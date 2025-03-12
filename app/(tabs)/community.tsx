@@ -175,8 +175,7 @@ export default function CommunityPage() {
       await response.json();
       // Re-fetch posts after voting to update the view.
       fetchOldPosts();
-      Alert.alert('Success', 'Your vote has been registered.');
-      return true;
+       return true;
     } catch (error) {
       console.error('Vote error:', error);
       Alert.alert('Error', 'There was a problem sending your vote.');
