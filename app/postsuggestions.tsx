@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator,  LogBox, } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, LogBox, } from 'react-native';
 import PostModal from './postmodal';
 import { AuthContext, AuthContextType } from './../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,7 +8,7 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import { APP_NAME } from "../constants";
 import { Post } from '@/contexts/PostContext';
 
-LogBox.ignoreLogs(['Unauthorized', ]);
+LogBox.ignoreLogs(['Unauthorized',]);
 
 const dropdownOptions = ['Popularity', 'Time'];
 
@@ -63,7 +63,7 @@ export default function PostSuggestions() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const authContext = useContext(AuthContext) as AuthContextType | null;
-  
+
   if (!authContext) return null;
   const { isLoggedIn, userName, userHandle, userInitials } = authContext;
   const [isLoading, setIsLoading] = useState(false);
@@ -83,7 +83,7 @@ export default function PostSuggestions() {
 
   // Helper function for dynamic background and border colors based on status.
   const getStatusStyle = (status: string) => {
-    switch(status.toLowerCase()) {
+    switch (status.toLowerCase()) {
       case "pending review":
         return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
       case "community approved":
@@ -99,7 +99,7 @@ export default function PostSuggestions() {
 
   // Helper function for dynamic text colors based on status.
   const getStatusTextColor = (status: string) => {
-    switch(status.toLowerCase()) {
+    switch (status.toLowerCase()) {
       case "flagged":
         return { color: "#b31b1b" };
       case "admin approved":
@@ -115,7 +115,7 @@ export default function PostSuggestions() {
 
   const fetchPosts = async () => {
     setIsLoading(true);
-    console.log("Using authToken:", authToken); 
+    console.log("Using authToken:", authToken);
     try {
       const response = await fetch(
         `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${origin_lat}&origin_lon=${origin_lon}&destination_lat=${destination_lat}&destination_lon=${destination_lon}`
@@ -144,7 +144,7 @@ export default function PostSuggestions() {
       setIsLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchPosts();
   }, [location, destination]);
@@ -210,11 +210,11 @@ export default function PostSuggestions() {
 
       await response.json();
       fetchPosts();
-    
+
       return true;
     } catch (error) {
       console.error('Vote error:', error);
-     
+
       return false;
     }
   };
@@ -257,7 +257,7 @@ export default function PostSuggestions() {
       }
     }
   };
- 
+
   const handlePostButtonPress = () => {
     const isLoggedIn = !!authToken;
     if (!isLoggedIn) {
@@ -278,16 +278,16 @@ export default function PostSuggestions() {
 
   return (
     <ScrollView style={styles.maincontainer}>
-      
+
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
       <View style={styles.sectionHeader}>
-       
+
         <View style={styles.detailsContainer}>
           <Text style={styles.locationText}>From: {location}</Text>
           <Text style={styles.locationText}>To: {destination}</Text>
         </View>
       </View>
-      <View style={{ flexDirection:'row', justifyContent:'space-between', marginBottom: 10, alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
@@ -295,7 +295,7 @@ export default function PostSuggestions() {
           <Text style={styles.postButtonText}>Post</Text>
         </TouchableOpacity>
       </View>
-      
+
       {isLoading && (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
       )}
@@ -324,9 +324,9 @@ export default function PostSuggestions() {
                 {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
               </Text>
             </View>
-            
+
             <View style={{ flexDirection: 'column', gap: 8 }}>
-              <Text style={styles.label}>Your experiences</Text>
+              <Text style={styles.label}>Their experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
@@ -336,40 +336,40 @@ export default function PostSuggestions() {
                 </View>
               </View>
               <View style={styles.arrowcontainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.arrowup,
-                      post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
-                    ]}
-                    onPress={() => post.id && handlePostPress(post.id, 'upvote')}
-                  >
-                    <AntDesign
-                      name="arrowup"
-                      size={13}
-                      color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
-                    />
-                  </TouchableOpacity>
-                  <Text style={styles.arrowupnum}>{post.votes}</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.arrowdown,
-                      post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
-                    ]}
-                    onPress={() => post.id && handlePostPress(post.id, 'downvote')}
-                  >
-                    <AntDesign
-                      name="arrowdown"
-                      size={13}
-                      color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
-                    />
-                  </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.arrowup,
+                    post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
+                  ]}
+                  onPress={() => post.id && handlePostPress(post.id, 'upvote')}
+                >
+                  <AntDesign
+                    name="arrowup"
+                    size={13}
+                    color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.arrowupnum}>{post.votes}</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.arrowdown,
+                    post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
+                  ]}
+                  onPress={() => post.id && handlePostPress(post.id, 'downvote')}
+                >
+                  <AntDesign
+                    name="arrowdown"
+                    size={13}
+                    color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
+                  />
+                </TouchableOpacity>
 
               </View>
             </View>
           </View>
         ))}
       </View>
-       
+
       <PostModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}

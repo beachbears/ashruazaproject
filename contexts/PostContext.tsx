@@ -9,6 +9,8 @@ export interface Post {
   content: string;
   location: string;
   destination: string;
+  origin_address: string;
+  destination_address: string;
   origin_lat: number;
   origin_lon: number;
   destination_lat: number;
@@ -29,16 +31,16 @@ export interface Post {
   comments_count?: number;
   created_at?: string;
   category?: PostCategory;
-   timestamp?: number;
+  timestamp?: number;
 }
 
 
 interface PostContextType {
   posts: Post[];
   addPost: (newPost: Omit<Post, 'category'>, source: PostCategory) => void;
-   handleUpvote: (postId: number) => void;
-   handleDownvote: (postId: number) => void;
-   getPostsByCategory: (category: PostCategory) => Post[];
+  handleUpvote: (postId: number) => void;
+  handleDownvote: (postId: number) => void;
+  getPostsByCategory: (category: PostCategory) => Post[];
   experienceOnly: boolean;
   setExperienceOnly: (value: boolean) => void;
   updatePost: (updatedPost: Post) => void; // <-- Add this line
@@ -55,28 +57,28 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addPost = (newPost: Post, source: string) => {
     setPosts(prevPosts => {
-        // Check if post already exists
-        const existingIndex = prevPosts.findIndex(post => post.id === newPost.id);
+      // Check if post already exists
+      const existingIndex = prevPosts.findIndex(post => post.id === newPost.id);
 
 
-        if (existingIndex !== -1) {
-            // If post exists, update it (e.g., vote count)
-            const updatedPosts = [...prevPosts];
-            updatedPosts[existingIndex] = newPost; // Replace with updated post
-            return updatedPosts;
-        }
+      if (existingIndex !== -1) {
+        // If post exists, update it (e.g., vote count)
+        const updatedPosts = [...prevPosts];
+        updatedPosts[existingIndex] = newPost; // Replace with updated post
+        return updatedPosts;
+      }
 
 
-        // Add new post at the top if it doesn't exist
-        return [newPost, ...prevPosts];
+      // Add new post at the top if it doesn't exist
+      return [newPost, ...prevPosts];
     });
-};
+  };
 
 
 
 
- 
- 
+
+
   const handleUpvote = (postId: number) => {
     setPosts(prev => prev.map(post =>
       post.id === postId ? { ...post, votes: (post.votes || 0) + 1 } : post
@@ -96,8 +98,8 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
 
-  
- 
+
+
   const updatePost = (updatedPost: Post) => {
     setPosts(prevPosts =>
       prevPosts.map(post =>
@@ -106,7 +108,7 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           : post
       )
     );
-};
+  };
 
 
 
@@ -120,7 +122,7 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       getPostsByCategory,
       experienceOnly,
       setExperienceOnly,
-   
+
     }}>
       {children}
     </PostContext.Provider>
@@ -136,13 +138,13 @@ export const usePostContext = () => {
     console.warn('PostContext is missing. Returning default values.');
     return {
       posts: [],
-      addPost: () => {},
-      updatePost: () => {}, // <-- Add this line
-      handleUpvote: () => {},
-      handleDownvote: () => {},
+      addPost: () => { },
+      updatePost: () => { }, // <-- Add this line
+      handleUpvote: () => { },
+      handleDownvote: () => { },
       getPostsByCategory: () => [],
       experienceOnly: false,
-      setExperienceOnly: () => {},
+      setExperienceOnly: () => { },
     };
   }
   return context;

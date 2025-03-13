@@ -69,6 +69,35 @@ export default function CommunityPage() {
   const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
   const [selectedOption, setSelectedOption] = useState<string>('Time');
 
+  const getStatusStyle = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "pending review":
+        return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
+      case "community approved":
+        return { backgroundColor: "#dbeafe", borderColor: "#dbeafe" };
+      case "flagged":
+        return { backgroundColor: "#fee2e2", borderColor: "#fee2e2" };
+      case "admin approved":
+        return { backgroundColor: "#dcfce7", borderColor: "#dcfce7" };
+      default:
+        return {};
+    }
+  };
+
+  const getStatusTextColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "flagged":
+        return { color: "#b31b1b" };
+      case "admin approved":
+        return { color: "#166534" };
+      case "pending review":
+        return { color: "#a44d0e" };
+      case "community approved":
+        return { color: "#4f40af" };
+      default:
+        return {};
+    }
+  };
 
   const handleOptionSelect = (option: string) => {
     setSelectedOption(option);
@@ -125,17 +154,17 @@ export default function CommunityPage() {
 
   // Handle post submission
   const handlePostSubmit = (formData: { content: string }) => {
-  const newPost = {
-    ...formData,
-    origin_address,
-    destination_address,
-    origin_lat,
-    origin_lon,
-    destination_lat,
-    destination_lon,
-    location: location.toString(),
-    destination: destination_address, // Add this line
-  };
+    const newPost = {
+      ...formData,
+      origin_address,
+      destination_address,
+      origin_lat,
+      origin_lon,
+      destination_lat,
+      destination_lon,
+      location: location.toString(),
+      destination: destination_address, // Add this line
+    };
     addPost(newPost, 'postsuggestions');
     setModalVisible(false);
   };
@@ -175,7 +204,7 @@ export default function CommunityPage() {
       await response.json();
       // Re-fetch posts after voting to update the view.
       fetchOldPosts();
-       return true;
+      return true;
     } catch (error) {
       console.error('Vote error:', error);
       Alert.alert('Error', 'There was a problem sending your vote.');
@@ -240,10 +269,10 @@ export default function CommunityPage() {
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
-        
+
       </View>
 
-       
+
 
       {isLoading && (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
@@ -274,8 +303,8 @@ export default function CommunityPage() {
                   {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
                 </Text>
               </View>
-              <Text style={styles.postLocation}>From: {post.location}</Text>
-              <Text style={styles.postDestination}>To: {post.destination}</Text>
+              <Text style={styles.postLocation}>From: {post.origin_address}</Text>
+              <Text style={styles.postDestination}>To: {post.destination_address}</Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
                 <Text style={styles.label}>Their experience</Text>
@@ -284,9 +313,8 @@ export default function CommunityPage() {
 
               <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={styles.content}>
-                  <View style={styles.badge}>
-                    <Entypo name="check" size={16} color="#03C04A" />
-                    <Text style={styles.cert}>Certified {APP_NAME}</Text>
+                  <View style={[styles.badge, getStatusStyle(post.status || '')]}>
+                    <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
                   </View>
                 </View>
                 <View style={styles.arrowcontainer}>
