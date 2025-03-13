@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "capstone",
+    "name": "Kommutsera",
     "slug": "kommutsera",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -23,7 +23,7 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/kommutsera-logo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.gabooo.capstone"
