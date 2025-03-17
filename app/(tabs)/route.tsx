@@ -101,6 +101,7 @@ export interface NearbySpot {
   description: string;
   latitude: number;
   longitude: number;
+  image_url?: string;  // Add image URL
   
 }
 
@@ -194,7 +195,7 @@ const getMapHTML = (
   route: LatLng[] = [],
   roadPath: any,
   polylineColor: string,
-  nearbySpots?: Array<{ latitude: number; longitude: number; name: string }>
+  nearbySpots?: Array<{ latitude: number; longitude: number; name: string; image_url?: string }>
 ) => {
   let markersJS = "";
   if (route.length > 0) {
@@ -211,7 +212,7 @@ const getMapHTML = (
       `;
     }
   }
-  // Add red markers for nearby spots
+  // Add red markers for nearby spots with optional images in the popup
   if (nearbySpots && nearbySpots.length > 0) {
     nearbySpots.forEach(spot => {
       markersJS += `
@@ -221,7 +222,19 @@ const getMapHTML = (
           fillColor: '#f03',
           fillOpacity: 0.5
         }).addTo(map)
-          .bindPopup("${spot.name}");
+          .bindPopup(\`
+            <div style="max-width: 200px;">
+              <b>${spot.name}</b>
+              \${${JSON.stringify(spot)}.image_url ? 
+                \`<img 
+                  src="\${${JSON.stringify(spot)}.image_url}" 
+                  style="width: 100%; height: auto; margin-top: 5px; border-radius: 4px;"
+                  onerror="this.onerror=null;this.src='https://via.placeholder.com/100x75.png?text=Image+Not+Available';"
+                />\` : 
+                '<p style="margin: 5px 0; color: #666;">No image available</p>'
+              }
+            </div>
+          \`);
       `;
     });
   }
@@ -285,6 +298,7 @@ const getMapHTML = (
     </html>
   `;
 };
+
 
 const MapComponent: React.FC<MapComponentProps> = ({
   initialRegion,
