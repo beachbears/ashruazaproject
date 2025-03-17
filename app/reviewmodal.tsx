@@ -1,4 +1,3 @@
-// Place this at the very top of the file to ignore warnings globally
 import { LogBox, Platform, Linking } from 'react-native';
 LogBox.ignoreLogs([
   '"textShadow*" style props are deprecated. Use "textShadow".',
@@ -18,31 +17,31 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-// Define a simple interface for coordinates
 interface Coordinates {
   latitude: number;
   longitude: number;
 }
 
-// Define NearbySpot interface if not imported from elsewhere
 export interface NearbySpot {
   name: string;
   description: string;
   latitude: number;
   longitude: number;
+  trivia?: string;
+  image_url?: string;
+  link?: string;
+  feedbacks?: string | string[];
 }
 
-// Updated props now include origin and destination coordinates as optional,
-// and a new onSpotsFetched callback to send fetched nearby spots back to the parent.
 interface ReviewModalProps {
   visible: boolean;
   onClose: () => void;
   originCoords?: Coordinates;
   destinationCoords?: Coordinates;
-  onSpotsFetched?: (spots: NearbySpot[]) => void; // Add this prop
+  onSpotsFetched?: (spots: NearbySpot[]) => void;
+  nearbySpots?: NearbySpot[];
 }
 
-// Updated RouteData interface with additional fields for link and feedbacks.
 interface RouteData {
   name: string;
   description: string;
@@ -57,19 +56,35 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   onClose,
   originCoords,
   destinationCoords,
-  onSpotsFetched // Destructure the new prop
+  onSpotsFetched,
+  nearbySpots // New prop: receive spots from parent
 }) => {
   const [routeData, setRouteData] = useState<RouteData[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // When nearbySpots is provided by the parent, use them directly.
   useEffect(() => {
-    if (visible && originCoords && destinationCoords) {
+    if (visible && nearbySpots) {
+      const formattedData = nearbySpots.map(spot => ({
+        name: spot.name,
+        description: spot.description,
+        trivia: spot.trivia || 'Interesting fact',
+        image_url: spot.image_url || 'https://via.placeholder.com/300x200.png?text=No+Image',
+        link: spot.link,
+        feedbacks: Array.isArray(spot.feedbacks) ? spot.feedbacks : []
+      }));
+      setRouteData(formattedData);
+    }
+  }, [visible, nearbySpots]);
+
+  // Only fetch route data if nearbySpots is not provided.
+  useEffect(() => {
+    if (visible && !nearbySpots && originCoords && destinationCoords) {
       fetchRouteData();
     }
-  }, [visible, originCoords, destinationCoords]);
+  }, [visible, originCoords, destinationCoords, nearbySpots]);
 
-  // Update the fetchRouteData function
   const fetchRouteData = async () => {
     setLoading(true);
     setError(null);
@@ -77,7 +92,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       if (!originCoords || !destinationCoords) {
         throw new Error('Missing coordinates');
       }
-      // Build the URL with the required query parameters
       const url = `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${originCoords.latitude}&origin_lon=${originCoords.longitude}&destination_lat=${destinationCoords.latitude}&destination_lon=${destinationCoords.longitude}`;
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch route data');
@@ -85,7 +99,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       const data = await response.json();
       console.log('Fetched route data:', data);
 
-      // Check if there are nearby spots available.
       if (data.nearby_spots?.length) {
         const formattedData: RouteData[] = data.nearby_spots.map((spot: any) => ({
           name: spot.name,
@@ -93,13 +106,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           trivia: spot.trivia || 'Interesting fact about this location',
           image_url: spot.image_url || 'https://via.placeholder.com/300x200.png?text=No+Image',
           link: spot.link,
-          // If feedbacks is a string, wrap it into an array. If it's already an array, use it.
           feedbacks: typeof spot.feedbacks === 'string'
             ? [spot.feedbacks]
             : (Array.isArray(spot.feedbacks) ? spot.feedbacks : [])
         }));
         setRouteData(formattedData);
-        // Send nearby spots back to the parent if the prop is provided.
         if (onSpotsFetched) {
           onSpotsFetched(data.nearby_spots);
         }
@@ -112,14 +123,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       setLoading(false);
     }
   };
-
-  // Renders individual feedback items.
-  const renderFeedback = (feedback: string, index: number) => (
-    <View key={index} style={styles.feedbackItem}>
-      <Ionicons name="chatbubble-ellipses" size={14} color="#4B5563" />
-      <Text style={styles.feedbackText}>{feedback}</Text>
-    </View>
-  );
 
   return (
     <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
@@ -142,8 +145,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   <Text style={styles.attractionDescription}>
                     {item.description || 'No description available.'}
                   </Text>
-
-                  {/* Link Section */}
                   {item.link && (
                     <TouchableOpacity
                       style={styles.linkButton}
@@ -153,17 +154,19 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                       <Ionicons name="open-outline" size={16} color="#3B82F6" />
                     </TouchableOpacity>
                   )}
-
-                  {/* Feedback Section */}
                   <View style={styles.feedbackContainer}>
                     <Text style={styles.sectionTitle}>Visitor Feedback</Text>
                     {item.feedbacks && item.feedbacks.length > 0 ? (
-                      item.feedbacks.map(renderFeedback)
+                      item.feedbacks.map((feedback, index) => (
+                        <View key={index} style={styles.feedbackItem}>
+                          <Ionicons name="chatbubble-ellipses" size={14} color="#4B5563" />
+                          <Text style={styles.feedbackText}>{feedback}</Text>
+                        </View>
+                      ))
                     ) : (
                       <Text style={styles.feedbackText}>No feedback available.</Text>
                     )}
                   </View>
-
                   <View style={styles.triviaContainer}>
                     <View style={styles.triviaHeader}>
                       <Ionicons name="sparkles-sharp" size={14} color="#21de6b" />

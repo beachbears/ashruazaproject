@@ -588,7 +588,12 @@ const RouteScreen: React.FC = () => {
         { params }
       );
       console.log("API Response:", response.data);
-
+  
+      // Set nearby spots immediately if available
+      if (response.data.nearby_spots) {
+        setNearbySpots(response.data.nearby_spots); // Set spots immediately
+      }
+  
       const processedPosts = response.data.posts.map(post => ({
         ...post,
         origin_address: origin,
@@ -602,12 +607,12 @@ const RouteScreen: React.FC = () => {
           email: post.user.email || ''
         }
       }));
-
+  
       processedPosts.forEach(p => addPost(p, 'routes'));
-
+  
       const routeData = response.data.route;
       setRouteDetails({ route: routeData });
-
+  
       if (routeData && routeData.summary) {
         const summary = routeData.summary;
         const formattedDuration = formatDuration(summary.total_duration);
@@ -635,14 +640,14 @@ const RouteScreen: React.FC = () => {
       } else {
         setRouteMetrics(null);
       }
-
+  
       if (routeData && routeData.segments && routeData.segments.length > 0) {
         const allWalking = routeData.segments.every(seg => seg.walking);
         setPolylineColor(allWalking ? "#808080" : "#6366F1");
       } else {
         setPolylineColor("#6366F1");
       }
-
+  
       if (response.data.polyline && response.data.polyline.length > 0) {
         setRoadPath(response.data.polyline);
       } else if (routeData && routeData.segments && routeData.segments.length > 0) {
@@ -684,6 +689,7 @@ const RouteScreen: React.FC = () => {
       setIsRouteLoading(false);
     }
   };
+  
 
   const renderRouteOverview = () => {
     if (isRouteLoading) {
@@ -899,6 +905,7 @@ const RouteScreen: React.FC = () => {
               onClose={() => setModalVisible(false)}
               originCoords={route[0]}
               destinationCoords={route[1]}
+              nearbySpots={nearbySpots} // Pass stored spots
               onSpotsFetched={(spots) => setNearbySpots(spots)} // New prop for nearby spots
             />
           )}
