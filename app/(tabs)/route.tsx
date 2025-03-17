@@ -101,6 +101,7 @@ export interface NearbySpot {
   description: string;
   latitude: number;
   longitude: number;
+  
 }
 
 export interface ApiResponse {
@@ -122,6 +123,7 @@ interface MapComponentProps {
   style?: any;
   mapResetKey?: number;
   polylineColor: string;
+  nearbySpots?: Array<{ latitude: number; longitude: number; name: string }>; // New optional prop
 }
 
 interface RouteDetails {
@@ -191,7 +193,8 @@ const getMapHTML = (
   region: Region,
   route: LatLng[] = [],
   roadPath: any,
-  polylineColor: string
+  polylineColor: string,
+  nearbySpots?: Array<{ latitude: number; longitude: number; name: string }>
 ) => {
   let markersJS = "";
   if (route.length > 0) {
@@ -208,6 +211,21 @@ const getMapHTML = (
       `;
     }
   }
+  // Add red markers for nearby spots
+  if (nearbySpots && nearbySpots.length > 0) {
+    nearbySpots.forEach(spot => {
+      markersJS += `
+        L.circleMarker([${spot.latitude}, ${spot.longitude}], {
+          radius: 6,
+          color: 'red',
+          fillColor: '#f03',
+          fillOpacity: 0.5
+        }).addTo(map)
+          .bindPopup("${spot.name}");
+      `;
+    });
+  }
+  
   let polylineJS = "";
   if (
     (typeof roadPath === "string" && roadPath.length > 0) ||
@@ -274,9 +292,17 @@ const MapComponent: React.FC<MapComponentProps> = ({
   roadPath = [],
   style,
   mapResetKey,
-  polylineColor
+  polylineColor,
+  nearbySpots // Destructure the new prop
 }) => {
-  const mapKey = JSON.stringify({ initialRegion, route, roadPath, mapResetKey });
+  // Updated mapKey: added nearbySpots to the dependency array.
+  const mapKey = JSON.stringify({ 
+    initialRegion, 
+    route, 
+    roadPath, 
+    mapResetKey,
+    nearbySpots 
+  });
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -295,7 +321,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
       <WebView
         key={mapKey}
         originWhitelist={['*']}
-        source={{ html: getMapHTML(initialRegion, route, roadPath, polylineColor) }}
+        source={{ html: getMapHTML(initialRegion, route, roadPath, polylineColor, nearbySpots) }}
         style={style}
         onLoadStart={() => setLoading(true)}
         onLoadEnd={handleLoadEnd}
@@ -355,6 +381,10 @@ const RouteScreen: React.FC = () => {
   const [isOriginLoading, setIsOriginLoading] = useState(false);
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
+  // -------------------------
+  // New State for Nearby Spots
+  // -------------------------
+  const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
 
   const router = useRouter();
   const animatedHeight = useRef(new Animated.Value(400)).current;
@@ -376,9 +406,9 @@ const RouteScreen: React.FC = () => {
             prev.length > 0
               ? [prev[0], { latitude: selected.lat, longitude: selected.lon }]
               : [
-                { latitude: region.latitude, longitude: region.longitude },
-                { latitude: selected.lat, longitude: selected.lon }
-              ]
+                  { latitude: region.latitude, longitude: region.longitude },
+                  { latitude: selected.lat, longitude: selected.lon }
+                ]
           );
           fetchRouteDetails(selected.lat, selected.lon);
         }
@@ -520,9 +550,9 @@ const RouteScreen: React.FC = () => {
       prev.length > 0
         ? [prev[0], { latitude: item.lat, longitude: item.lon }]
         : [
-          { latitude: region.latitude, longitude: region.longitude },
-          { latitude: item.lat, longitude: item.lon }
-        ]
+            { latitude: region.latitude, longitude: region.longitude },
+            { latitude: item.lat, longitude: item.lon }
+          ]
     );
     await fetchRouteDetails(item.lat, item.lon);
     setMapResetKey(Date.now());
@@ -547,19 +577,18 @@ const RouteScreen: React.FC = () => {
 
       const processedPosts = response.data.posts.map(post => ({
         ...post,
-        origin_address: origin,              // current origin from state
-        destination_address: destination,      // current destination from state
+        origin_address: origin,
+        destination_address: destination,
         origin_lat: region.latitude,
         origin_lon: region.longitude,
         destination_lat: destLat,
         destination_lon: destLon,
         user: {
           ...post.user,
-          email: post.user.email || '' // Ensure email exists (fallback to empty string)
+          email: post.user.email || ''
         }
       }));
 
-      // Add processedPosts to your PostContext here
       processedPosts.forEach(p => addPost(p, 'routes'));
 
       const routeData = response.data.route;
@@ -834,7 +863,6 @@ const RouteScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.twobox}
               onPress={() => {
-                // Navigate to Route Post Suggestion Page with location and destination
                 router.push({
                   pathname: "/postsuggestions",
                   params: {
@@ -857,6 +885,7 @@ const RouteScreen: React.FC = () => {
               onClose={() => setModalVisible(false)}
               originCoords={route[0]}
               destinationCoords={route[1]}
+              onSpotsFetched={(spots) => setNearbySpots(spots)} // New prop for nearby spots
             />
           )}
         </View>
@@ -881,6 +910,7 @@ const RouteScreen: React.FC = () => {
             mapResetKey={mapResetKey}
             style={styles.map}
             polylineColor={polylineColor}
+            nearbySpots={nearbySpots} // Pass nearby spots to the map
           />
         </Animated.View>
         <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
@@ -899,6 +929,7 @@ const RouteScreen: React.FC = () => {
             mapResetKey={mapResetKey}
             style={styles.map}
             polylineColor={polylineColor}
+            nearbySpots={nearbySpots} // Pass nearby spots to the map
           />
         </Animated.View>
         {detailsContent}
@@ -908,6 +939,9 @@ const RouteScreen: React.FC = () => {
 };
 
 export default RouteScreen;
+
+
+
 
 // -------------------------
 // Styles

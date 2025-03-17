@@ -24,12 +24,22 @@ interface Coordinates {
   longitude: number;
 }
 
-// Updated props now include origin and destination coordinates as optional.
+// Define NearbySpot interface if not imported from elsewhere
+export interface NearbySpot {
+  name: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+}
+
+// Updated props now include origin and destination coordinates as optional,
+// and a new onSpotsFetched callback to send fetched nearby spots back to the parent.
 interface ReviewModalProps {
   visible: boolean;
   onClose: () => void;
   originCoords?: Coordinates;
   destinationCoords?: Coordinates;
+  onSpotsFetched?: (spots: NearbySpot[]) => void; // Add this prop
 }
 
 // Updated RouteData interface with additional fields for link and feedbacks.
@@ -42,7 +52,13 @@ interface RouteData {
   feedbacks?: string[];
 }
 
-const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoords, destinationCoords }) => {
+const ReviewModal: React.FC<ReviewModalProps> = ({
+  visible,
+  onClose,
+  originCoords,
+  destinationCoords,
+  onSpotsFetched // Destructure the new prop
+}) => {
   const [routeData, setRouteData] = useState<RouteData[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +69,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoord
     }
   }, [visible, originCoords, destinationCoords]);
 
+  // Update the fetchRouteData function
   const fetchRouteData = async () => {
     setLoading(true);
     setError(null);
@@ -82,6 +99,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ visible, onClose, originCoord
             : (Array.isArray(spot.feedbacks) ? spot.feedbacks : [])
         }));
         setRouteData(formattedData);
+        // Send nearby spots back to the parent if the prop is provided.
+        if (onSpotsFetched) {
+          onSpotsFetched(data.nearby_spots);
+        }
       } else {
         setError('No nearby attractions found');
       }
