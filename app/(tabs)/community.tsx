@@ -55,7 +55,12 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 
 type VoteType = 'upvote' | 'downvote';
 export default function CommunityPage() {
-  const { posts: contextPosts, addPost } = usePostContext();
+   
+
+  const { posts: contextPosts, addPost,  setPosts,
+    handleUpvote,
+    handleDownvote,
+    updatePost } = usePostContext();
   const { routeDetails } = useRouteContext();
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
   const router = useRouter();
@@ -89,96 +94,142 @@ export default function CommunityPage() {
     routeDetails?.destination_lon ?? (params.destination_lon ? Number(params.destination_lon) : 0);
 
   // Fetch old posts from the API when the component mounts.
-  async function fetchOldPosts() {
-    try {
-      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
-      if (!response.ok) {
-        console.error('Error fetching posts:', response.status);
-        return;
-      }
-      const data = await response.json();
-      // Reverse the array so that addPost (which prepends) maintains the API’s descending order
-      data.reverse().forEach((post: any) => {
-        // Transform API fields to match your Post type
-        const transformedPost: Post = {
-          ...post,
-          destination_lat: post.dest_lat,
-          destination_lon: post.dest_lon,
-          // If API response is missing these fields, fallback to our current values
-          origin_address: post.origin_address || origin_address,
-          destination_address: post.destination_address || destination_address,
-        };
-        addPost(transformedPost, 'postsuggestions');
-      });
-    } catch (error) {
-      console.error('Fetch error:', error);
-    }
+ // Modify fetchOldPosts to properly sync with context:
+ const fetchOldPosts = async () => {
+  try {
+    const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
+    if (!response.ok) return;
+    
+    const data = await response.json();
+    const transformedPosts: Post[] = data.map((post: any) => ({
+      ...post,
+      // Map API fields to your Post interface
+      location: post.origin_address || origin_address,
+      destination: post.destination_address || destination_address,
+      origin_lat: post.origin_lat,
+      origin_lon: post.origin_lon,
+      destination_lat: post.dest_lat,
+      destination_lon: post.dest_lon,
+      created_at: post.created_at,
+      timestamp: new Date(post.created_at).getTime(),
+    }));
+
+    setPosts(transformedPosts);
+  } catch (error) {
+    console.error('Fetch error:', error);
   }
+};
 
-  useEffect(() => {
-    fetchOldPosts();
-  }, []);
-
-  useEffect(() => {
-    fetchOldPosts();
-  }, [origin_address, destination_address]);
+// Add polling effect
+useEffect(() => {
+  const interval = setInterval(fetchOldPosts, 30000); // Every 30 seconds
+  return () => clearInterval(interval);
+}, []);
+ 
 
   // Handle post submission
-  const handlePostSubmit = (formData: { content: string }) => {
-  const newPost = {
-    ...formData,
-    origin_address,
-    destination_address,
-    origin_lat,
-    origin_lon,
-    destination_lat,
-    destination_lon,
-    location: location.toString(),
-    destination: destination_address, // Add this line
-  };
-    addPost(newPost, 'postsuggestions');
-    setModalVisible(false);
+   
+
+  const handlePostSubmit = async (formData: { content: string }) => {
+    try {
+      setIsLoading(true);
+      
+      // First submit to API
+      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          content: formData.content,
+          origin_address,
+          destination_address,
+          origin_lat,
+          origin_lon,
+          dest_lat: destination_lat,
+          dest_lon: destination_lon,
+        }),
+      });
+  
+      if (!response.ok) throw new Error('Failed to submit post');
+      
+      // Get the actual post data from API response
+      const apiPost = await response.json();
+      
+      // Transform to match your Post type
+      const newPost: Post = {
+        ...apiPost,
+        destination_lat: apiPost.dest_lat,
+        destination_lon: apiPost.dest_lon,
+        destination_address: apiPost.destination_address || destination_address,
+        origin_address: apiPost.origin_address || origin_address,
+        created_at: apiPost.created_at || Date.now().toString(),
+        timestamp: Date.now(),
+      };
+  
+      // Add to context
+      addPost(newPost, 'postsuggestions');
+      setModalVisible(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to submit post. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleVote = async (id: number, action: VoteType) => {
-    if (selectedVotes[id] === action) {
-      const success = await sendVoteRequest(id.toString(), action);
-      if (success) {
-        // Maintain current vote highlight.
+    if (!authToken) {
+      router.push('/login');
+      return;
+    }
+  
+    const previousVote = selectedVotes[id];
+    const previousVotesCount = contextPosts.find(p => p.id === id)?.votes || 0;
+  
+    try {
+      // Optimistic update
+      setSelectedVotes(prev => ({ ...prev, [id]: action }));
+      if (action === 'upvote') {
+        handleUpvote(id);
+      } else {
+        handleDownvote(id);
       }
-    } else {
+  
+      // API call
       const success = await sendVoteRequest(id.toString(), action);
-      if (success) {
-        setSelectedVotes(prev => ({ ...prev, [id]: action }));
+      
+      if (!success) {
+        // Revert if failed
+        setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
+        updatePost({
+          id,
+          votes: previousVotesCount,
+        } as Post);
       }
+    } catch (error) {
+      setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
+      updatePost({
+        id,
+        votes: previousVotesCount,
+      } as Post);
     }
   };
-
+  
+  // Modify sendVoteRequest to remove the fetchOldPosts call:
   const sendVoteRequest = async (postId: string, action: VoteType) => {
-    const endpoint = `https://comgu20-production.up.railway.app/api/route_posts/${postId}/${action}`;
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch(`https://comgu20-production.up.railway.app/api/route_posts/${postId}/${action}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to send vote:', response.status, errorText);
-        Alert.alert('Error', 'There was a problem registering your vote.');
-        return false;
-      }
-
-      await response.json();
-      // Re-fetch posts after voting to update the view.
-      fetchOldPosts();
-       return true;
+  
+      return response.ok;
     } catch (error) {
       console.error('Vote error:', error);
-      Alert.alert('Error', 'There was a problem sending your vote.');
       return false;
     }
   };
@@ -318,17 +369,9 @@ export default function CommunityPage() {
                       color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
                     />
                   </TouchableOpacity>
-
-
-
                 </View>
               </View>
-
-
-
-
             </View>
-
           ))}
         </View>
       </View>

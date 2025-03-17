@@ -41,8 +41,7 @@ export default function RootLayout() {
           <View style={{ flex: 1 }}>
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="routeuser" options={{ headerShown: false }} />
-              <Stack.Screen
+                 <Stack.Screen
                 name="postsuggestions"
                 options={{
                   headerShown: false,

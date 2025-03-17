@@ -13,6 +13,7 @@ export interface Post {
   origin_lon: number;
   destination_lat: number;
   destination_lon: number;
+  
   // New fields from the API
   user?: {
     id: number;
@@ -30,6 +31,8 @@ export interface Post {
   created_at?: string;
   category?: PostCategory;
    timestamp?: number;
+   destination_address: string;
+   origin_address: string
 }
 
 
@@ -42,6 +45,7 @@ interface PostContextType {
   experienceOnly: boolean;
   setExperienceOnly: (value: boolean) => void;
   updatePost: (updatedPost: Post) => void; // <-- Add this line
+  setPosts: (posts: Post[]) => void;
 }
 
 
@@ -120,13 +124,12 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       getPostsByCategory,
       experienceOnly,
       setExperienceOnly,
-   
+      setPosts,
     }}>
       {children}
     </PostContext.Provider>
   );
 };
-
 
 
 
@@ -137,16 +140,16 @@ export const usePostContext = () => {
     return {
       posts: [],
       addPost: () => {},
-      updatePost: () => {}, // <-- Add this line
+      updatePost: () => {},
       handleUpvote: () => {},
       handleDownvote: () => {},
       getPostsByCategory: () => [],
       experienceOnly: false,
       setExperienceOnly: () => {},
+      setPosts: () => {}, // Add this line
     };
   }
   return context;
 };
-
 
 
