@@ -125,6 +125,7 @@ interface MapComponentProps {
   mapResetKey?: number;
   polylineColor: string;
   nearbySpots?: Array<{ latitude: number; longitude: number; name: string }>; // New optional prop
+  selectedSpot?: LatLng | null; // Add this
 }
 
 interface RouteDetails {
@@ -287,6 +288,7 @@ const getMapHTML = (
         <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
         <script>
           var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);
+          window.map = map; // Add this line
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
           }).addTo(map);
@@ -307,7 +309,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
   style,
   mapResetKey,
   polylineColor,
-  nearbySpots // Destructure the new prop
+  nearbySpots,
+  selectedSpot // New prop for the selected spot
 }) => {
   // Updated mapKey: added nearbySpots to the dependency array.
   const mapKey = JSON.stringify({ 
@@ -320,6 +323,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
+  // New: Ref for WebView and state to track when it is ready.
+  const webViewRef = useRef<WebView>(null);
+  const [isWebViewReady, setIsWebViewReady] = useState(false);
+
   const handleLoadEnd = () => {
     Animated.timing(fadeAnim, {
       toValue: 0,
@@ -330,15 +337,33 @@ const MapComponent: React.FC<MapComponentProps> = ({
     });
   };
 
+  useEffect(() => {
+    if (isWebViewReady && selectedSpot) {
+      const js = `
+        if (window.map) {
+          window.map.flyTo([${selectedSpot.latitude}, ${selectedSpot.longitude}], 16, {
+            animate: true,
+            duration: 2
+          });
+        }
+      `;
+      webViewRef.current?.injectJavaScript(js);
+    }
+  }, [selectedSpot, isWebViewReady]);
+
   return (
     <View style={{ flex: 1 }}>
       <WebView
+        ref={webViewRef}
         key={mapKey}
         originWhitelist={['*']}
         source={{ html: getMapHTML(initialRegion, route, roadPath, polylineColor, nearbySpots) }}
         style={style}
         onLoadStart={() => setLoading(true)}
-        onLoadEnd={handleLoadEnd}
+        onLoadEnd={() => {
+          handleLoadEnd();
+          setIsWebViewReady(true);
+        }}
       />
       {loading && (
         <Animated.View
@@ -353,6 +378,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     </View>
   );
 };
+
 
 // Cache for geocoding results
 const locationCacheRef = { current: {} as { [key: string]: any[] } };
@@ -399,6 +425,10 @@ const RouteScreen: React.FC = () => {
   // New State for Nearby Spots
   // -------------------------
   const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
+  // -------------------------
+  // New State for Selected Spot (for map fly-to)
+  // -------------------------
+  const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
 
   const router = useRouter();
   const animatedHeight = useRef(new Animated.Value(400)).current;
@@ -690,7 +720,6 @@ const RouteScreen: React.FC = () => {
     }
   };
   
-
   const renderRouteOverview = () => {
     if (isRouteLoading) {
       return <ActivityIndicator size="small" color="#6366F1" />;
@@ -907,6 +936,7 @@ const RouteScreen: React.FC = () => {
               destinationCoords={route[1]}
               nearbySpots={nearbySpots} // Pass stored spots
               onSpotsFetched={(spots) => setNearbySpots(spots)} // New prop for nearby spots
+              onSpotSelect={(coords) => setSelectedSpot(coords)} // New prop for spot selection
             />
           )}
         </View>
@@ -932,6 +962,7 @@ const RouteScreen: React.FC = () => {
             style={styles.map}
             polylineColor={polylineColor}
             nearbySpots={nearbySpots} // Pass nearby spots to the map
+            selectedSpot={selectedSpot} // New prop for selected spot
           />
         </Animated.View>
         <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
@@ -951,6 +982,7 @@ const RouteScreen: React.FC = () => {
             style={styles.map}
             polylineColor={polylineColor}
             nearbySpots={nearbySpots} // Pass nearby spots to the map
+            selectedSpot={selectedSpot} // New prop for selected spot
           />
         </Animated.View>
         {detailsContent}

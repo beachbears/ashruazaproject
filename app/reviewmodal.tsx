@@ -40,8 +40,10 @@ interface ReviewModalProps {
   destinationCoords?: Coordinates;
   onSpotsFetched?: (spots: NearbySpot[]) => void;
   nearbySpots?: NearbySpot[];
+  onSpotSelect?: (coords: Coordinates) => void;
 }
 
+// Updated RouteData interface to include coordinates
 interface RouteData {
   name: string;
   description: string;
@@ -49,6 +51,8 @@ interface RouteData {
   image_url: string;
   link?: string;
   feedbacks?: string[];
+  latitude: number;
+  longitude: number;
 }
 
 const ReviewModal: React.FC<ReviewModalProps> = ({
@@ -57,7 +61,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   originCoords,
   destinationCoords,
   onSpotsFetched,
-  nearbySpots // New prop: receive spots from parent
+  nearbySpots,
+  onSpotSelect
 }) => {
   const [routeData, setRouteData] = useState<RouteData[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -72,7 +77,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         trivia: spot.trivia || 'Interesting fact',
         image_url: spot.image_url || 'https://via.placeholder.com/300x200.png?text=No+Image',
         link: spot.link,
-        feedbacks: Array.isArray(spot.feedbacks) ? spot.feedbacks : []
+        feedbacks: Array.isArray(spot.feedbacks) ? spot.feedbacks : [],
+        latitude: spot.latitude,
+        longitude: spot.longitude
       }));
       setRouteData(formattedData);
     }
@@ -108,7 +115,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           link: spot.link,
           feedbacks: typeof spot.feedbacks === 'string'
             ? [spot.feedbacks]
-            : (Array.isArray(spot.feedbacks) ? spot.feedbacks : [])
+            : (Array.isArray(spot.feedbacks) ? spot.feedbacks : []),
+          latitude: spot.latitude,
+          longitude: spot.longitude
         }));
         setRouteData(formattedData);
         if (onSpotsFetched) {
@@ -135,7 +144,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               <Text style={{ color: 'red' }}>{error}</Text>
             ) : routeData ? (
               routeData.map((item, index) => (
-                <View key={index} style={styles.attractionCard}>
+                // Wrapped the card content inside a TouchableOpacity for onSpotSelect
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.attractionCard}
+                  onPress={() => onSpotSelect?.({
+                    latitude: item.latitude,
+                    longitude: item.longitude
+                  })}
+                >
                   <Image
                     source={{ uri: item.image_url }}
                     style={styles.attractionImage}
@@ -174,7 +191,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                     </View>
                     <Text style={styles.triviafacts}>{item.trivia}</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))
             ) : (
               <Text>No data available</Text>
