@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { Post } from '@/contexts/PostContext';
+import ModalComponent from './reportmodal';
 
 const dropdownOptions = ['Popularity', 'Time'];
 type VoteType = 'upvote' | 'downvote';
@@ -77,6 +78,20 @@ export default function PostSuggestions() {
   const handleOptionSelect = (option: string) => {
     setSelectedOption(option);
   };
+
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // Store post ID
+     const [isModalVisible, setIsModalVisible] = useState(false);
+  
+     const openReportModal = (postId: number) => {
+      setSelectedPostId(postId);
+      setIsModalVisible(true);
+    };
+    
+    const closeReportModal = () => {
+      setIsModalVisible(false);
+      setSelectedPostId(null); // Reset after closing
+    };
+  
 
   const fetchPosts = async () => {
      try {
@@ -181,6 +196,55 @@ export default function PostSuggestions() {
       return false;
     }
   };
+
+  
+    const handleReportSubmit = async (reason: string) => {
+      if (!isLoggedIn || !selectedPostId) {
+        Alert.alert("Error", "You must be logged in to report a post.");
+        return;
+      }
+    
+      const API_URL = "https://comgu20-production.up.railway.app/api/reports";  
+      console.log("Submitting report to:", API_URL); // ✅ Debugging API URL
+    
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            report: {
+              reason: reason,
+              route_post_id: selectedPostId,
+            },
+          }),
+        });
+    
+        console.log("Raw response status:", response.status); // ✅ Check response status
+    
+        if (!response.ok) {
+          const errorText = await response.text(); // Read error message
+          console.error("API Error Response:", errorText);
+          throw new Error(`API Error: ${response.status} - ${errorText}`);
+        }
+    
+        const text = await response.text();
+        console.log("Raw response:", text); // ✅ Debugging server response
+    
+        const data = JSON.parse(text); // Convert response to JSON
+        console.log("Report submitted:", data);
+    
+        Alert.alert("Success", data.message);
+        closeReportModal();
+      } catch (error) {
+        console.error("Error submitting report:", error);
+        Alert.alert("Error", "Failed to submit report. Please try again.");
+      }
+    };
+    
+  
 
   const sortedPosts = useMemo(() => {
     return [...posts].sort((a, b) => {
@@ -319,6 +383,9 @@ export default function PostSuggestions() {
                   <Text style={styles.suggestorusername}>{post.user?.email}</Text>
                 </View>
               </View>
+               <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
+                <Text>Report</Text>
+              </TouchableOpacity>
               <Text style={styles.postTimestamp}>
                 {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
               </Text>
@@ -383,6 +450,15 @@ export default function PostSuggestions() {
         userEmail={''}
         userPassword={''}
       />
+
+{isModalVisible && selectedPostId !== null && (
+  <ModalComponent
+    visible={isModalVisible}
+    onClose={closeReportModal}
+    onSubmit={handleReportSubmit}
+    route_post_id={selectedPostId} // ✅ Now properly set
+  />
+)}
     </ScrollView>
   );
 }
