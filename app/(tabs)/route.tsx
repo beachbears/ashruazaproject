@@ -1101,7 +1101,7 @@ const RouteScreen: React.FC = () => {
           ref={bottomSheetRef}
           snapPoints={snapPoints}
           index={0}
-          enableContentPanningGesture={false}
+          enableContentPanningGesture={false} // if true, magcoconflict sa scrollables like search results
           enableHandlePanningGesture={true}
           onChange={handleSheetChanges}
           backgroundComponent={({ style }) => (
