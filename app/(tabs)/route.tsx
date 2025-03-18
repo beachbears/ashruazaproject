@@ -459,6 +459,13 @@ const RouteScreen: React.FC = () => {
   const snapPoints = ['25%', '60%', '90%'];
   const [mapHeight, setMapHeight] = useState(Dimensions.get('window').height * 0.6); // initial map height
   const screenHeight = Dimensions.get('window').height;
+  const animatedHeight = useRef(new Animated.Value(screenHeight * 0.7)).current;
+  const contentHeight = animatedHeight.interpolate({
+    inputRange: [screenHeight * 0.3, screenHeight * 0.7],
+    outputRange: [400, 200], // adjust these values as needed
+    extrapolate: 'clamp',
+  });
+
 
 
   const handleSheetChanges = (index: number) => {
@@ -511,7 +518,6 @@ const RouteScreen: React.FC = () => {
 
   const router = useRouter();
   // const animatedHeight = useRef(new Animated.Value(400)).current;
-  const animatedHeight = useRef(new Animated.Value(screenHeight * 0.7)).current;
 
   const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
 
@@ -1101,7 +1107,9 @@ const RouteScreen: React.FC = () => {
           ref={bottomSheetRef}
           snapPoints={snapPoints}
           index={0}
-          enableContentPanningGesture={false} // if true, magcoconflict sa scrollables like search results
+          // if enableContentPanningGesture is true, magcoconflict sa scrollables like search results,
+          // but if false, scrollables will work but buttons like segments takes long to respond
+          enableContentPanningGesture={true}
           enableHandlePanningGesture={true}
           onChange={handleSheetChanges}
           backgroundComponent={({ style }) => (
