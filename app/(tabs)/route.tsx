@@ -11,7 +11,10 @@ import {
   TouchableWithoutFeedback,
   Image,
   Animated,
-  ActivityIndicator
+  ActivityIndicator,
+  Dimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent
 } from 'react-native';
 import axios from 'axios';
 import { WebView } from 'react-native-webview';
@@ -20,6 +23,10 @@ import { Ionicons } from '@expo/vector-icons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import ReviewModal from '../reviewmodal';
 import { usePostContext } from '@/contexts/PostContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import BottomSheet from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+
 
 const polyline = require('@mapbox/polyline');
 
@@ -102,7 +109,7 @@ export interface NearbySpot {
   latitude: number;
   longitude: number;
   image_url?: string;  // Add image URL
-  
+
 }
 
 export interface ApiResponse {
@@ -239,7 +246,7 @@ const getMapHTML = (
       `;
     });
   }
-  
+
   let polylineJS = "";
   if (
     (typeof roadPath === "string" && roadPath.length > 0) ||
@@ -313,12 +320,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
   selectedSpot // New prop for the selected spot
 }) => {
   // Updated mapKey: added nearbySpots to the dependency array.
-  const mapKey = JSON.stringify({ 
-    initialRegion, 
-    route, 
-    roadPath, 
+  const mapKey = JSON.stringify({
+    initialRegion,
+    route,
+    roadPath,
     mapResetKey,
-    nearbySpots 
+    nearbySpots
   });
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -376,7 +383,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
       webViewRef.current?.injectJavaScript(js);
     }
   }, [selectedSpot, isWebViewReady]);
-  
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -413,7 +420,7 @@ const locationCacheRef = { current: {} as { [key: string]: any[] } };
 const SuggestionList: React.FC<{ suggestions: any[]; onSelect: (item: any) => void; }> = ({ suggestions, onSelect }) => {
   if (!suggestions.length) return null;
   return (
-    <ScrollView style={styles.suggestionList} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.suggestionList} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
       {suggestions.map((item, index) => (
         <TouchableWithoutFeedback key={`${item.name}-${index}`} onPress={() => onSelect(item)}>
           <View style={styles.suggestionItem}>
@@ -448,6 +455,51 @@ const RouteScreen: React.FC = () => {
   const [isOriginLoading, setIsOriginLoading] = useState(false);
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const snapPoints = ['25%', '60%', '90%'];
+  const [mapHeight, setMapHeight] = useState(Dimensions.get('window').height * 0.6); // initial map height
+  const screenHeight = Dimensions.get('window').height;
+
+
+  const handleSheetChanges = (index: number) => {
+    let newMapHeight = screenHeight * 0.7; // default
+
+    if (index === 0) {
+      newMapHeight = screenHeight * 0.7;
+    } else if (index === 1) {
+      newMapHeight = screenHeight * 0.5;
+    } else if (index === 2) {
+      newMapHeight = screenHeight * 0.3;
+    }
+
+    Animated.timing(animatedHeight, {
+      toValue: newMapHeight,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const handleScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { y } = event.nativeEvent.contentOffset;
+    const { height: layoutHeight } = event.nativeEvent.layoutMeasurement;
+    const contentHeight = event.nativeEvent.contentSize.height;
+    const tolerance = 500; // Increased tolerance
+
+    // Prevent snapping if content isn't scrollable
+    if (contentHeight <= layoutHeight + tolerance) {
+      return;
+    }
+
+    // Snap to top if near the top
+    if (y <= tolerance) {
+      bottomSheetRef.current?.snapToIndex(0);
+    }
+    // Snap to bottom if near the bottom
+    // else if (y + layoutHeight >= contentHeight - tolerance) {
+    //   bottomSheetRef.current?.snapToIndex(2);
+    // }
+  };
+
   // -------------------------
   // New State for Nearby Spots
   // -------------------------
@@ -458,7 +510,9 @@ const RouteScreen: React.FC = () => {
   const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
 
   const router = useRouter();
-  const animatedHeight = useRef(new Animated.Value(400)).current;
+  // const animatedHeight = useRef(new Animated.Value(400)).current;
+  const animatedHeight = useRef(new Animated.Value(screenHeight * 0.7)).current;
+
   const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
 
   const toggleSegment = (index: number) => {
@@ -477,9 +531,9 @@ const RouteScreen: React.FC = () => {
             prev.length > 0
               ? [prev[0], { latitude: selected.lat, longitude: selected.lon }]
               : [
-                  { latitude: region.latitude, longitude: region.longitude },
-                  { latitude: selected.lat, longitude: selected.lon }
-                ]
+                { latitude: region.latitude, longitude: region.longitude },
+                { latitude: selected.lat, longitude: selected.lon }
+              ]
           );
           fetchRouteDetails(selected.lat, selected.lon);
         }
@@ -586,7 +640,7 @@ const RouteScreen: React.FC = () => {
     setRoadPath([]);
     setNearbySpots([]); // Added to clear nearby spots
   };
-  
+
 
   const selectOriginSuggestion = async (item: any) => {
     setOrigin(item.name);
@@ -623,9 +677,9 @@ const RouteScreen: React.FC = () => {
       prev.length > 0
         ? [prev[0], { latitude: item.lat, longitude: item.lon }]
         : [
-            { latitude: region.latitude, longitude: region.longitude },
-            { latitude: item.lat, longitude: item.lon }
-          ]
+          { latitude: region.latitude, longitude: region.longitude },
+          { latitude: item.lat, longitude: item.lon }
+        ]
     );
     await fetchRouteDetails(item.lat, item.lon);
     setMapResetKey(Date.now());
@@ -636,27 +690,27 @@ const RouteScreen: React.FC = () => {
     setIsRouteLoading(true);
     setNearbySpots([]); // Reset nearby spots state
     setSelectedSpot(null); // Also reset selected spot if needed
-  
+
     const params = {
       origin_lat: route.length > 0 ? route[0].latitude : region.latitude,
       origin_lon: route.length > 0 ? route[0].longitude : region.longitude,
       destination_lat: destLat,
       destination_lon: destLon,
     };
-  
+
     console.log("Request Params:", params);
-  
+
     try {
       const response = await axios.get<ApiResponse>(
         'https://comgu20-production.up.railway.app/api/routes/find',
         { params }
       );
-  
+
       // Update nearby spots only if new data contains them
       if (response.data.nearby_spots) {
         setNearbySpots(response.data.nearby_spots); // Set spots immediately
       }
-  
+
       const processedPosts = response.data.posts.map(post => ({
         ...post,
         origin_address: origin,
@@ -670,12 +724,12 @@ const RouteScreen: React.FC = () => {
           email: post.user.email || ''
         }
       }));
-  
+
       processedPosts.forEach(p => addPost(p, 'routes'));
-  
+
       const routeData = response.data.route;
       setRouteDetails({ route: routeData });
-  
+
       if (routeData && routeData.summary) {
         const summary = routeData.summary;
         const formattedDuration = formatDuration(summary.total_duration);
@@ -703,14 +757,14 @@ const RouteScreen: React.FC = () => {
       } else {
         setRouteMetrics(null);
       }
-  
+
       if (routeData && routeData.segments && routeData.segments.length > 0) {
         const allWalking = routeData.segments.every(seg => seg.walking);
         setPolylineColor(allWalking ? "#808080" : "#6366F1");
       } else {
         setPolylineColor("#6366F1");
       }
-  
+
       if (response.data.polyline && response.data.polyline.length > 0) {
         setRoadPath(response.data.polyline);
       } else if (routeData && routeData.segments && routeData.segments.length > 0) {
@@ -753,7 +807,7 @@ const RouteScreen: React.FC = () => {
     }
   };
 
-  
+
   const renderRouteOverview = () => {
     if (isRouteLoading) {
       return <ActivityIndicator size="small" color="#6366F1" />;
@@ -890,22 +944,22 @@ const RouteScreen: React.FC = () => {
           {isDestinationLoading && (
             <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />
           )}
-         {destination !== '' && (
-  <TouchableOpacity
-    style={styles.clearButton}
-    onPress={() => {
-      setDestination('');
-      setNearbySpots([]); // Added to clear nearby spots
-      setDestinationSuggestions([]);
-      setRoute(prev => (prev.length > 0 ? [prev[0]] : []));
-      setRouteDetails({ route: null });
-      setRoadPath([]);
-      setMapResetKey(Date.now());
-    }}
-  >
-    <Ionicons name="close" size={20} color="#666" />
-  </TouchableOpacity>
-)}
+          {destination !== '' && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => {
+                setDestination('');
+                setNearbySpots([]); // Added to clear nearby spots
+                setDestinationSuggestions([]);
+                setRoute(prev => (prev.length > 0 ? [prev[0]] : []));
+                setRouteDetails({ route: null });
+                setRoadPath([]);
+                setMapResetKey(Date.now());
+              }}
+            >
+              <Ionicons name="close" size={20} color="#666" />
+            </TouchableOpacity>
+          )}
 
         </View>
         <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
@@ -965,54 +1019,54 @@ const RouteScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
           {route.length >= 2 && (
-  <ReviewModal
-    visible={modalVisible}
-    onClose={() => setModalVisible(false)}
-    originCoords={route[0]}
-    destinationCoords={route[1]}
-    nearbySpots={nearbySpots}
-    onSpotsFetched={(spots) => setNearbySpots(spots)}
-    onSpotSelect={(selectedSpot) => {
-      // Clear existing nearby spots immediately
-      setNearbySpots([]);
-      
-      // Update destination text
-      setDestination(selectedSpot.name);
-      
-      // Define new destination coordinates
-      const newDestination = {
-        latitude: selectedSpot.latitude,
-        longitude: selectedSpot.longitude
-      };
-      
-      // Determine current origin (existing route's start point or current location)
-      const currentOrigin =
-        route.length > 0
-          ? route[0]
-          : { latitude: region.latitude, longitude: region.longitude };
+            <ReviewModal
+              visible={modalVisible}
+              onClose={() => setModalVisible(false)}
+              originCoords={route[0]}
+              destinationCoords={route[1]}
+              nearbySpots={nearbySpots}
+              onSpotsFetched={(spots) => setNearbySpots(spots)}
+              onSpotSelect={(selectedSpot) => {
+                // Clear existing nearby spots immediately
+                setNearbySpots([]);
 
-      // Update route with new destination
-      setRoute([currentOrigin, newDestination]);
-      
-      // Fetch new route details and nearby spots
-      fetchRouteDetails(newDestination.latitude, newDestination.longitude);
-      
-      // Close the modal
-      setModalVisible(false);
-      
-      // Update selected spot for map focus
-      setSelectedSpot(newDestination);
-    }}
-    onSpotView={(selectedSpot) => {
-      // New handler to update map focus when viewing a spot
-      setSelectedSpot({
-        latitude: selectedSpot.latitude,
-        longitude: selectedSpot.longitude
-      });
-      setModalVisible(false); // Added line to close the modal
-    }}
-  />
-)}
+                // Update destination text
+                setDestination(selectedSpot.name);
+
+                // Define new destination coordinates
+                const newDestination = {
+                  latitude: selectedSpot.latitude,
+                  longitude: selectedSpot.longitude
+                };
+
+                // Determine current origin (existing route's start point or current location)
+                const currentOrigin =
+                  route.length > 0
+                    ? route[0]
+                    : { latitude: region.latitude, longitude: region.longitude };
+
+                // Update route with new destination
+                setRoute([currentOrigin, newDestination]);
+
+                // Fetch new route details and nearby spots
+                fetchRouteDetails(newDestination.latitude, newDestination.longitude);
+
+                // Close the modal
+                setModalVisible(false);
+
+                // Update selected spot for map focus
+                setSelectedSpot(newDestination);
+              }}
+              onSpotView={(selectedSpot) => {
+                // New handler to update map focus when viewing a spot
+                setSelectedSpot({
+                  latitude: selectedSpot.latitude,
+                  longitude: selectedSpot.longitude
+                });
+                setModalVisible(false); // Added line to close the modal
+              }}
+            />
+          )}
 
 
 
@@ -1027,9 +1081,9 @@ const RouteScreen: React.FC = () => {
     </View>
   );
 
-  if (route.length >= 2) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <View style={{ flex: 1 }}>
         <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
           <MapComponent
             initialRegion={region}
@@ -1038,45 +1092,60 @@ const RouteScreen: React.FC = () => {
             mapResetKey={mapResetKey}
             style={styles.map}
             polylineColor={polylineColor}
-            nearbySpots={nearbySpots} // Pass nearby spots to the map
-            selectedSpot={selectedSpot} // New prop for selected spot
+            nearbySpots={nearbySpots}
+            selectedSpot={selectedSpot}
           />
         </Animated.View>
-        <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
-          {detailsContent}
-        </ScrollView>
+
+        <BottomSheet
+          ref={bottomSheetRef}
+          snapPoints={snapPoints}
+          index={0}
+          enableContentPanningGesture={false}
+          enableHandlePanningGesture={true}
+          onChange={handleSheetChanges}
+          backgroundComponent={({ style }) => (
+            <View style={[style, { backgroundColor: '#FFFFFF', borderRadius: 20 }]} />
+          )}
+          handleComponent={CustomHandle}
+        >
+          <BottomSheetScrollView
+            nestedScrollEnabled={true}
+            contentContainerStyle={[
+              styles.contentContainer,
+              { backgroundColor: '#FFFFFF', flexGrow: 1 }
+            ]}
+            showsVerticalScrollIndicator={false}
+            onScrollEndDrag={handleScrollEndDrag}
+            onMomentumScrollEnd={handleScrollEndDrag}
+          >
+            {detailsContent}
+          </BottomSheetScrollView>
+        </BottomSheet>
       </View>
-    );
-  } else {
-    return (
-      <ScrollView style={[styles.maincontainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
-        <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
-          <MapComponent
-            initialRegion={region}
-            route={route}
-            roadPath={roadPath}
-            mapResetKey={mapResetKey}
-            style={styles.map}
-            polylineColor={polylineColor}
-            nearbySpots={nearbySpots} // Pass nearby spots to the map
-            selectedSpot={selectedSpot} // New prop for selected spot
-          />
-        </Animated.View>
-        {detailsContent}
-      </ScrollView>
-    );
-  }
+    </GestureHandlerRootView>
+  );
+
+
 };
 
 export default RouteScreen;
 
 
-
+const CustomHandle = () => (
+  <View style={styles.customHandle}>
+    <View style={styles.handleIndicator} />
+  </View>
+);
 
 // -------------------------
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  bottomSheetContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
   maincontainer: { width: '100%', backgroundColor: '#FFFFFF' },
   detailsContainer: { flex: 1, backgroundColor: '#FFFFFF' },
   contentContainer: { paddingBottom: 30 },
@@ -1117,5 +1186,17 @@ const styles = StyleSheet.create({
   alternativeHeader: { fontSize: 12, fontWeight: '700', marginBottom: 4, color: '#111827' },
   alternativeText: { fontSize: 12, color: '#374151', marginBottom: 2 },
   twobox: { borderRadius: 6, backgroundColor: '#E0E7FF', paddingVertical: 5, paddingHorizontal: 12, margin: 4 },
-  texttwo: { fontSize: 12, color: '#6366F1', fontWeight: '500' }
+  texttwo: { fontSize: 12, color: '#6366F1', fontWeight: '500' },
+  customHandle: {
+    alignItems: 'center',
+    paddingVertical: 16, // Increased vertical padding for a larger touch area
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  handleIndicator: {
+    width: 60,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#ccc',
+  }
 });
