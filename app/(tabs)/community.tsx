@@ -7,7 +7,7 @@ import { usePostContext, type Post } from '../../contexts/PostContext';
 import { useRouteContext } from '../../contexts/RouteContext';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
-import { APP_NAME } from "../../constants";
+import ModalComponent from '../reportmodal';
 
 const dropdownOptions = ['Popularity', 'Time'];
 
@@ -65,10 +65,21 @@ export default function CommunityPage() {
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+   const [isLoading, setIsLoading] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const authContext = useContext(AuthContext) as AuthContextType | null;
+   const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // Store post ID
+   const [isModalVisible, setIsModalVisible] = useState(false);
+
+   const openReportModal = (postId: number) => {
+    setSelectedPostId(postId);
+    setIsModalVisible(true);
+  };
+  
+  const closeReportModal = () => {
+    setIsModalVisible(false);
+    setSelectedPostId(null); // Reset after closing
+  };
 
   if (!authContext) return null; // Prevents errors if context is null
   const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
@@ -101,6 +112,7 @@ export default function CommunityPage() {
     if (!response.ok) return;
     
     const data = await response.json();
+    
     const transformedPosts: Post[] = data.map((post: any) => ({
       ...post,
       // Map API fields to your Post interface
@@ -114,7 +126,9 @@ export default function CommunityPage() {
       timestamp: new Date(post.created_at).getTime(),
     }));
 
+   
     setPosts(transformedPosts);
+ 
   } catch (error) {
     console.error('Fetch error:', error);
   }
@@ -122,61 +136,10 @@ export default function CommunityPage() {
 
 // Add polling effect
 useEffect(() => {
-  const interval = setInterval(fetchOldPosts, 30000); // Every 30 seconds
+  const interval = setInterval(fetchOldPosts, 5000); // Every 5 seconds
   return () => clearInterval(interval);
 }, []);
  
-
-  // Handle post submission
-   
-
-  const handlePostSubmit = async (formData: { content: string }) => {
-    try {
-      setIsLoading(true);
-      
-      // First submit to API
-      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          content: formData.content,
-          origin_address,
-          destination_address,
-          origin_lat,
-          origin_lon,
-          dest_lat: destination_lat,
-          dest_lon: destination_lon,
-        }),
-      });
-  
-      if (!response.ok) throw new Error('Failed to submit post');
-      
-      // Get the actual post data from API response
-      const apiPost = await response.json();
-      
-      // Transform to match your Post type
-      const newPost: Post = {
-        ...apiPost,
-        destination_lat: apiPost.dest_lat,
-        destination_lon: apiPost.dest_lon,
-        destination_address: apiPost.destination_address || destination_address,
-        origin_address: apiPost.origin_address || origin_address,
-        created_at: apiPost.created_at || Date.now().toString(),
-        timestamp: Date.now(),
-      };
-  
-      // Add to context
-      addPost(newPost, 'postsuggestions');
-      setModalVisible(false);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit post. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleVote = async (id: number, action: VoteType) => {
     if (!authToken) {
@@ -188,14 +151,6 @@ useEffect(() => {
     const previousVotesCount = contextPosts.find(p => p.id === id)?.votes || 0;
   
     try {
-      // Optimistic update
-      setSelectedVotes(prev => ({ ...prev, [id]: action }));
-      if (action === 'upvote') {
-        handleUpvote(id);
-      } else {
-        handleDownvote(id);
-      }
-  
       // API call
       const success = await sendVoteRequest(id.toString(), action);
       
@@ -234,29 +189,63 @@ useEffect(() => {
     }
   };
 
-
-  // Navigate to Route Finder if needed.
-  const handleGoToRouteFinder = () => {
-    router.push('/route');
-  };
-
-  const handlePostButtonPress = () => {
-    const isLoggedIn = !!authToken;
-    if (!isLoggedIn) {
-      router.push('/login');
+  const handleReportSubmit = async (reason: string) => {
+    if (!isLoggedIn || !selectedPostId) {
+      Alert.alert("Error", "You must be logged in to report a post.");
       return;
     }
-    setModalVisible(true);
+  
+    const API_URL = "https://comgu20-production.up.railway.app/api/reports";  
+    console.log("Submitting report to:", API_URL); // ✅ Debugging API URL
+  
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          report: {
+            reason: reason,
+            route_post_id: selectedPostId,
+          },
+        }),
+      });
+  
+      console.log("Raw response status:", response.status); // ✅ Check response status
+  
+      if (!response.ok) {
+        const errorText = await response.text(); // Read error message
+        console.error("API Error Response:", errorText);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
+      }
+  
+      const text = await response.text();
+      console.log("Raw response:", text); // ✅ Debugging server response
+  
+      const data = JSON.parse(text); // Convert response to JSON
+      console.log("Report submitted:", data);
+  
+      Alert.alert("Success", data.message);
+      closeReportModal();
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      Alert.alert("Error", "Failed to submit report. Please try again.");
+    }
   };
+  
+
 
   const handlePostPress = (postId: number, action: VoteType) => {
     if (!isLoggedIn) {
       router.push('/login');
       return;
     }
-
     handleVote(postId, action);
   };
+ 
+ 
 
   const sortedPosts = useMemo(() => {
     return [...contextPosts].sort((a, b) => {
@@ -282,7 +271,38 @@ useEffect(() => {
     if (diff < day) return `${Math.floor(diff / hour)}h ago`;
     return `${Math.floor(diff / day)}d ago`;
   };
+  const getStatusStyle = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "pending review":
+        return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
+      case "community approved":
+        return { backgroundColor: "#dbeafe", borderColor: "#dbeafe" };
+      case "flagged":
+        return { backgroundColor: "#fee2e2", borderColor: "#fee2e2" };
+      case "admin approved":
+        return { backgroundColor: "#dcfce7", borderColor: "#dcfce7" };
+      default:
+        return {};
+    }
+  };
 
+  // Helper function for dynamic text colors based on status.
+  const getStatusTextColor = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "flagged":
+        return { color: "#b31b1b" };
+      case "admin approved":
+        return { color: "#166534" };
+      case "pending review":
+        return { color: "#a44d0e" };
+      case "community approved":
+        return { color: "#4f40af" };
+      default:
+        return {};
+    }
+  };
+ 
+   
   return (
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
@@ -293,8 +313,6 @@ useEffect(() => {
         </View>
         
       </View>
-
-       
 
       {isLoading && (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
@@ -321,6 +339,12 @@ useEffect(() => {
                     <Text style={styles.suggestorusername}>{post.user?.email}</Text>
                   </View>
                 </View>
+                  
+                <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
+  <Text>Report</Text>
+</TouchableOpacity>
+
+
                 <Text style={styles.postTimestamp}>
                   {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
                 </Text>
@@ -335,10 +359,9 @@ useEffect(() => {
 
               <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={styles.content}>
-                  <View style={styles.badge}>
-                    <Entypo name="check" size={16} color="#03C04A" />
-                    <Text style={styles.cert}>Certified {APP_NAME}</Text>
-                  </View>
+                    <View style={[styles.badge, getStatusStyle(post.status || '')]}>
+                                    <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
+                                  </View>
                 </View>
                 <View style={styles.arrowcontainer}>
 
@@ -375,6 +398,15 @@ useEffect(() => {
           ))}
         </View>
       </View>
+       
+      {isModalVisible && selectedPostId !== null && (
+  <ModalComponent
+    visible={isModalVisible}
+    onClose={closeReportModal}
+    onSubmit={handleReportSubmit}
+    route_post_id={selectedPostId} // ✅ Now properly set
+  />
+)}
     </ScrollView>
   );
 }

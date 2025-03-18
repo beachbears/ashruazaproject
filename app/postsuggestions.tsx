@@ -5,12 +5,10 @@ import { AuthContext, AuthContextType } from './../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { APP_NAME } from "../constants";
 import { Post } from '@/contexts/PostContext';
 
-LogBox.ignoreLogs(['Unauthorized', ]);
-
 const dropdownOptions = ['Popularity', 'Time'];
+type VoteType = 'upvote' | 'downvote';
 
 interface DropdownProps {
   options: string[];
@@ -53,7 +51,6 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   );
 };
 
-type VoteType = 'upvote' | 'downvote';
 
 export default function PostSuggestions() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -81,46 +78,13 @@ export default function PostSuggestions() {
     setSelectedOption(option);
   };
 
-  // Helper function for dynamic background and border colors based on status.
-  const getStatusStyle = (status: string) => {
-    switch(status.toLowerCase()) {
-      case "pending review":
-        return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
-      case "community approved":
-        return { backgroundColor: "#dbeafe", borderColor: "#dbeafe" };
-      case "flagged":
-        return { backgroundColor: "#fee2e2", borderColor: "#fee2e2" };
-      case "admin approved":
-        return { backgroundColor: "#dcfce7", borderColor: "#dcfce7" };
-      default:
-        return {};
-    }
-  };
-
-  // Helper function for dynamic text colors based on status.
-  const getStatusTextColor = (status: string) => {
-    switch(status.toLowerCase()) {
-      case "flagged":
-        return { color: "#b31b1b" };
-      case "admin approved":
-        return { color: "#166534" };
-      case "pending review":
-        return { color: "#a44d0e" };
-      case "community approved":
-        return { color: "#4f40af" };
-      default:
-        return {};
-    }
-  };
-
   const fetchPosts = async () => {
-    setIsLoading(true);
-    console.log("Using authToken:", authToken); 
-    try {
+     try {
       const response = await fetch(
         `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${origin_lat}&origin_lon=${origin_lon}&destination_lat=${destination_lat}&destination_lon=${destination_lon}`
       );
       if (!response.ok) throw new Error('Failed to fetch posts');
+
       const postsData = await response.json();
       const transformedPosts: Post[] = (postsData.posts || []).map((p: any) => ({
         id: p.id,
@@ -140,15 +104,15 @@ export default function PostSuggestions() {
       setPosts(transformedPosts);
     } catch (error) {
       console.error('Error loading posts:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    }  
   };
-  
-  useEffect(() => {
-    fetchPosts();
-  }, [location, destination]);
 
+  useEffect(() => {
+    fetchPosts(); // Add initial fetch
+    const interval = setInterval(fetchPosts, 5000);
+    return () => clearInterval(interval);
+  }, [location, destination, selectedOption]); // Add selectedOption to dependencies
+   
   const handlePostSubmit = async (formData: Post) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -164,7 +128,6 @@ export default function PostSuggestions() {
           dest_lon: destination_lon,
         },
       };
-
       const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
         method: 'POST',
         headers: {
@@ -245,6 +208,10 @@ export default function PostSuggestions() {
   };
 
   const handleVote = async (id: number, action: VoteType) => {
+    if (!authToken) {
+      router.push('/login');
+      return;
+    }
     if (selectedVotes[id] === action) {
       const success = await sendVoteRequest(id.toString(), action);
       if (success) {
@@ -274,6 +241,38 @@ export default function PostSuggestions() {
     }
 
     handleVote(postId, action);
+  };
+
+  // Helper function for dynamic background and border colors based on status.
+  const getStatusStyle = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "pending review":
+        return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
+      case "community approved":
+        return { backgroundColor: "#dbeafe", borderColor: "#dbeafe" };
+      case "flagged":
+        return { backgroundColor: "#fee2e2", borderColor: "#fee2e2" };
+      case "admin approved":
+        return { backgroundColor: "#dcfce7", borderColor: "#dcfce7" };
+      default:
+        return {};
+    }
+  };
+
+  // Helper function for dynamic text colors based on status.
+  const getStatusTextColor = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "flagged":
+        return { color: "#b31b1b" };
+      case "admin approved":
+        return { color: "#166534" };
+      case "pending review":
+        return { color: "#a44d0e" };
+      case "community approved":
+        return { color: "#4f40af" };
+      default:
+        return {};
+    }
   };
 
   return (

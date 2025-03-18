@@ -31,8 +31,8 @@ export interface Post {
   created_at?: string;
   category?: PostCategory;
    timestamp?: number;
-   destination_address: string;
-   origin_address: string
+   destination_address?: string;
+   origin_address?: string
 }
 
 

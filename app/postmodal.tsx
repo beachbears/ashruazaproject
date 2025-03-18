@@ -37,7 +37,6 @@ export default function PostModal({
   const handleSubmit = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-
     const newPost: Post = {
       content,
       origin_lat,
