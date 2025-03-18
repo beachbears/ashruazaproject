@@ -1009,6 +1009,7 @@ const RouteScreen: React.FC = () => {
         latitude: selectedSpot.latitude,
         longitude: selectedSpot.longitude
       });
+      setModalVisible(false); // Added line to close the modal
     }}
   />
 )}
