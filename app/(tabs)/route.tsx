@@ -341,15 +341,42 @@ const MapComponent: React.FC<MapComponentProps> = ({
     if (isWebViewReady && selectedSpot) {
       const js = `
         if (window.map) {
-          window.map.flyTo([${selectedSpot.latitude}, ${selectedSpot.longitude}], 16, {
+          const targetLat = ${selectedSpot.latitude};
+          const targetLng = ${selectedSpot.longitude};
+          
+          // Fly to the selected spot
+          window.map.flyTo([targetLat, targetLng], 16, {
             animate: true,
             duration: 2
           });
+  
+          // After animation, find and open the popup
+          setTimeout(() => {
+            let foundMarker = null;
+            
+            window.map.eachLayer(layer => {
+              if (layer instanceof L.CircleMarker) {
+                const layerLatLng = layer.getLatLng();
+                // Compare coordinates with precision threshold
+                if (Math.abs(layerLatLng.lat - targetLat) < 0.000001 && 
+                    Math.abs(layerLatLng.lng - targetLng) < 0.000001) {
+                  foundMarker = layer;
+                }
+              }
+            });
+  
+            if (foundMarker) {
+              // Close any existing popups
+              window.map.closePopup();
+              foundMarker.openPopup();
+            }
+          }, 500); // Short delay for flyTo completion
         }
       `;
       webViewRef.current?.injectJavaScript(js);
     }
   }, [selectedSpot, isWebViewReady]);
+  
 
   return (
     <View style={{ flex: 1 }}>
