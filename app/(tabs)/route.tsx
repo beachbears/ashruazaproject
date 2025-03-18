@@ -929,16 +929,19 @@ const RouteScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
           {route.length >= 2 && (
-            <ReviewModal
-              visible={modalVisible}
-              onClose={() => setModalVisible(false)}
-              originCoords={route[0]}
-              destinationCoords={route[1]}
-              nearbySpots={nearbySpots} // Pass stored spots
-              onSpotsFetched={(spots) => setNearbySpots(spots)} // New prop for nearby spots
-              onSpotSelect={(coords) => setSelectedSpot(coords)} // New prop for spot selection
-            />
-          )}
+  <ReviewModal
+    visible={modalVisible}
+    onClose={() => setModalVisible(false)}
+    originCoords={route[0]}
+    destinationCoords={route[1]}
+    nearbySpots={nearbySpots}
+    onSpotsFetched={(spots) => setNearbySpots(spots)}
+    onSpotSelect={(coords) => {
+      setSelectedSpot(coords);  // Existing zoom functionality
+      setModalVisible(false);   // Add this to close modal
+    }}
+  />
+)}
         </View>
       ) : (
         <View style={styles.oopsContainer}>
