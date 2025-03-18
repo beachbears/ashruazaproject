@@ -633,8 +633,8 @@ const RouteScreen: React.FC = () => {
   const fetchRouteDetails = async (destLat: number, destLon: number) => {
     setIsRouteLoading(true);
     const params = {
-      origin_lat: region.latitude,
-      origin_lon: region.longitude,
+      origin_lat: route.length > 0 ? route[0].latitude : region.latitude,
+      origin_lon: route.length > 0 ? route[0].longitude : region.longitude,
       destination_lat: destLat,
       destination_lon: destLon,
     };
@@ -963,12 +963,33 @@ const RouteScreen: React.FC = () => {
     destinationCoords={route[1]}
     nearbySpots={nearbySpots}
     onSpotsFetched={(spots) => setNearbySpots(spots)}
-    onSpotSelect={(coords) => {
-      setSelectedSpot(coords);  // Existing zoom functionality
-      setModalVisible(false);   // Add this to close modal
+    onSpotSelect={(selectedSpot) => {
+      // Update destination input text
+      setDestination(selectedSpot.name);
+      
+      // Update route with new destination coordinates
+      const newDestination = {
+        latitude: selectedSpot.latitude,
+        longitude: selectedSpot.longitude
+      };
+      
+      // Maintain existing origin or use current location
+      const currentOrigin = route.length > 0 
+        ? route[0] 
+        : { latitude: region.latitude, longitude: region.longitude };
+
+      setRoute([currentOrigin, newDestination]);
+      
+      // Fetch new route details
+      fetchRouteDetails(newDestination.latitude, newDestination.longitude);
+      
+      // Close modal and update map focus
+      setModalVisible(false);
+      setSelectedSpot(newDestination);
     }}
   />
 )}
+
         </View>
       ) : (
         <View style={styles.oopsContainer}>

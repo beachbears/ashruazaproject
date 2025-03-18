@@ -40,10 +40,9 @@ interface ReviewModalProps {
   destinationCoords?: Coordinates;
   onSpotsFetched?: (spots: NearbySpot[]) => void;
   nearbySpots?: NearbySpot[];
-  onSpotSelect?: (coords: Coordinates) => void;
+  onSpotSelect?: (spot: NearbySpot) => void; // Updated to pass full spot
 }
 
-// Updated RouteData interface to include coordinates
 interface RouteData {
   name: string;
   description: string;
@@ -144,15 +143,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               <Text style={{ color: 'red' }}>{error}</Text>
             ) : routeData ? (
               routeData.map((item, index) => (
-                // Wrapped the card content inside a TouchableOpacity for onSpotSelect
-                <TouchableOpacity 
-                  key={index} 
-                  style={styles.attractionCard}
-                  onPress={() => onSpotSelect?.({
-                    latitude: item.latitude,
-                    longitude: item.longitude
-                  })}
-                >
+                <View key={index} style={styles.attractionCard}>
                   <Image
                     source={{ uri: item.image_url }}
                     style={styles.attractionImage}
@@ -162,15 +153,26 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   <Text style={styles.attractionDescription}>
                     {item.description || 'No description available.'}
                   </Text>
-                  {item.link && (
-                    <TouchableOpacity
-                      style={styles.linkButton}
-                      onPress={() => Linking.openURL(item.link!)}
+                  
+                  <View style={styles.actionButtonsContainer}>
+                    {item.link && (
+                      <TouchableOpacity
+                        style={styles.linkButton}
+                        onPress={() => Linking.openURL(item.link!)}
+                      >
+                        <Text style={styles.linkText}>Official Website</Text>
+                        <Ionicons name="open-outline" size={16} color="#3B82F6" />
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity 
+                      style={styles.goHereButton}
+                      onPress={() => onSpotSelect?.(item)}  // Pass entire spot object
                     >
-                      <Text style={styles.linkText}>Official Website</Text>
-                      <Ionicons name="open-outline" size={16} color="#3B82F6" />
+                      <Text style={styles.goHereText}>Go here</Text>
+                      <Ionicons name="navigate" size={18} color="#3B82F6" />
                     </TouchableOpacity>
-                  )}
+                  </View>
+
                   <View style={styles.feedbackContainer}>
                     <Text style={styles.sectionTitle}>Visitor Feedback</Text>
                     {item.feedbacks && item.feedbacks.length > 0 ? (
@@ -191,7 +193,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                     </View>
                     <Text style={styles.triviafacts}>{item.trivia}</Text>
                   </View>
-                </TouchableOpacity>
+                </View>
               ))
             ) : (
               <Text>No data available</Text>
@@ -250,16 +252,34 @@ const styles = StyleSheet.create({
     color: '#686A9C',
     marginBottom: 10,
   },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 8
+  },
   linkButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     padding: 12,
     backgroundColor: '#EFF6FF',
-    borderRadius: 8,
-    marginVertical: 8
+    borderRadius: 8
   },
   linkText: {
+    color: '#3B82F6',
+    fontWeight: '500'
+  },
+  goHereButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: 'center'
+  },
+  goHereText: {
     color: '#3B82F6',
     fontWeight: '500'
   },
