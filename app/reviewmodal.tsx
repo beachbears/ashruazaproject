@@ -40,7 +40,8 @@ interface ReviewModalProps {
   destinationCoords?: Coordinates;
   onSpotsFetched?: (spots: NearbySpot[]) => void;
   nearbySpots?: NearbySpot[];
-  onSpotSelect?: (spot: NearbySpot) => void; // Updated to pass full spot
+  onSpotSelect?: (spot: NearbySpot) => void;
+  onSpotView?: (spot: NearbySpot) => void; // New prop for viewing details
 }
 
 interface RouteData {
@@ -61,7 +62,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   destinationCoords,
   onSpotsFetched,
   nearbySpots,
-  onSpotSelect
+  onSpotSelect,
+  onSpotView
 }) => {
   const [routeData, setRouteData] = useState<RouteData[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -165,8 +167,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                       </TouchableOpacity>
                     )}
                     <TouchableOpacity 
+                      style={styles.viewButton}
+                      onPress={() => onSpotView?.(item)}  // New button for viewing details
+                    >
+                      <Text style={styles.viewText}>View</Text>
+                      <Ionicons name="eye-outline" size={16} color="#3B82F6" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
                       style={styles.goHereButton}
-                      onPress={() => onSpotSelect?.(item)}  // Pass entire spot object
+                      onPress={() => onSpotSelect?.(item)}
                     >
                       <Text style={styles.goHereText}>Go here</Text>
                       <Ionicons name="navigate" size={18} color="#3B82F6" />
@@ -255,7 +264,8 @@ const styles = StyleSheet.create({
   actionButtonsContainer: {
     flexDirection: 'row',
     gap: 8,
-    marginVertical: 8
+    marginVertical: 8,
+    flexWrap: 'wrap' // Added to handle wrapping on small screens
   },
   linkButton: {
     flexDirection: 'row',
@@ -263,7 +273,8 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 12,
     backgroundColor: '#EFF6FF',
-    borderRadius: 8
+    borderRadius: 8,
+    flexBasis: '100%' // Take full width when wrapped
   },
   linkText: {
     color: '#3B82F6',
@@ -276,10 +287,24 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#EFF6FF',
     borderRadius: 8,
-    flex: 1,
+    flexBasis: '48%', // Adjust based on available space
     justifyContent: 'center'
   },
   goHereText: {
+    color: '#3B82F6',
+    fontWeight: '500'
+  },
+  viewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 12,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    flexBasis: '48%', // Adjust based on available space
+    justifyContent: 'center'
+  },
+  viewText: {
     color: '#3B82F6',
     fontWeight: '500'
   },

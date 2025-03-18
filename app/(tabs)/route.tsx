@@ -584,7 +584,9 @@ const RouteScreen: React.FC = () => {
     setRoute([]);
     setRouteDetails({ route: null });
     setRoadPath([]);
+    setNearbySpots([]); // Added to clear nearby spots
   };
+  
 
   const selectOriginSuggestion = async (item: any) => {
     setOrigin(item.name);
@@ -632,21 +634,25 @@ const RouteScreen: React.FC = () => {
   const { addPost } = usePostContext();
   const fetchRouteDetails = async (destLat: number, destLon: number) => {
     setIsRouteLoading(true);
+    setNearbySpots([]); // Reset nearby spots state
+    setSelectedSpot(null); // Also reset selected spot if needed
+  
     const params = {
       origin_lat: route.length > 0 ? route[0].latitude : region.latitude,
       origin_lon: route.length > 0 ? route[0].longitude : region.longitude,
       destination_lat: destLat,
       destination_lon: destLon,
     };
+  
     console.log("Request Params:", params);
+  
     try {
       const response = await axios.get<ApiResponse>(
         'https://comgu20-production.up.railway.app/api/routes/find',
         { params }
       );
-      console.log("API Response:", response.data);
   
-      // Set nearby spots immediately if available
+      // Update nearby spots only if new data contains them
       if (response.data.nearby_spots) {
         setNearbySpots(response.data.nearby_spots); // Set spots immediately
       }
@@ -746,6 +752,7 @@ const RouteScreen: React.FC = () => {
       setIsRouteLoading(false);
     }
   };
+
   
   const renderRouteOverview = () => {
     if (isRouteLoading) {
@@ -883,21 +890,23 @@ const RouteScreen: React.FC = () => {
           {isDestinationLoading && (
             <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />
           )}
-          {destination !== '' && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => {
-                setDestination('');
-                setDestinationSuggestions([]);
-                setRoute(prev => (prev.length > 0 ? [prev[0]] : []));
-                setRouteDetails({ route: null });
-                setRoadPath([]);
-                setMapResetKey(Date.now());
-              }}
-            >
-              <Ionicons name="close" size={20} color="#666" />
-            </TouchableOpacity>
-          )}
+         {destination !== '' && (
+  <TouchableOpacity
+    style={styles.clearButton}
+    onPress={() => {
+      setDestination('');
+      setNearbySpots([]); // Added to clear nearby spots
+      setDestinationSuggestions([]);
+      setRoute(prev => (prev.length > 0 ? [prev[0]] : []));
+      setRouteDetails({ route: null });
+      setRoadPath([]);
+      setMapResetKey(Date.now());
+    }}
+  >
+    <Ionicons name="close" size={20} color="#666" />
+  </TouchableOpacity>
+)}
+
         </View>
         <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
       </View>
@@ -964,31 +973,47 @@ const RouteScreen: React.FC = () => {
     nearbySpots={nearbySpots}
     onSpotsFetched={(spots) => setNearbySpots(spots)}
     onSpotSelect={(selectedSpot) => {
-      // Update destination input text
+      // Clear existing nearby spots immediately
+      setNearbySpots([]);
+      
+      // Update destination text
       setDestination(selectedSpot.name);
       
-      // Update route with new destination coordinates
+      // Define new destination coordinates
       const newDestination = {
         latitude: selectedSpot.latitude,
         longitude: selectedSpot.longitude
       };
       
-      // Maintain existing origin or use current location
-      const currentOrigin = route.length > 0 
-        ? route[0] 
-        : { latitude: region.latitude, longitude: region.longitude };
+      // Determine current origin (existing route's start point or current location)
+      const currentOrigin =
+        route.length > 0
+          ? route[0]
+          : { latitude: region.latitude, longitude: region.longitude };
 
+      // Update route with new destination
       setRoute([currentOrigin, newDestination]);
       
-      // Fetch new route details
+      // Fetch new route details and nearby spots
       fetchRouteDetails(newDestination.latitude, newDestination.longitude);
       
-      // Close modal and update map focus
+      // Close the modal
       setModalVisible(false);
+      
+      // Update selected spot for map focus
       setSelectedSpot(newDestination);
+    }}
+    onSpotView={(selectedSpot) => {
+      // New handler to update map focus when viewing a spot
+      setSelectedSpot({
+        latitude: selectedSpot.latitude,
+        longitude: selectedSpot.longitude
+      });
     }}
   />
 )}
+
+
 
         </View>
       ) : (
