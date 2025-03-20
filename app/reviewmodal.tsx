@@ -78,7 +78,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         trivia: spot.trivia || 'Interesting fact',
         image_url: spot.image_url || 'https://via.placeholder.com/300x200.png?text=No+Image',
         link: spot.link,
-        feedbacks: Array.isArray(spot.feedbacks) ? spot.feedbacks : [],
+        feedbacks: Array.isArray(spot.feedbacks) ? 
+        spot.feedbacks : 
+        (typeof spot.feedbacks === 'string' ? spot.feedbacks.split(';') : []),
         latitude: spot.latitude,
         longitude: spot.longitude
       }));
