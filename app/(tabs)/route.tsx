@@ -118,7 +118,6 @@ export interface LatLng {
 }
 
 interface MapComponentProps {
-  
   initialRegion: Region;
   route?: LatLng[]; // index 0: origin, index 1: destination
   roadPath?: LatLng[] | string;
@@ -127,6 +126,7 @@ interface MapComponentProps {
   polylineColor: string;
   nearbySpots?: Array<{ latitude: number; longitude: number; name: string }>; // New optional prop
   selectedSpot?: LatLng | null; // Add this
+  isLoading?: boolean; // New prop
 }
 
 interface RouteDetails {
@@ -331,8 +331,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
   mapResetKey,
   polylineColor,
   nearbySpots,
-  selectedSpot // New prop for the selected spot
-  
+  selectedSpot, // New prop for the selected spot
+  isLoading,     // New prop for loading state
 }) => {
   // Updated mapKey: added nearbySpots to the dependency array.
   const mapKey = JSON.stringify({ 
@@ -398,7 +398,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
       webViewRef.current?.injectJavaScript(js);
     }
   }, [selectedSpot, isWebViewReady]);
-  
 
   return (
     <View style={{ flex: 1 }}>
@@ -414,20 +413,24 @@ const MapComponent: React.FC<MapComponentProps> = ({
           setIsWebViewReady(true);
         }}
       />
-      {loading && (
+      {(loading || isLoading) ? (
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
-            { opacity: fadeAnim, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }
+            { 
+              opacity: fadeAnim, 
+              backgroundColor: '#fff', 
+              justifyContent: 'center', 
+              alignItems: 'center' 
+            }
           ]}
         >
           <ActivityIndicator size="large" color="#6366F1" />
         </Animated.View>
-      )}
+      ) : null}
     </View>
   );
 };
-
 
 // Cache for geocoding results
 const locationCacheRef = { current: {} as { [key: string]: any[] } };
@@ -1067,6 +1070,7 @@ const RouteScreen: React.FC = () => {
             polylineColor={polylineColor}
             nearbySpots={nearbySpots} // Pass nearby spots to the map
             selectedSpot={selectedSpot} // New prop for selected spot
+            isLoading={isRouteLoading} // New isLoading prop
           />
         </Animated.View>
         <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
@@ -1087,12 +1091,14 @@ const RouteScreen: React.FC = () => {
             polylineColor={polylineColor}
             nearbySpots={nearbySpots} // Pass nearby spots to the map
             selectedSpot={selectedSpot} // New prop for selected spot
+            isLoading={isRouteLoading} // New isLoading prop
           />
         </Animated.View>
         {detailsContent}
       </ScrollView>
     );
   }
+  
 };
 
 export default RouteScreen;
