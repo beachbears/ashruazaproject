@@ -118,6 +118,7 @@ export interface LatLng {
 }
 
 interface MapComponentProps {
+  
   initialRegion: Region;
   route?: LatLng[]; // index 0: origin, index 1: destination
   roadPath?: LatLng[] | string;
@@ -247,66 +248,79 @@ const getMapHTML = (
     });
   }
 
-  let polylineJS = "";
-  if (
-    (typeof roadPath === "string" && roadPath.length > 0) ||
-    (Array.isArray(roadPath) && roadPath.length > 0)
-  ) {
-    let polylineCoordinates;
-    if (typeof roadPath === "string") {
-      const decoded = polyline.decode(roadPath);
-      polylineCoordinates = decoded.map((coord: number[]) => [coord[0], coord[1]]);
-    } else if (Array.isArray(roadPath) && roadPath.length > 0) {
-      polylineCoordinates = Array.isArray(roadPath[0])
-        ? roadPath
-        : roadPath.map((coord: any) => [coord.latitude, coord.longitude]);
-    }
-    if (polylineCoordinates && polylineCoordinates.length > 0) {
-      polylineJS = `var roadPolyline = L.polyline(${JSON.stringify(
-        polylineCoordinates
-      )}, { color: '${polylineColor}', weight: 3 }).addTo(map);`;
-    }
-  } else if (route.length === 2) {
-    polylineJS = `var polyline = L.polyline([
-      [${route[0].latitude}, ${route[0].longitude}],
-      [${route[1].latitude}, ${route[1].longitude}]
-    ], { color: '${polylineColor}', weight: 3 }).addTo(map);`;
+
+// Update the polylineJS generation in getMapHTML function
+let polylineJS = "";
+if (
+  (typeof roadPath === "string" && roadPath.length > 0) ||
+  (Array.isArray(roadPath) && roadPath.length > 0)
+) {
+  let polylineCoordinates;
+  if (typeof roadPath === "string") {
+    const decoded = polyline.decode(roadPath);
+    polylineCoordinates = decoded.map((coord: number[]) => [coord[0], coord[1]]);
+  } else {
+    polylineCoordinates = roadPath.map((coord: any) => 
+      Array.isArray(coord) ? coord : [coord.latitude, coord.longitude]
+    );
   }
-  let fitBoundsJS = `
-    if (typeof roadPolyline !== 'undefined') {
-      map.fitBounds(roadPolyline.getBounds());
-    } else if (typeof polyline !== 'undefined') {
-      map.fitBounds(polyline.getBounds());
-    }
-  `;
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-        ${fontAwesomeCSS}
-        <style>
-          html, body { margin: 0; padding: 0; height: 100%; }
-          #map { height: 100%; width: 100%; }
-        </style>
-      </head>
-      <body>
-        <div id="map"></div>
-        <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-        <script>
-          var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);
-          window.map = map;
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-          }).addTo(map);
-          ${markersJS}
-          ${polylineJS}
-          ${fitBoundsJS}
-        </script>
-      </body>
-    </html>
-  `;
+
+  if (polylineCoordinates && polylineCoordinates.length > 0) {
+    polylineJS = `
+      var roadPolyline = L.polyline([], { 
+        color: '${polylineColor}', 
+        weight: 3,
+        smoothFactor: 1
+      }).addTo(map);
+      
+      var coordinates = ${JSON.stringify(polylineCoordinates)};
+      var chunkSize = ${Math.max(1, Math.floor(polylineCoordinates.length / 50))};
+      var index = 0;
+      
+      function animatePolyline() {
+        if (index >= coordinates.length) {
+          map.fitBounds(roadPolyline.getBounds());
+          return;
+        }
+        var chunk = coordinates.slice(0, index + chunkSize);
+        roadPolyline.setLatLngs(chunk);
+        index += chunkSize;
+        setTimeout(animatePolyline, 30);
+      }
+      animatePolyline();
+    `;
+  }
+}
+
+// The fallback else if block for a straight line has been removed.
+
+return `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+      ${fontAwesomeCSS}
+      <style>
+        html, body { margin: 0; padding: 0; height: 100%; }
+        #map { height: 100%; width: 100%; }
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+      <script>
+        var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);
+        window.map = map;
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        ${markersJS}
+        ${polylineJS}
+      </script>
+    </body>
+  </html>
+`;
 };
 
 const MapComponent: React.FC<MapComponentProps> = ({
@@ -318,6 +332,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   polylineColor,
   nearbySpots,
   selectedSpot // New prop for the selected spot
+  
 }) => {
   // Updated mapKey: added nearbySpots to the dependency array.
   const mapKey = JSON.stringify({ 
@@ -643,7 +658,8 @@ const RouteScreen: React.FC = () => {
     setIsRouteLoading(true);
     setNearbySpots([]); // Reset nearby spots state
     setSelectedSpot(null); // Also reset selected spot if needed
-  
+    setRoadPath([]); // Clear previous path before fetching new data
+    
     const params = {
       origin_lat: route.length > 0 ? route[0].latitude : region.latitude,
       origin_lon: route.length > 0 ? route[0].longitude : region.longitude,
@@ -992,6 +1008,9 @@ const RouteScreen: React.FC = () => {
         longitude: selectedSpot.longitude
       };
       
+      // Reset road path immediately
+      setRoadPath([]);
+      
       // Determine current origin (existing route's start point or current location)
       const currentOrigin =
         route.length > 0
@@ -1020,6 +1039,7 @@ const RouteScreen: React.FC = () => {
     }}
   />
 )}
+
 
 
 
