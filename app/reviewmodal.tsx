@@ -78,9 +78,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         trivia: spot.trivia || 'Interesting fact',
         image_url: spot.image_url || 'https://via.placeholder.com/300x200.png?text=No+Image',
         link: spot.link,
-        feedbacks: Array.isArray(spot.feedbacks) ? 
-        spot.feedbacks : 
-        (typeof spot.feedbacks === 'string' ? spot.feedbacks.split(';') : []),
+        feedbacks: Array.isArray(spot.feedbacks)
+          ? spot.feedbacks
+          : (typeof spot.feedbacks === 'string' ? spot.feedbacks.split(';') : []),
         latitude: spot.latitude,
         longitude: spot.longitude
       }));
@@ -157,31 +157,84 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   <Text style={styles.attractionDescription}>
                     {item.description || 'No description available.'}
                   </Text>
-                  
-                  <View style={styles.actionButtonsContainer}>
-                    {item.link && (
-                      <TouchableOpacity
-                        style={styles.linkButton}
-                        onPress={() => Linking.openURL(item.link!)}
+
+                  {/* Conditionally render the Official Website button if item.link exists */}
+                  {item.link && (
+                    <TouchableOpacity
+                      style={styles.linkButton}
+                      onPress={() => Linking.openURL(item.link!)}
+                    >
+                      <Text 
+                        style={styles.linkText} 
+                        numberOfLines={1} 
+                        ellipsizeMode="tail"
                       >
-                        <Text style={styles.linkText}>Official Website</Text>
-                        <Ionicons name="open-outline" size={16} color="#3B82F6" />
-                      </TouchableOpacity>
+                        Official Website
+                      </Text>
+                      <Ionicons name="open-outline" size={16} color="#3B82F6" />
+                    </TouchableOpacity>
+                  )}
+                  <View style={styles.actionButtonsContainer}>
+                    {!item.link && (
+                      <>
+                        <TouchableOpacity
+                          style={styles.viewButton}
+                          onPress={() => onSpotView?.(item)}
+                        >
+                          <Text 
+                            style={styles.viewText} 
+                            numberOfLines={1} 
+                            ellipsizeMode="tail"
+                          >
+                            View
+                          </Text>
+                          <Ionicons name="eye-outline" size={16} color="#3B82F6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.goHereButton}
+                          onPress={() => onSpotSelect?.(item)}
+                        >
+                          <Text 
+                            style={styles.goHereText} 
+                            numberOfLines={1} 
+                            ellipsizeMode="tail"
+                          >
+                            Go here
+                          </Text>
+                          <Ionicons name="navigate" size={18} color="#3B82F6" />
+                        </TouchableOpacity>
+                      </>
                     )}
-                    <TouchableOpacity 
-                      style={styles.viewButton}
-                      onPress={() => onSpotView?.(item)}  // New button for viewing details
-                    >
-                      <Text style={styles.viewText}>View</Text>
-                      <Ionicons name="eye-outline" size={16} color="#3B82F6" />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.goHereButton}
-                      onPress={() => onSpotSelect?.(item)}
-                    >
-                      <Text style={styles.goHereText}>Go here</Text>
-                      <Ionicons name="navigate" size={18} color="#3B82F6" />
-                    </TouchableOpacity>
+                    {item.link && (
+                      <>
+                        <TouchableOpacity
+                          style={styles.viewButton}
+                          onPress={() => onSpotView?.(item)}
+                        >
+                          <Text 
+                            style={styles.viewText} 
+                            numberOfLines={1} 
+                            ellipsizeMode="tail"
+                          >
+                            View
+                          </Text>
+                          <Ionicons name="eye-outline" size={16} color="#3B82F6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.goHereButton}
+                          onPress={() => onSpotSelect?.(item)}
+                        >
+                          <Text 
+                            style={styles.goHereText} 
+                            numberOfLines={1} 
+                            ellipsizeMode="tail"
+                          >
+                            Go here
+                          </Text>
+                          <Ionicons name="navigate" size={18} color="#3B82F6" />
+                        </TouchableOpacity>
+                      </>
+                    )}
                   </View>
 
                   <View style={styles.feedbackContainer}>
@@ -267,7 +320,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginVertical: 8,
-    flexWrap: 'wrap' // Added to handle wrapping on small screens
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
   },
   linkButton: {
     flexDirection: 'row',
@@ -276,7 +330,7 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#EFF6FF',
     borderRadius: 8,
-    flexBasis: '100%' // Take full width when wrapped
+    width: '100%',
   },
   linkText: {
     color: '#3B82F6',
@@ -289,8 +343,7 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#EFF6FF',
     borderRadius: 8,
-    flexBasis: '48%', // Adjust based on available space
-    justifyContent: 'center'
+    width: '48%',
   },
   goHereText: {
     color: '#3B82F6',
@@ -303,8 +356,7 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#EFF6FF',
     borderRadius: 8,
-    flexBasis: '48%', // Adjust based on available space
-    justifyContent: 'center'
+    width: '48%',
   },
   viewText: {
     color: '#3B82F6',
