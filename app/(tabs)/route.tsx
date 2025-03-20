@@ -198,6 +198,9 @@ const getMapHTML = (
   polylineColor: string,
   nearbySpots?: Array<{ latitude: number; longitude: number; name: string; image_url?: string }>
 ) => {
+  // Add Font Awesome CSS to the head
+  const fontAwesomeCSS = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />';
+
   let markersJS = "";
   if (route.length > 0) {
     markersJS += `
@@ -213,16 +216,20 @@ const getMapHTML = (
       `;
     }
   }
-  // Add red markers for nearby spots with optional images in the popup
+
+  // Update nearby spots markers with a circular background and icon inside for contrast
   if (nearbySpots && nearbySpots.length > 0) {
     nearbySpots.forEach(spot => {
       markersJS += `
-        L.circleMarker([${spot.latitude}, ${spot.longitude}], {
-          radius: 6,
-          color: 'red',
-          fillColor: '#f03',
-          fillOpacity: 0.5
-        }).addTo(map)
+        var icon = L.divIcon({
+          html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-city" style="color: #28a745; font-size: 16px;"></i></div>',
+          className: 'custom-icon',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32]
+        });
+        
+        L.marker([${spot.latitude}, ${spot.longitude}], { icon: icon })
+          .addTo(map)
           .bindPopup(\`
             <div style="max-width: 200px;">
               <b>${spot.name}</b>
@@ -239,7 +246,7 @@ const getMapHTML = (
       `;
     });
   }
-  
+
   let polylineJS = "";
   if (
     (typeof roadPath === "string" && roadPath.length > 0) ||
@@ -278,6 +285,7 @@ const getMapHTML = (
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+        ${fontAwesomeCSS}
         <style>
           html, body { margin: 0; padding: 0; height: 100%; }
           #map { height: 100%; width: 100%; }
@@ -288,7 +296,7 @@ const getMapHTML = (
         <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
         <script>
           var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);
-          window.map = map; // Add this line
+          window.map = map;
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
           }).addTo(map);
@@ -300,7 +308,6 @@ const getMapHTML = (
     </html>
   `;
 };
-
 
 const MapComponent: React.FC<MapComponentProps> = ({
   initialRegion,
