@@ -80,11 +80,7 @@ const router = useRouter();
 console.log('Received params in Community:', params);
   const location = decodeURIComponent(params.location as string);
   const destination = decodeURIComponent(params.destination as string);
-  const origin_lat = Number(params.origin_lat);
-  const origin_lon = Number(params.origin_lon);
-  const destination_lat = Number(params.destination_lat);
-  const destination_lon = Number(params.destination_lon);
-
+ 
 const openReportModal = (postId: number) => {
     setSelectedPostId(postId);
     setIsModalVisible(true);
