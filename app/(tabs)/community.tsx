@@ -9,6 +9,7 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 import ModalComponent from '../reportmodal';
 
+
 const dropdownOptions = ['Popularity', 'Time'];
 
 interface DropdownProps {
@@ -63,15 +64,28 @@ export default function CommunityPage() {
     updatePost } = usePostContext();
   const { routeDetails } = useRouteContext();
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
-  const router = useRouter();
-  const params = useLocalSearchParams();
+ 
+  
    const [isLoading, setIsLoading] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const authContext = useContext(AuthContext) as AuthContextType | null;
    const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // Store post ID
    const [isModalVisible, setIsModalVisible] = useState(false);
+const [modalVisible, setModalVisible] = useState(false);
+const [isSubmitting, setIsSubmitting] = useState(false);
+  
+const router = useRouter();
+  const params = useLocalSearchParams();
+   
+console.log('Received params in Community:', params);
+  const location = decodeURIComponent(params.location as string);
+  const destination = decodeURIComponent(params.destination as string);
+  const origin_lat = Number(params.origin_lat);
+  const origin_lon = Number(params.origin_lon);
+  const destination_lat = Number(params.destination_lat);
+  const destination_lon = Number(params.destination_lon);
 
-   const openReportModal = (postId: number) => {
+const openReportModal = (postId: number) => {
     setSelectedPostId(postId);
     setIsModalVisible(true);
   };
@@ -85,6 +99,9 @@ export default function CommunityPage() {
   const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
   const [selectedOption, setSelectedOption] = useState<string>('Time');
 
+    
+   
+     
 
   const handleOptionSelect = (option: string) => {
     setSelectedOption(option);
@@ -140,6 +157,45 @@ useEffect(() => {
   return () => clearInterval(interval);
 }, []);
  
+ const handlePostSubmit = async (formData: Post) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const requestBody = {
+        route_post: {
+          ...formData,
+          location,
+          destination,
+          origin_lat,
+          origin_lon,
+          dest_lat: destination_lat,
+          dest_lon: destination_lon,
+        },
+      };
+      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Server Error Response:", errorData);
+        throw new Error(errorData.error || 'Failed to create post');
+      }
+
+      await response.json();
+      fetchOldPosts();
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Post submission error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleVote = async (id: number, action: VoteType) => {
     if (!authToken) {
@@ -302,6 +358,14 @@ useEffect(() => {
     }
   };
  
+  const handlePostButtonPress = () => {
+    const isLoggedIn = !!authToken;
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    setModalVisible(true);
+  };
    
   return (
     <ScrollView style={styles.maincontainer}>
@@ -311,7 +375,9 @@ useEffect(() => {
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
-        
+          <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+                  <Text style={styles.postButtonText}>Post</Text>
+                </TouchableOpacity>
       </View>
 
       {isLoading && (
@@ -349,8 +415,8 @@ useEffect(() => {
                   {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
                 </Text>
               </View>
-              <Text style={styles.postLocation}>From: {post.location}</Text>
-              <Text style={styles.postDestination}>To: {post.destination}</Text>
+              <Text style={styles.postLocation}>From: {post.location || origin}</Text>
+              <Text style={styles.postDestination}>To: {post.destination || destination}</Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
                 <Text style={styles.label}>Their experience</Text>
@@ -398,6 +464,22 @@ useEffect(() => {
           ))}
         </View>
       </View>
+
+      <PostModal
+              visible={modalVisible}
+              onClose={() => setModalVisible(false)}
+              onSubmit={handlePostSubmit}
+              location={location}
+              destination={destination}
+              origin_lat={origin_lat}
+              origin_lon={origin_lon}
+              destination_lat={destination_lat}
+              destination_lon={destination_lon}
+              authToken={authToken}
+              userEmail={''}
+              userPassword={''}
+              isFromCommunity={true} 
+            />
        
       {isModalVisible && selectedPostId !== null && (
   <ModalComponent

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Modal, View, TextInput, TouchableOpacity, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Modal, View, TextInput, TouchableOpacity, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { usePostContext, type Post } from './../contexts/PostContext';
 import { AuthContext, AuthContextType } from './../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,25 +17,43 @@ interface PostModalProps {
   authToken: string;
   userEmail: string;
   userPassword: string;
+  isFromCommunity?: boolean; // New prop: if true, location/destination are editable
 }
 
 export default function PostModal({
   visible,
   onClose,
   onSubmit,
-  location,
-  destination,
+  location: initialLocation,
+  destination: initialDestination,
   origin_lat,
   origin_lon,
   destination_lat,
   destination_lon,
+  authToken,
+  userEmail,
+  userPassword,
+  isFromCommunity = false,
 }: PostModalProps) {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Local state for location and destination so they can be edited if needed.
+  const [location, setLocation] = useState(initialLocation);
+  const [destination, setDestination] = useState(initialDestination);
 
+  // Reset local state when modal opens/closes or when initial values change.
+  useEffect(() => {
+    setLocation(initialLocation);
+    setDestination(initialDestination);
+  }, [initialLocation, initialDestination, visible]);
 
   const handleSubmit = () => {
     if (isSubmitting) return;
+    if (!content.trim()) {
+      Alert.alert("Error", "Please enter some content before submitting.");
+      return;
+    }
     setIsSubmitting(true);
     const newPost: Post = {
       content,
@@ -58,17 +76,27 @@ export default function PostModal({
       <View style={styles.modalContainer}>
         <View style={styles.postContainer}>
           <ScrollView>
-      
-        <Text style={styles.label}>From:</Text>
-        <Text style={styles.locationText}>{location}</Text>
-          <Text style={styles.label}>To: </Text>
-        <Text style={styles.locationText}>{destination}</Text>
- 
-   <Text style={styles.exp}>Your Experiences:</Text>
+            <Text style={styles.label}>From:</Text>
             <TextInput
-              placeholder={
-                "Type here...\n\n\n\n"
-              }
+              placeholder="From: E.g. Glori Bayan"
+              value={location}
+              onChangeText={isFromCommunity ? setLocation : undefined}
+              style={[styles.input, !isFromCommunity && styles.disabledInput]}
+              editable={isFromCommunity}
+            />
+
+            <Text style={styles.label}>To:</Text>
+            <TextInput
+              placeholder="To: E.g. Intramuros"
+              value={destination}
+              onChangeText={isFromCommunity ? setDestination : undefined}
+              style={[styles.input, !isFromCommunity && styles.disabledInput]}
+              editable={isFromCommunity}
+            />
+ 
+            <Text style={styles.exp}>Your Experiences:</Text>
+            <TextInput
+              placeholder={"Type here...\n\n\n\n"}
               value={content}
               onChangeText={setContent}
               multiline
@@ -95,9 +123,8 @@ export default function PostModal({
     </Modal>
   );
 }
- 
- 
 
+ 
 
 
  
@@ -183,7 +210,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   
-  
+  disabledInput: {
+    backgroundColor: '#E5E7EB', // Gray out to indicate non-editable field
+  },
 });
 
 
