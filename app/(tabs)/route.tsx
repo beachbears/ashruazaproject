@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import ReviewModal from '../reviewmodal';
 import { usePostContext } from '@/contexts/PostContext';
+import ModalComponent from '../restaurantmodal'
 
 const polyline = require('@mapbox/polyline');
 
@@ -933,7 +934,16 @@ const RouteScreen: React.FC = () => {
   </TouchableOpacity>
 )}
 
+ 
+
         </View>
+
+        {/*new modal */}
+<TouchableOpacity style={styles.twobox} onPress={() => setModalVisible(true)}>
+        <Text style={styles.texttwo}>Restaurants Modal</Text>
+      </TouchableOpacity>
+      <ModalComponent visible={modalVisible} onClose={() => setModalVisible(false)} />
+
         <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
       </View>
       {route.length >= 2 && routeMetrics && (
