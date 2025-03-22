@@ -80,23 +80,6 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
     }
   }, [visible]);
 
-  // Uncomment and adjust this function if you later use real API data
-  // const fetchData = async () => {
-  //   try {
-  //     setError(null);
-  //     const response = await fetch("YOUR_API_ENDPOINT");
-  //     if (!response.ok) {
-  //       throw new Error("Failed to fetch data");
-  //     }
-  //     const data = await response.json();
-  //     setSpots(data);
-  //   } catch (err: any) {
-  //     setError(err.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleSelectCategory = (cat: string) => {
     setSelectedCategory(cat);
     setShowCategories(false);
@@ -134,28 +117,30 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
             {/* Dropdown Overlay */}
             {showCategories && (
               <View style={styles.dropdownOverlay}>
-                {categories.map((cat, index) => {
-                  const isSelected = selectedCategory === cat;
-                  return (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.dropdownItem,
-                        isSelected && styles.dropdownItemSelected,
-                      ]}
-                      onPress={() => handleSelectCategory(cat)}
-                    >
-                      <Text
+                <ScrollView style={{ maxHeight: 160 }}>
+                  {categories.map((cat, index) => {
+                    const isSelected = selectedCategory === cat;
+                    return (
+                      <TouchableOpacity
+                        key={index}
                         style={[
-                          styles.dropdownItemText,
-                          isSelected && styles.dropdownItemTextSelected,
+                          styles.dropdownItem,
+                          isSelected && styles.dropdownItemSelected,
                         ]}
+                        onPress={() => handleSelectCategory(cat)}
                       >
-                        {cat}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text
+                          style={[
+                            styles.dropdownItemText,
+                            isSelected && styles.dropdownItemTextSelected,
+                          ]}
+                        >
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
               </View>
             )}
           </View>
@@ -177,9 +162,7 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
                       )}
                     </View>
                     <View style={styles.amenityPill}>
-                      <Text style={styles.amenityText}>
-                        Amenity: {spot.amenity}
-                      </Text>
+                      <Text style={styles.amenityText}>Amenity: {spot.amenity}</Text>
                     </View>
                   </View>
 
@@ -193,18 +176,11 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
                       <Text style={styles.sectionValue}>{spot.address}</Text>
 
                       <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
-                        <Ionicons name="information-circle-outline" size={16} color="#44457D" />{" "}
-                        Details
+                        <Ionicons name="information-circle-outline" size={16} color="#44457D" /> Details
                       </Text>
-                      <Text style={styles.sectionValue}>
-                        Cuisine: {spot.details?.Cuisine}
-                      </Text>
-                      <Text style={styles.sectionValue}>
-                        Brand: {spot.details?.Brand}
-                      </Text>
-                      <Text style={styles.sectionValue}>
-                        Operator: {spot.details?.Operator}
-                      </Text>
+                      <Text style={styles.sectionValue}>Cuisine: {spot.details?.Cuisine}</Text>
+                      <Text style={styles.sectionValue}>Brand: {spot.details?.Brand}</Text>
+                      <Text style={styles.sectionValue}>Operator: {spot.details?.Operator}</Text>
                     </View>
 
                     {/* Right Column */}
@@ -213,10 +189,7 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
                         <Ionicons name="time-outline" size={16} color="#44457D" /> Opening Hours
                       </Text>
                       <Text style={styles.sectionValue}>{spot.opening_hours}</Text>
-
-                      <Text style={[styles.sectionValue, { marginTop: 10 }]}>
-                        {spot.payment_methods}
-                      </Text>
+                      <Text style={[styles.sectionValue, { marginTop: 10 }]}>{spot.payment_methods}</Text>
                     </View>
                   </View>
 
@@ -416,14 +389,16 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 6,
   },
+  // Pinalitan ang background color ng feature tag sa light green
   featureTag: {
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#c4ecd2",
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
+  // Pinalitan ang text color para sa contrast
   featureText: {
-    color: "#6366F1",
+    color: "#2F855A",
     fontSize: 11,
     fontWeight: "600",
   },
@@ -433,7 +408,7 @@ const styles = StyleSheet.create({
   },
   viewButton: {
     flex: 1,
-    backgroundColor: "#E0E7FF",
+    backgroundColor: "#1751b3",
     paddingVertical: 8,
     borderRadius: 5,
     marginRight: 8,
@@ -442,19 +417,19 @@ const styles = StyleSheet.create({
   },
   directionsButton: {
     flex: 1,
-    backgroundColor: "#E0E7FF",
+    backgroundColor: "#197814",
     paddingVertical: 8,
     borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
   },
   viewButtonText: {
-    color: "#6366F1",
+    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "bold",
   },
   directionsButtonText: {
-    color: "#6366F1",
+    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "bold",
   },

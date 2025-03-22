@@ -59,12 +59,53 @@ const Home = () => {
   const [searchY, setSearchY] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<CurrentLocation | null>(null);
 
+  // Listahan ng tourist attractions
   const touristAttractions: Attraction[] = [
-    // ... (iyong listahan ng attractions)
+    { id: 1, name: "Sanctuario de San Ezekiel Moreno", city: "Manila", image: require('../../assets/images/attractions/Sanctuario.jpg'), latitude: 14.473, longitude: 120.980 },
+    { id: 2, name: "Rizal Park", city: "Manila", image: require('../../assets/images/rizalpark.jpg'), latitude: 14.582, longitude: 120.975 },
+    { id: 3, name: "National Museum of Fine Arts", city: "Manila", image: require('../../assets/images/nationalmos.jpg'), latitude: 14.580, longitude: 120.978 },
+    { id: 4, name: "SM Mall of Asia", city: "Pasay", image: require('../../assets/images/smallasia.jpg'), latitude: 14.536, longitude: 120.982 },
+    { id: 5, name: "Bonifacio High Street", city: "Taguig", image: require('../../assets/images/hs.jpg'), latitude: 14.550, longitude: 121.050 },
+    { id: 6, name: "Quezon Memorial Circle", city: "Quezon City", image: require('../../assets/images/attractions/circle.jpg'), latitude: 14.651, longitude: 121.046 },
+    { id: 7, name: "Eastwood City", city: "Quezon City", image: require('../../assets/images/EW.png'), latitude: 14.578, longitude: 121.057 },
+    { id: 8, name: "Star City", city: "Pasay", image: require('../../assets/images/STCity.jpg'), latitude: 14.531, longitude: 120.979 },
+    { id: 9, name: "Bonifacio Monument", city: "Caloocan City", image: require('../../assets/images/attractions/Bonmon.png'), latitude: 14.657, longitude: 120.982 },
+    { id: 10, name: "San Roque", city: "Caloocan City", image: require('../../assets/images/attractions/sanroqcathed.jpg'), latitude: 14.645, longitude: 121.030 },
+    { id: 11, name: "Entertainment City", city: "Paranaque City", image: require('../../assets/images/attractions/EntertainmentCity.jpg'), latitude: 14.514, longitude: 121.008 },
+    { id: 12, name: "BF Aguirre/ President’s Avenue Food Strip", city: "Paranaque City", image: require('../../assets/images/attractions/bfaguirre.jpg'), latitude: 14.512, longitude: 121.019 },
+    { id: 13, name: "Las Pinas – Paranaque Wetland", city: "Paranaque City", image: require('../../assets/images/attractions/Westland.png'), latitude: 14.459, longitude: 120.994 },
+    { id: 14, name: "Baclaran Church", city: "Paranaque City", image: require('../../assets/images/attractions/BaclaranChurch.png'), latitude: 14.527, longitude: 121.000 },
+    { id: 15, name: "Baclaran Market", city: "Paranaque City", image: require('../../assets/images/attractions/BaclaranMarket.jpg'), latitude: 14.526, longitude: 121.001 },
+    { id: 16, name: "New Bilibid Prison", city: "Muntinlupa City", image: require('../../assets/images/attractions/bilibid.jpg'), latitude: 14.414, longitude: 121.044 },
+    { id: 17, name: "Japanese Garden", city: "Muntinlupa City", image: require('../../assets/images/attractions/Japanesegarden.jpg'), latitude: 14.417, longitude: 121.039 },
+    { id: 18, name: "Jamboree Lake", city: "Muntinlupa City", image: require('../../assets/images/attractions/Jamborelake.jpg'), latitude: 14.406, longitude: 121.037 },
+    { id: 19, name: "Filinvest Corporate City", city: "Muntinlupa City", image: require('../../assets/images/attractions/filnevestcorporatecity.jpg'), latitude: 14.424, longitude: 121.047 },
+    { id: 21, name: "Saint Joseph Church and the Bamboo Organ", city: "Las Pinas City", image: require('../../assets/images/attractions/Saintjosepchurch.jpg'), latitude: 14.440, longitude: 121.005 },
+    { id: 22, name: "Sarao Jeepney Factory", city: "Las Pinas City", image: require('../../assets/images/attractions/jeepfactory.jpg'), latitude: 14.431, longitude: 121.010 },
+    { id: 24, name: "Villar Sipag Museum", city: "Las Pinas City", image: require('../../assets/images/attractions/Villarsipag.png'), latitude: 14.435, longitude: 121.003 },
+    { id: 25, name: "Bahay na Tisa (Tech House)", city: "Pasig City", image: require('../../assets/images/attractions/bahaytisa.jpg'), latitude: 14.584, longitude: 121.087 },
+    { id: 26, name: "Pasig Museum", city: "Pasig City", image: require('../../assets/images/attractions/pasigmuseum.jpg'), latitude: 14.587, longitude: 121.085 },
+    { id: 27, name: "Rave Rainforest Adventure Experience", city: "Pasig City", image: require('../../assets/images/attractions/Raverainforest.jpg'), latitude: 14.589, longitude: 121.090 },
+    { id: 28, name: "Ortigas Center Complex", city: "Pasig City", image: require('../../assets/images/attractions/ortigascenter.png'), latitude: 14.586, longitude: 121.061 },
+    { id: 29, name: "Barrio Kapitolyo Food Strip", city: "Pasig City", image: require('../../assets/images/attractions/barriocapital.jpg'), latitude: 14.591, longitude: 121.073 },
+    { id: 30, name: "Pasig River", city: "Pasig City", image: require('../../assets/images/attractions/Pasigriver.jpg'), latitude: 14.589, longitude: 121.070 },
+    { id: 31, name: "Kapitan Moy", city: "Marikina City", image: require('../../assets/images/attractions/moy.jpg'), latitude: 14.650, longitude: 121.107 },
+    { id: 32, name: "Shoe Museum", city: "Marikina City", image: require('../../assets/images/attractions/shoemuseum.jpg'), latitude: 14.651, longitude: 121.108 },
+    { id: 33, name: "Marikina Riverbanks", city: "Marikina City", image: require('../../assets/images/attractions/marikinariverbanks.jpg'), latitude: 14.652, longitude: 121.110 },
+    { id: 34, name: "National Shrine of the Our Lady of Fatima", city: "Valenzuela City", image: require('../../assets/images/attractions/nationalOLFU.jpg'), latitude: 14.720, longitude: 121.040 },
+    { id: 35, name: "Museo ng Valenzuela", city: "Valenzuela City", image: require('../../assets/images/attractions/museoval.jpg'), latitude: 14.722, longitude: 121.045 },
+    { id: 36, name: "La Mesa Eco Park", city: "Quezon City", image: require('../../assets/images/attractions/ecopark.png'), latitude: 14.676, longitude: 121.092 },
+    { id: 37, name: "Melchora Aquino (Tandang Sora) Shrine", city: "Quezon City", image: require('../../assets/images/attractions/tandangsorashrine.jpg'), latitude: 14.692, longitude: 121.065 },
+    { id: 38, name: "Cry of Pugad Lawin Shrine", city: "Quezon City", image: require('../../assets/images/attractions/cryofpugad.jpg'), latitude: 14.697, longitude: 121.050 },
+    { id: 39, name: "Ninoy Aquino Parks and Wildlife", city: "Quezon City", image: require('../../assets/images/attractions/ninoywildlife.jpg'), latitude: 14.678, longitude: 121.050 },
+    { id: 40, name: "Araneta Center", city: "Quezon City", image: require('../../assets/images/attractions/aranetacenter.jpg'), latitude: 14.657, longitude: 121.032 },
+    { id: 41, name: "UP Maginhawa Art and Food Hub", city: "Quezon City", image: require('../../assets/images/attractions/upmagin.jpg'), latitude: 14.651, longitude: 121.062 },
+    { id: 42, name: "Art in Island Museum", city: "Quezon City", image: require('../../assets/images/attractions/artisland.jpg'), latitude: 14.650, longitude: 121.030 },
   ];
 
   const filteredAttractions = touristAttractions;
 
+  // Humihingi ng location permissions at kinukuha ang current location
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -102,8 +143,8 @@ const Home = () => {
     }, 1000);
   };
 
+  // Kapag pinindot ang isang attraction, ire-route ang user papunta sa route.tsx
   const handleAttractionPress = (attraction: Attraction) => {
-    console.log("Navigating to route with attraction", attraction);
     router.push({
       pathname: '/(tabs)/route',
       params: { 
@@ -113,6 +154,7 @@ const Home = () => {
     });
   };
 
+  // Geocoding function gamit ang Railway API
   const geocodeAddress = async (address: string) => {
     try {
       const { data } = await axios.get(
@@ -133,6 +175,7 @@ const Home = () => {
     }
   };
 
+  // Kapag nagta-type sa search input
   const handleSearchInput = async (text: string) => {
     setLocation(text);
     if (text.trim() === '') {
@@ -143,25 +186,24 @@ const Home = () => {
     setDestinationSuggestions(suggestions);
   };
 
+  // Kapag napili na ang suggestion mula sa dropdown, i-update lang ang input (hindi agad mag-navigate)
   const handleSuggestionSelect = (suggestion: Suggestion) => {
     setLocation(suggestion.name);
     setDestinationSuggestions([]);
     console.log("Selected suggestion:", suggestion);
   };
 
-  // Kapag pinindot ang "Let's go" button, mag-navigate tayo papunta sa route.tsx
+  // Kapag pinindot ang search button sa search bar ("Let's go")
   const handleLocationSearch = () => {
     if (location.trim() !== '') {
-      console.log("Navigating to route with destination:", location);
-      router.push({
-        pathname: '/(tabs)/route', // O '/route' kung iyon ang tamang path
+      router.replace({
+        pathname: '/(tabs)/route',
         params: { 
           destination: location, 
           from: currentLocation ? encodeURIComponent(JSON.stringify(currentLocation)) : '',
           timestamp: new Date().getTime()
         }
       });
-      // Optional: i-clear ang input pagkatapos mag-navigate
       setLocation('');
       setDestinationSuggestions([]);
     }
@@ -197,6 +239,7 @@ const Home = () => {
                 Conquer the Metro with ease! <Text style={styles.boldText}>Kommutsera: Gabay ko, Byahe Mo!!!</Text> your companion for hassle-free commuting, offering clear routes and navigation.
               </Text>
 
+              {/* Capture layout position ng search container */}
               <View
                 onLayout={(e) => setSearchY(e.nativeEvent.layout.y)}
                 style={styles.searchContainer}
@@ -225,7 +268,7 @@ const Home = () => {
                   <Text style={styles.buttonText}>Let's go</Text>
                 </TouchableOpacity>
               </View>
-
+              {/* Listahan ng suggestions */}
               {destinationSuggestions.length > 0 && (
                 <ScrollView style={styles.suggestionList} keyboardShouldPersistTaps="handled">
                   {destinationSuggestions.map((item, index) => (
