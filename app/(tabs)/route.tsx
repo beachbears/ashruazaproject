@@ -14,19 +14,15 @@ import {
   ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
-import { WebView } from 'react-native-webview';
+import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import ReviewModal from '../reviewmodal';
-
 const polyline = require('@mapbox/polyline');
 
 LogBox.ignoreLogs(['textShadow*', 'shadow*']);
 
-// -------------------------
-// Interfaces & Types
-// -------------------------
 interface LocationSuggestion {
   label: string;
   latitude: string;
@@ -51,7 +47,7 @@ export interface Stop {
 }
 
 export interface Segment {
-  type: string; // "Jeep" / "Bus" / "Ejeep" / "LRT" / "MRT" / "walking"
+  type: string;
   distance?: number;
   duration?: number;
   geometry?: string;
@@ -111,13 +107,19 @@ export interface LatLng {
   longitude: number;
 }
 
+export interface SegmentPath {
+  coords: LatLng[];
+  color: string;
+}
+
 interface MapComponentProps {
   initialRegion: Region;
-  route?: LatLng[]; // index 0: origin, index 1: destination
-  roadPath?: LatLng[] | string;
+  route?: LatLng[];
+  roadPath?: LatLng[] | string | LatLng[][] | SegmentPath[];
   style?: any;
   mapResetKey?: number;
   polylineColor: string;
+  webviewRef?: React.RefObject<WebView>;
 }
 
 interface RouteDetails {
@@ -132,9 +134,6 @@ interface RouteMetrics {
   busTime: string;
 }
 
-// -------------------------
-// Helper Functions
-// -------------------------
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 function formatDuration(seconds: number): string {
@@ -151,21 +150,10 @@ function formatDuration(seconds: number): string {
   }
 }
 
-/**
- * Shorten an address by returning only the first part
- * (e.g., "Emerald Street, San Bartolome, ..." becomes "Emerald Street")
- */
 function shortenAddress(address: string) {
   return address.split(',')[0];
 }
 
-/**
- * Generates a concise label for each segment.
- * For vehicles, it uses the vehicleType (if provided) or capitalized type.
- * For walking, it returns "Walk".
- * If both origin and destination exist, returns:
- *    "Label: ShortFrom - ShortTo"
- */
 function getSegmentLabel(
   type: string,
   fromStopName?: string,
@@ -185,12 +173,12 @@ function getSegmentLabel(
 
 const getMapHTML = (
   region: Region,
-  route: LatLng[] = [],
-  roadPath: any,
+  route: LatLng[],
+  roadPath: LatLng[] | string | LatLng[][] | SegmentPath[],
   polylineColor: string
 ) => {
   let markersJS = "";
-  if (route.length > 0) {
+  if (route && route.length > 0) {
     markersJS += `
       var currentMarker = L.marker([${route[0].latitude}, ${route[0].longitude}])
         .addTo(map)
@@ -204,8 +192,36 @@ const getMapHTML = (
       `;
     }
   }
-  let polylineJS = "";
-  if (
+
+  let polylinesJS = "";
+  // Kapag roadPath ay SegmentPath[]
+  if (Array.isArray(roadPath) && roadPath.length > 0 && (roadPath[0] as any).coords !== undefined) {
+    polylinesJS += `
+      window.segmentPolylines = [];
+      ${(roadPath as SegmentPath[]).map((segment, idx: number) =>
+        `var segment${idx} = L.polyline(${JSON.stringify(
+          segment.coords.map(pt => [pt.latitude, pt.longitude])
+        )}, { color: '${segment.color}', weight: 3 }).addTo(map);
+         segment${idx}.options.defaultColor = '${segment.color}';
+         window.segmentPolylines.push(segment${idx});`
+      ).join("\n")}
+    `;
+  } 
+  // Kapag roadPath ay LatLng[][]
+  else if (Array.isArray(roadPath) && roadPath.length > 0 && Array.isArray(roadPath[0])) {
+    polylinesJS += `
+      window.segmentPolylines = [];
+      ${(roadPath as LatLng[][]).map((segment, idx: number) =>
+        `var segment${idx} = L.polyline(${JSON.stringify(
+          segment.map((pt: LatLng) => [pt.latitude, pt.longitude])
+        )}, { color: '${polylineColor}', weight: 3 }).addTo(map);
+         segment${idx}.options.defaultColor = '${polylineColor}';
+         window.segmentPolylines.push(segment${idx});`
+      ).join("\n")}
+    `;
+  } 
+  // Kapag roadPath ay string o LatLng[]
+  else if (
     (typeof roadPath === "string" && roadPath.length > 0) ||
     (Array.isArray(roadPath) && roadPath.length > 0)
   ) {
@@ -213,29 +229,79 @@ const getMapHTML = (
     if (typeof roadPath === "string") {
       const decoded = polyline.decode(roadPath);
       polylineCoordinates = decoded.map((coord: number[]) => [coord[0], coord[1]]);
-    } else if (Array.isArray(roadPath) && roadPath.length > 0) {
+    } else if (Array.isArray(roadPath)) {
       polylineCoordinates = Array.isArray(roadPath[0])
         ? roadPath
-        : roadPath.map((coord: any) => [coord.latitude, coord.longitude]);
+        : (roadPath as LatLng[]).map((coord: LatLng) => [coord.latitude, coord.longitude]);
     }
-    if (polylineCoordinates && polylineCoordinates.length > 0) {
-      polylineJS = `var roadPolyline = L.polyline(${JSON.stringify(
-        polylineCoordinates
-      )}, { color: '${polylineColor}', weight: 3 }).addTo(map);`;
-    }
-  } else if (route.length === 2) {
-    polylineJS = `var polyline = L.polyline([
-      [${route[0].latitude}, ${route[0].longitude}],
-      [${route[1].latitude}, ${route[1].longitude}]
-    ], { color: '${polylineColor}', weight: 3 }).addTo(map);`;
+    polylinesJS += `var roadPolyline = L.polyline(${JSON.stringify(
+      polylineCoordinates
+    )}, { color: '${polylineColor}', weight: 3 }).addTo(map);`;
   }
+
   let fitBoundsJS = `
-    if (typeof roadPolyline !== 'undefined') {
+    if (window.segmentPolylines && window.segmentPolylines.length > 0) {
+      var group = new L.featureGroup(window.segmentPolylines);
+      map.fitBounds(group.getBounds());
+    } else if (typeof roadPolyline !== 'undefined') {
       map.fitBounds(roadPolyline.getBounds());
-    } else if (typeof polyline !== 'undefined') {
-      map.fitBounds(polyline.getBounds());
     }
   `;
+
+  let messageListenerJS = `
+    var highlightedIndices = [];
+    
+    function toggleHighlightSegment(idx) {
+      var i = highlightedIndices.indexOf(idx);
+      if(i === -1) {
+        highlightedIndices.push(idx);
+      } else {
+        highlightedIndices.splice(i, 1);
+      }
+      updateSegmentStyles();
+    }
+    
+    function updateSegmentStyles() {
+      if(window.segmentPolylines) {
+        window.segmentPolylines.forEach(function(polyline, index) {
+          var defaultColor = polyline.options.defaultColor || '${polylineColor}';
+          // Kung walking segment, panatilihin ang kulay gray kahit naka-highlight
+          if(defaultColor === '#808080'){
+            polyline.setStyle({ color: '#808080', weight: (highlightedIndices.indexOf(index) !== -1) ? 6 : 3 });
+          } else {
+            if(highlightedIndices.indexOf(index) !== -1) {
+              polyline.setStyle({ color: '#1D4ED8', weight: 6 });
+            } else {
+              polyline.setStyle({ color: defaultColor, weight: 3 });
+            }
+          }
+        });
+      }
+    }
+    
+    document.addEventListener('message', function(event) {
+      try {
+        var data = JSON.parse(event.data);
+        if (data.type === 'toggleSegmentHighlight') {
+          toggleHighlightSegment(data.index);
+        }
+      } catch(e) {
+        console.error(e);
+      }
+    });
+    
+    window.addEventListener('message', function(event) {
+      try {
+        var data = JSON.parse(event.data);
+        if (data.type === 'toggleSegmentHighlight') {
+          toggleHighlightSegment(data.index);
+        }
+      } catch(e) {
+        console.error(e);
+      }
+    });
+  `;
+
   return `
     <!DOCTYPE html>
     <html>
@@ -256,8 +322,9 @@ const getMapHTML = (
             attribution: '© OpenStreetMap contributors'
           }).addTo(map);
           ${markersJS}
-          ${polylineJS}
+          ${polylinesJS}
           ${fitBoundsJS}
+          ${messageListenerJS}
         </script>
       </body>
     </html>
@@ -270,7 +337,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
   roadPath = [],
   style,
   mapResetKey,
-  polylineColor
+  polylineColor,
+  webviewRef
 }) => {
   const mapKey = JSON.stringify({ initialRegion, route, roadPath, mapResetKey });
   const [loading, setLoading] = useState(true);
@@ -289,6 +357,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   return (
     <View style={{ flex: 1 }}>
       <WebView
+        ref={webviewRef}
         key={mapKey}
         originWhitelist={['*']}
         source={{ html: getMapHTML(initialRegion, route, roadPath, polylineColor) }}
@@ -309,9 +378,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
     </View>
   );
 };
-
-// Cache for geocoding results
-const locationCacheRef = { current: {} as { [key: string]: any[] } };
 
 const SuggestionList: React.FC<{ suggestions: any[]; onSelect: (item: any) => void; }> = ({ suggestions, onSelect }) => {
   if (!suggestions.length) return null;
@@ -340,9 +406,9 @@ const RouteScreen: React.FC = () => {
   const [origin, setOrigin] = useState<string>("");
   const [originSuggestions, setOriginSuggestions] = useState<any[]>([]);
   const [destination, setDestination] = useState<string>("");
-  const [route, setRoute] = useState<LatLng[]>([]);
-  const [roadPath, setRoadPath] = useState<LatLng[] | string>([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>([]);
+  const [route, setRoute] = useState<LatLng[]>([]);
+  const [roadPath, setRoadPath] = useState<LatLng[] | string | LatLng[][] | SegmentPath[]>([]);
   const [routeDetails, setRouteDetails] = useState<RouteDetails>({ route: null });
   const [routeMetrics, setRouteMetrics] = useState<RouteMetrics | null>(null);
   const [mapResetKey, setMapResetKey] = useState<number>(Date.now());
@@ -355,10 +421,27 @@ const RouteScreen: React.FC = () => {
   const router = useRouter();
   const animatedHeight = useRef(new Animated.Value(400)).current;
   const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
+  const webviewRef = useRef<WebView>(null);
+  const originTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const destinationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const toggleSegment = (index: number) => {
-    setExpandedSegments(prev => ({ ...prev, [index]: !prev[index] }));
+  // Bagong handleToggleSegment na nagpapadala ng mensahe sa WebView
+  const handleToggleSegment = (idx: number) => {
+    setExpandedSegments(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
+    if (webviewRef.current) {
+      webviewRef.current.postMessage(JSON.stringify({ type: 'toggleSegmentHighlight', index: idx }));
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      if (originTimeoutRef.current) clearTimeout(originTimeoutRef.current);
+      if (destinationTimeoutRef.current) clearTimeout(destinationTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (destParam) {
@@ -454,6 +537,16 @@ const RouteScreen: React.FC = () => {
     }
   }
 
+  const clearOrigin = () => {
+    setOrigin('');
+    setOriginSuggestions([]);
+    setDestination('');
+    setDestinationSuggestions([]);
+    setRoute([]);
+    setRouteDetails({ route: null });
+    setRoadPath([]);
+  };
+
   const handleOriginChange = async (text: string) => {
     setOrigin(text);
     if (!text) {
@@ -463,22 +556,26 @@ const RouteScreen: React.FC = () => {
       setRoute([]);
       setRouteDetails({ route: null });
       setRoadPath([]);
+      setIsOriginLoading(false);
       return;
     }
-    setIsOriginLoading(true);
-    const suggestions = await geocodeAddress(text);
-    setOriginSuggestions(suggestions);
-    setIsOriginLoading(false);
-  };
 
-  const clearOrigin = () => {
-    setOrigin('');
-    setOriginSuggestions([]);
-    setDestination('');
-    setDestinationSuggestions([]);
-    setRoute([]);
-    setRouteDetails({ route: null });
-    setRoadPath([]);
+    if (originTimeoutRef.current) {
+      clearTimeout(originTimeoutRef.current);
+    }
+
+    setIsOriginLoading(true);
+    originTimeoutRef.current = setTimeout(async () => {
+      try {
+        const suggestions = await geocodeAddress(text);
+        setOriginSuggestions(suggestions);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setOriginSuggestions([]);
+      } finally {
+        setIsOriginLoading(false);
+      }
+    }, 300);
   };
 
   const selectOriginSuggestion = async (item: any) => {
@@ -500,12 +597,24 @@ const RouteScreen: React.FC = () => {
     setDestination(text);
     if (!text) {
       setDestinationSuggestions([]);
+      setIsDestinationLoading(false);
       return;
     }
+    if (destinationTimeoutRef.current) {
+      clearTimeout(destinationTimeoutRef.current);
+    }
     setIsDestinationLoading(true);
-    const suggestions = await geocodeAddress(text);
-    setDestinationSuggestions(suggestions);
-    setIsDestinationLoading(false);
+    destinationTimeoutRef.current = setTimeout(async () => {
+      try {
+        const suggestions = await geocodeAddress(text);
+        setDestinationSuggestions(suggestions);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setDestinationSuggestions([]);
+      } finally {
+        setIsDestinationLoading(false);
+      }
+    }, 300);
   };
 
   const selectDestinationSuggestion = async (item: any) => {
@@ -570,43 +679,21 @@ const RouteScreen: React.FC = () => {
         setRouteMetrics(null);
       }
 
-      if (routeData && routeData.segments && routeData.segments.length > 0) {
-        const allWalking = routeData.segments.every(seg => seg.walking);
-        setPolylineColor(allWalking ? "#808080" : "#6366F1");
-      } else {
-        setPolylineColor("#6366F1");
-      }
-
-      if (response.data.polyline && response.data.polyline.length > 0) {
+      // Pag-set ng roadPath batay sa API response
+      if (response.data.polyline && typeof response.data.polyline === 'string' && response.data.polyline.length > 0) {
         setRoadPath(response.data.polyline);
       } else if (routeData && routeData.segments && routeData.segments.length > 0) {
-        let combinedPath: LatLng[] = [];
-        const tolerance = 0.0001;
-        routeData.segments.forEach(segment => {
-          if (segment.geometry) {
-            const decodedCoords = polyline.decode(segment.geometry).map(
-              (coord: number[]) => ({
-                latitude: coord[0],
-                longitude: coord[1],
-              })
-            );
-            if (combinedPath.length > 0) {
-              const lastPoint = combinedPath[combinedPath.length - 1];
-              const firstNew = decodedCoords[0];
-              if (
-                Math.abs(lastPoint.latitude - firstNew.latitude) < tolerance &&
-                Math.abs(lastPoint.longitude - firstNew.longitude) < tolerance
-              ) {
-                combinedPath = combinedPath.concat(decodedCoords.slice(1));
-              } else {
-                combinedPath = combinedPath.concat(decodedCoords);
-              }
-            } else {
-              combinedPath = combinedPath.concat(decodedCoords);
-            }
-          }
-        });
-        setRoadPath(combinedPath);
+        const segmentsPaths: SegmentPath[] = routeData.segments
+          .filter(segment => segment.geometry)
+          .map(segment => {
+            const color = segment.type.toLowerCase() === 'walking' ? '#808080' : '#6366F1';
+            const coords = polyline.decode(segment.geometry).map((coord: number[]) => ({
+              latitude: coord[0],
+              longitude: coord[1],
+            }));
+            return { coords, color };
+          });
+        setRoadPath(segmentsPaths);
       } else if (route.length === 2) {
         setRoadPath(route);
       } else {
@@ -645,7 +732,7 @@ const RouteScreen: React.FC = () => {
             <View key={idx} style={styles.segmentCard}>
               <TouchableOpacity
                 style={styles.segmentHeaderRow}
-                onPress={() => toggleSegment(idx)}
+                onPress={() => handleToggleSegment(idx)}
                 activeOpacity={0.8}
               >
                 <Ionicons
@@ -656,7 +743,6 @@ const RouteScreen: React.FC = () => {
                 />
                 <Text style={styles.segmentCardHeaderText}>{segLabel}</Text>
               </TouchableOpacity>
-
               {isExpanded && (
                 <View style={styles.segmentCardBody}>
                   {segType === 'walking' && (
@@ -841,6 +927,7 @@ const RouteScreen: React.FC = () => {
             mapResetKey={mapResetKey}
             style={styles.map}
             polylineColor={polylineColor}
+            webviewRef={webviewRef}
           />
         </Animated.View>
         <ScrollView style={[styles.detailsContainer, { backgroundColor: '#FFFFFF' }]} contentContainerStyle={styles.contentContainer}>
@@ -859,6 +946,7 @@ const RouteScreen: React.FC = () => {
             mapResetKey={mapResetKey}
             style={styles.map}
             polylineColor={polylineColor}
+            webviewRef={webviewRef}
           />
         </Animated.View>
         {detailsContent}
@@ -870,9 +958,14 @@ const RouteScreen: React.FC = () => {
 export default RouteScreen;
 
 // -------------------------
+// Cache for geocoding results
+// -------------------------
+const locationCacheRef = { current: {} as { [key: string]: any[] } };
+
+// -------------------------
 // Styles
 // -------------------------
-const styles = StyleSheet.create({
+const styles = StyleSheet.create({ 
   maincontainer: { width: '100%', backgroundColor: '#FFFFFF' },
   detailsContainer: { flex: 1, backgroundColor: '#FFFFFF' },
   contentContainer: { paddingBottom: 30 },
@@ -885,7 +978,7 @@ const styles = StyleSheet.create({
   inputContainer: { width: '100%' },
   userInput: { backgroundColor: '#F5F7FF', borderWidth: 1, borderColor: '#C7D2FE', borderRadius: 8, padding: 8, fontSize: 11, color: '#374151', marginVertical: 8, paddingRight: 30, height: 40 },
   clearButton: { position: 'absolute', right: 10, top: '50%', transform: [{ translateY: -10 }] },
-  loadingIndicator: { position: 'absolute', right: 40, top: '50%', transform: [{ translateY: -10 }] },
+  loadingIndicator: { position: 'absolute', right: 40, top: '50%', transform: [{ translateY: -10 }], zIndex: 11 },
   suggestionList: { position: 'absolute', top: 45, left: 0, right: 0, backgroundColor: '#FFFFFF', zIndex: 10, borderRadius: 8, elevation: 4, maxHeight: 150 },
   suggestionItem: { padding: 10, borderBottomWidth: 1, borderColor: '#ddd' },
   suggestionText: { color: '#444' },

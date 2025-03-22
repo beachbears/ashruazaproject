@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { LogBox } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import axios from 'axios';
+import * as Location from 'expo-location';
 
 LogBox.ignoreLogs([
   'textShadow*',
@@ -42,6 +43,12 @@ type Suggestion = {
   lon: number;
 };
 
+type CurrentLocation = {
+  latitude: number;
+  longitude: number;
+  address: string;
+};
+
 const Home = () => {
   const router = useRouter();
   const [location, setLocation] = useState(''); // search input value
@@ -51,6 +58,9 @@ const Home = () => {
   // Ref for ScrollView and Y position of search container
   const scrollViewRef = useRef<ScrollView>(null);
   const [searchY, setSearchY] = useState(0);
+
+  // State para sa current location mula sa GPS
+  const [currentLocation, setCurrentLocation] = useState<CurrentLocation | null>(null);
 
   // Updated list of tourist attractions with sample coordinates
   const touristAttractions: Attraction[] = [
@@ -62,39 +72,31 @@ const Home = () => {
     { id: 6, name: "Quezon Memorial Circle", city: "Quezon City", image: require('../../assets/images/attractions/circle.jpg'), latitude: 14.651, longitude: 121.046 },
     { id: 7, name: "Eastwood City", city: "Quezon City", image: require('../../assets/images/EW.png'), latitude: 14.578, longitude: 121.057 },
     { id: 8, name: "Star City", city: "Pasay", image: require('../../assets/images/STCity.jpg'), latitude: 14.531, longitude: 120.979 },
-    // Caloocan City
     { id: 9, name: "Bonifacio Monument", city: "Caloocan City", image: require('../../assets/images/attractions/Bonmon.png'), latitude: 14.657, longitude: 120.982 },
     { id: 10, name: "San Roque", city: "Caloocan City", image: require('../../assets/images/attractions/sanroqcathed.jpg'), latitude: 14.645, longitude: 121.030 },
-    // Paranaque City
     { id: 11, name: "Entertainment City", city: "Paranaque City", image: require('../../assets/images/attractions/EntertainmentCity.jpg'), latitude: 14.514, longitude: 121.008 },
     { id: 12, name: "BF Aguirre/ President’s Avenue Food Strip", city: "Paranaque City", image: require('../../assets/images/attractions/bfaguirre.jpg'), latitude: 14.512, longitude: 121.019 },
     { id: 13, name: "Las Pinas – Paranaque Wetland", city: "Paranaque City", image: require('../../assets/images/attractions/Westland.png'), latitude: 14.459, longitude: 120.994 },
     { id: 14, name: "Baclaran Church", city: "Paranaque City", image: require('../../assets/images/attractions/BaclaranChurch.png'), latitude: 14.527, longitude: 121.000 },
     { id: 15, name: "Baclaran Market", city: "Paranaque City", image: require('../../assets/images/attractions/BaclaranMarket.jpg'), latitude: 14.526, longitude: 121.001 },
-    // Muntinlupa City
     { id: 16, name: "New Bilibid Prison", city: "Muntinlupa City", image: require('../../assets/images/attractions/bilibid.jpg'), latitude: 14.414, longitude: 121.044 },
     { id: 17, name: "Japanese Garden", city: "Muntinlupa City", image: require('../../assets/images/attractions/Japanesegarden.jpg'), latitude: 14.417, longitude: 121.039 },
     { id: 18, name: "Jamboree Lake", city: "Muntinlupa City", image: require('../../assets/images/attractions/Jamborelake.jpg'), latitude: 14.406, longitude: 121.037 },
     { id: 19, name: "Filinvest Corporate City", city: "Muntinlupa City", image: require('../../assets/images/attractions/filnevestcorporatecity.jpg'), latitude: 14.424, longitude: 121.047 },
-    // Las Pinas City
     { id: 21, name: "Saint Joseph Church and the Bamboo Organ", city: "Las Pinas City", image: require('../../assets/images/attractions/Saintjosepchurch.jpg'), latitude: 14.440, longitude: 121.005 },
     { id: 22, name: "Sarao Jeepney Factory", city: "Las Pinas City", image: require('../../assets/images/attractions/jeepfactory.jpg'), latitude: 14.431, longitude: 121.010 },
     { id: 24, name: "Villar Sipag Museum", city: "Las Pinas City", image: require('../../assets/images/attractions/Villarsipag.png'), latitude: 14.435, longitude: 121.003 },
-    // Pasig City
     { id: 25, name: "Bahay na Tisa (Tech House)", city: "Pasig City", image: require('../../assets/images/attractions/bahaytisa.jpg'), latitude: 14.584, longitude: 121.087 },
     { id: 26, name: "Pasig Museum", city: "Pasig City", image: require('../../assets/images/attractions/pasigmuseum.jpg'), latitude: 14.587, longitude: 121.085 },
     { id: 27, name: "Rave Rainforest Adventure Experience", city: "Pasig City", image: require('../../assets/images/attractions/Raverainforest.jpg'), latitude: 14.589, longitude: 121.090 },
     { id: 28, name: "Ortigas Center Complex", city: "Pasig City", image: require('../../assets/images/attractions/ortigascenter.png'), latitude: 14.586, longitude: 121.061 },
     { id: 29, name: "Barrio Kapitolyo Food Strip", city: "Pasig City", image: require('../../assets/images/attractions/barriocapital.jpg'), latitude: 14.591, longitude: 121.073 },
     { id: 30, name: "Pasig River", city: "Pasig City", image: require('../../assets/images/attractions/Pasigriver.jpg'), latitude: 14.589, longitude: 121.070 },
-    // Marikina City
     { id: 31, name: "Kapitan Moy", city: "Marikina City", image: require('../../assets/images/attractions/moy.jpg'), latitude: 14.650, longitude: 121.107 },
     { id: 32, name: "Shoe Museum", city: "Marikina City", image: require('../../assets/images/attractions/shoemuseum.jpg'), latitude: 14.651, longitude: 121.108 },
     { id: 33, name: "Marikina Riverbanks", city: "Marikina City", image: require('../../assets/images/attractions/marikinariverbanks.jpg'), latitude: 14.652, longitude: 121.110 },
-    // Valenzuela City
     { id: 34, name: "National Shrine of the Our Lady of Fatima", city: "Valenzuela City", image: require('../../assets/images/attractions/nationalOLFU.jpg'), latitude: 14.720, longitude: 121.040 },
     { id: 35, name: "Museo ng Valenzuela", city: "Valenzuela City", image: require('../../assets/images/attractions/museoval.jpg'), latitude: 14.722, longitude: 121.045 },
-    // Quezon City (additional attractions)
     { id: 36, name: "La Mesa Eco Park", city: "Quezon City", image: require('../../assets/images/attractions/ecopark.png'), latitude: 14.676, longitude: 121.092 },
     { id: 37, name: "Melchora Aquino (Tandang Sora) Shrine", city: "Quezon City", image: require('../../assets/images/attractions/tandangsorashrine.jpg'), latitude: 14.692, longitude: 121.065 },
     { id: 38, name: "Cry of Pugad Lawin Shrine", city: "Quezon City", image: require('../../assets/images/attractions/cryofpugad.jpg'), latitude: 14.697, longitude: 121.050 },
@@ -105,6 +107,24 @@ const Home = () => {
   ];
 
   const filteredAttractions = touristAttractions;
+
+  // GPS Authentication: Humihingi ng location permissions at kinukuha ang current location.
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log("Location permission not granted");
+        return;
+      }
+      const locationObj = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = locationObj.coords;
+      const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+      const address = geocode && geocode.length > 0 
+        ? `${geocode[0].name ? geocode[0].name + ', ' : ''}${geocode[0].street ? geocode[0].street + ', ' : ''}${geocode[0].city}, ${geocode[0].region}`
+        : 'Unknown Location';
+      setCurrentLocation({ latitude, longitude, address });
+    })();
+  }, []);
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
@@ -126,11 +146,14 @@ const Home = () => {
     }, 1000);
   };
 
-  // When an attraction is pressed, navigate to the Route screen with its data.
+  // Kapag pinindot ang isang attraction, ire-route ang user sa route.tsx at ipapasa ang current location bilang "from"
   const handleAttractionPress = (attraction: Attraction) => {
     router.push({
-      pathname: '/route',
-      params: { attraction: encodeURIComponent(JSON.stringify(attraction)) }
+      pathname: '/(tabs)/route',
+      params: { 
+        attraction: encodeURIComponent(JSON.stringify(attraction)),
+        from: currentLocation ? encodeURIComponent(JSON.stringify(currentLocation)) : ''
+      }
     });
   };
 
@@ -174,7 +197,12 @@ const Home = () => {
     if (location.trim() !== '') {
       router.replace({
         pathname: '/route',
-        params: { destination: location, timestamp: new Date().getTime() }
+        params: { 
+          destination: location, 
+          // Ipapasa rin ang current location (kung available) bilang "from"
+          from: currentLocation ? encodeURIComponent(JSON.stringify(currentLocation)) : '',
+          timestamp: new Date().getTime()
+        }
       });
       setLocation('');
       setDestinationSuggestions([]);
