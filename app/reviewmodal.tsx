@@ -198,7 +198,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         <TouchableOpacity
                           style={styles.viewButton}
                           onPress={() => {
-                            onSpotView?.(item);
+                            if (onSpotView) {
+                              onSpotView(item);
+                              // Don't close the modal here
+                            }
                             // Add vibration feedback
                             if (Platform.OS === "ios") {
                               const ReactNative = require("react-native");
@@ -245,7 +248,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                         <TouchableOpacity
                           style={styles.viewButton}
                           onPress={() => {
-                            onSpotView?.(item);
+                            if (onSpotView) {
+                              onSpotView(item);
+                              // Don't close the modal here
+                            }
                             // Add vibration feedback
                             if (Platform.OS === "ios") {
                               const ReactNative = require("react-native");
