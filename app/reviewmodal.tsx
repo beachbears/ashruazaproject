@@ -1,10 +1,10 @@
-import { LogBox, Platform, Linking } from "react-native";
+import { LogBox, Platform, Linking, FlatList } from "react-native";
 LogBox.ignoreLogs([
   '"textShadow*" style props are deprecated. Use "textShadow".',
   '"shadow*" style props are deprecated. Use "boxShadow".',
 ]);
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
-  ScrollView,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -41,7 +40,8 @@ interface ReviewModalProps {
   onSpotsFetched?: (spots: NearbySpot[]) => void;
   nearbySpots?: NearbySpot[];
   onSpotSelect?: (spot: NearbySpot) => void;
-  onSpotView?: (spot: NearbySpot) => void; // New prop for viewing details
+  onSpotView?: (spot: NearbySpot) => void;
+  scrollToSpot?: string | null; // NEW: For scrolling to a specific spot
 }
 
 interface RouteData {
@@ -64,10 +64,14 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   nearbySpots,
   onSpotSelect,
   onSpotView,
+  scrollToSpot, // NEW: Destructure the new prop
 }) => {
   const [routeData, setRouteData] = useState<RouteData[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const flatListRef = useRef<FlatList<RouteData>>(null); // NEW: Reference for FlatList
+  const [scrollIndex, setScrollIndex] = useState<number | null>(null); // NEW: To track the index to scroll to
 
   // When nearbySpots is provided by the parent, use them directly.
   useEffect(() => {
@@ -98,6 +102,23 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       fetchRouteData();
     }
   }, [visible, originCoords, destinationCoords, nearbySpots]);
+
+  // NEW: Effect for scrolling to a specific spot when scrollToSpot is provided
+  useEffect(() => {
+    if (scrollToSpot && routeData) {
+      const index = routeData.findIndex((spot) => spot.name === scrollToSpot);
+      if (index !== -1) {
+        setScrollIndex(index);
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({
+            index,
+            animated: true,
+            viewPosition: 0.3, // Adjust this value to set desired scroll position
+          });
+        }, 100); // Small delay for layout
+      }
+    }
+  }, [scrollToSpot, routeData]);
 
   const fetchRouteData = async () => {
     setLoading(true);
@@ -147,6 +168,94 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     }
   };
 
+  // Render each attraction card. This logic remains unchanged.
+  const renderAttractionCard = ({ item }: { item: RouteData }) => (
+    <View style={styles.attractionCard}>
+      <Image
+        source={{ uri: item.image_url }}
+        style={styles.attractionImage}
+        defaultSource={{
+          uri: "https://via.placeholder.com/300x200.png?text=Loading...",
+        }}
+      />
+      <Text style={styles.attractionName}>{item.name}</Text>
+      <Text style={styles.attractionDescription}>
+        {item.description || "No description available."}
+      </Text>
+
+      {/* Conditionally render the Official Website button if item.link exists */}
+      {item.link && (
+        <TouchableOpacity
+          style={styles.linkButton}
+          onPress={() => Linking.openURL(item.link!)}
+        >
+          <Text style={styles.linkText} numberOfLines={1} ellipsizeMode="tail">
+            Official Website
+          </Text>
+          <Ionicons name="open-outline" size={16} color="#3B82F6" />
+        </TouchableOpacity>
+      )}
+      <View style={styles.actionButtonsContainer}>
+        <TouchableOpacity
+          style={styles.viewButton}
+          onPress={() => {
+            if (onSpotView) {
+              onSpotView(item);
+              // Don't close the modal here
+            }
+            // Add vibration feedback
+            if (Platform.OS === "ios") {
+              const ReactNative = require("react-native");
+              ReactNative.NativeModules.Vibration.vibrate("impactHeavy");
+            } else {
+              const Vibration = require("react-native").Vibration;
+              Vibration.vibrate(50);
+            }
+          }}
+        >
+          <Text style={styles.viewText} numberOfLines={1} ellipsizeMode="tail">
+            View
+          </Text>
+          <Ionicons name="eye-outline" size={16} color="#3B82F6" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.goHereButton}
+          onPress={() => onSpotSelect?.(item)}
+        >
+          <Text
+            style={styles.goHereText}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            Go here
+          </Text>
+          <Ionicons name="navigate" size={18} color="#3B82F6" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.feedbackContainer}>
+        <Text style={styles.sectionTitle}>Visitor Feedback</Text>
+        {item.feedbacks && item.feedbacks.length > 0 ? (
+          item.feedbacks.map((feedback, index) => (
+            <View key={index} style={styles.feedbackItem}>
+              <Ionicons name="chatbubble-ellipses" size={14} color="#4B5563" />
+              <Text style={styles.feedbackText}>{feedback}</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.feedbackText}>No feedback available.</Text>
+        )}
+      </View>
+      <View style={styles.triviaContainer}>
+        <View style={styles.triviaHeader}>
+          <Ionicons name="sparkles-sharp" size={14} color="#21de6b" />
+          <Text style={styles.triviaTitle}> Trivia & Facts</Text>
+        </View>
+        <Text style={styles.triviafacts}>{item.trivia}</Text>
+      </View>
+    </View>
+  );
+
   return (
     <Modal
       animationType="fade"
@@ -156,181 +265,27 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            {loading ? (
-              <ActivityIndicator size="large" color="#000" />
-            ) : error ? (
-              <Text style={{ color: "red" }}>{error}</Text>
-            ) : routeData ? (
-              routeData.map((item, index) => (
-                <View key={index} style={styles.attractionCard}>
-                  <Image
-                    source={{ uri: item.image_url }}
-                    style={styles.attractionImage}
-                    defaultSource={{
-                      uri: "https://via.placeholder.com/300x200.png?text=Loading...",
-                    }}
-                  />
-                  <Text style={styles.attractionName}>{item.name}</Text>
-                  <Text style={styles.attractionDescription}>
-                    {item.description || "No description available."}
-                  </Text>
-
-                  {/* Conditionally render the Official Website button if item.link exists */}
-                  {item.link && (
-                    <TouchableOpacity
-                      style={styles.linkButton}
-                      onPress={() => Linking.openURL(item.link!)}
-                    >
-                      <Text
-                        style={styles.linkText}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        Official Website
-                      </Text>
-                      <Ionicons name="open-outline" size={16} color="#3B82F6" />
-                    </TouchableOpacity>
-                  )}
-                  <View style={styles.actionButtonsContainer}>
-                    {!item.link && (
-                      <>
-                        <TouchableOpacity
-                          style={styles.viewButton}
-                          onPress={() => {
-                            if (onSpotView) {
-                              onSpotView(item);
-                              // Don't close the modal here
-                            }
-                            // Add vibration feedback
-                            if (Platform.OS === "ios") {
-                              const ReactNative = require("react-native");
-                              ReactNative.NativeModules.Vibration.vibrate(
-                                "impactHeavy"
-                              );
-                            } else {
-                              const Vibration =
-                                require("react-native").Vibration;
-                              Vibration.vibrate(50);
-                            }
-                          }}
-                        >
-                          <Text
-                            style={styles.viewText}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                          >
-                            View
-                          </Text>
-                          <Ionicons
-                            name="eye-outline"
-                            size={16}
-                            color="#3B82F6"
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.goHereButton}
-                          onPress={() => onSpotSelect?.(item)}
-                        >
-                          <Text
-                            style={styles.goHereText}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                          >
-                            Go here
-                          </Text>
-                          <Ionicons name="navigate" size={18} color="#3B82F6" />
-                        </TouchableOpacity>
-                      </>
-                    )}
-                    {item.link && (
-                      <>
-                        <TouchableOpacity
-                          style={styles.viewButton}
-                          onPress={() => {
-                            if (onSpotView) {
-                              onSpotView(item);
-                              // Don't close the modal here
-                            }
-                            // Add vibration feedback
-                            if (Platform.OS === "ios") {
-                              const ReactNative = require("react-native");
-                              ReactNative.NativeModules.Vibration.vibrate(
-                                "impactHeavy"
-                              );
-                            } else {
-                              const Vibration =
-                                require("react-native").Vibration;
-                              Vibration.vibrate(50);
-                            }
-                          }}
-                        >
-                          <Text
-                            style={styles.viewText}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                          >
-                            View
-                          </Text>
-                          <Ionicons
-                            name="eye-outline"
-                            size={16}
-                            color="#3B82F6"
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.goHereButton}
-                          onPress={() => onSpotSelect?.(item)}
-                        >
-                          <Text
-                            style={styles.goHereText}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                          >
-                            Go here
-                          </Text>
-                          <Ionicons name="navigate" size={18} color="#3B82F6" />
-                        </TouchableOpacity>
-                      </>
-                    )}
-                  </View>
-
-                  <View style={styles.feedbackContainer}>
-                    <Text style={styles.sectionTitle}>Visitor Feedback</Text>
-                    {item.feedbacks && item.feedbacks.length > 0 ? (
-                      item.feedbacks.map((feedback, index) => (
-                        <View key={index} style={styles.feedbackItem}>
-                          <Ionicons
-                            name="chatbubble-ellipses"
-                            size={14}
-                            color="#4B5563"
-                          />
-                          <Text style={styles.feedbackText}>{feedback}</Text>
-                        </View>
-                      ))
-                    ) : (
-                      <Text style={styles.feedbackText}>
-                        No feedback available.
-                      </Text>
-                    )}
-                  </View>
-                  <View style={styles.triviaContainer}>
-                    <View style={styles.triviaHeader}>
-                      <Ionicons
-                        name="sparkles-sharp"
-                        size={14}
-                        color="#21de6b"
-                      />
-                      <Text style={styles.triviaTitle}> Trivia & Facts</Text>
-                    </View>
-                    <Text style={styles.triviafacts}>{item.trivia}</Text>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <Text>No data available</Text>
-            )}
-          </ScrollView>
+          {loading ? (
+            <ActivityIndicator size="large" color="#000" />
+          ) : error ? (
+            <Text style={{ color: "red" }}>{error}</Text>
+          ) : routeData ? (
+            <FlatList
+              ref={flatListRef}
+              data={routeData}
+              keyExtractor={(item, index) => item.name + index}
+              renderItem={renderAttractionCard}
+              onScrollToIndexFailed={({ index }) => {
+                // Handle scroll failure
+                setTimeout(() => {
+                  flatListRef.current?.scrollToIndex({ index, animated: true });
+                }, 500);
+              }}
+              contentContainerStyle={styles.scrollContent}
+            />
+          ) : (
+            <Text>No data available</Text>
+          )}
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.buttonText}>Close</Text>

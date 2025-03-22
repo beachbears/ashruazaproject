@@ -134,6 +134,7 @@ interface MapComponentProps {
   selectedSpot?: LatLng | null;
   isLoading?: boolean;
   webviewRef?: React.RefObject<WebView>;
+  onSpotClick?: (spotName: string) => void; // Added new prop
 }
 
 interface RouteDetails {
@@ -368,8 +369,12 @@ const getMapHTML = (
             \${${JSON.stringify(spot)}.image_url ? 
               \`<img 
                 src="\${${JSON.stringify(spot)}.image_url}" 
-                style="width: 100%; height: auto; margin-top: 5px; border-radius: 4px;"
+                style="width: 100%; height: auto; margin-top: 5px; border-radius: 4px; cursor: pointer;"
                 onerror="this.onerror=null;this.src='https://via.placeholder.com/100x75.png?text=Image+Not+Available';"
+                onclick="window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                  type: 'spotClick', 
+                  name: '${spot.name.replace(/'/g, "\\'")}' 
+                }))"
               />\` : 
               '<p style="margin: 5px 0; color: #666;">No image available</p>' 
             }
@@ -470,6 +475,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   nearbySpots,
   selectedSpot,
   isLoading,
+  onSpotClick, // Added new prop
 }) => {
   const mapKey = JSON.stringify({
     initialRegion,
@@ -567,6 +573,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
           handleLoadEnd();
           setIsWebViewReady(true);
         }}
+        onMessage={(event) => {
+          try {
+            const data = JSON.parse(event.nativeEvent.data);
+            if (data.type === "spotClick" && onSpotClick) {
+              onSpotClick(data.name);
+            }
+          } catch (e) {
+            console.error("Error parsing message:", e);
+          }
+        }}
       />
       {(loading || isLoading) && (
         <Animated.View
@@ -617,6 +633,7 @@ const RouteScreen: React.FC = () => {
   const { destination: destParam, attraction } = useLocalSearchParams();
   const [modalVisible, setModalVisible] = useState(false); // For Nearby Attractions (ReviewModal)
   const [restaurantModalVisible, setRestaurantModalVisible] = useState(false); // For Restaurants Modal
+  const [scrollToSpot, setScrollToSpot] = useState<string | null>(null); // NEW: For handling scroll to a spot
   const [region, setRegion] = useState<Region>({
     latitude: 14.676,
     longitude: 121.0437,
@@ -654,6 +671,16 @@ const RouteScreen: React.FC = () => {
   const webviewRef = useRef<WebView>(null);
   const originTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const destinationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // NEW: Effect to handle scroll when modal is visible
+  useEffect(() => {
+    if (modalVisible && scrollToSpot) {
+      // Small timeout to ensure modal is fully rendered
+      setTimeout(() => {
+        setScrollToSpot(null);
+      }, 300);
+    }
+  }, [modalVisible, scrollToSpot]);
 
   const handleToggleSegment = (idx: number) => {
     setExpandedSegments((prev) => ({
@@ -1261,6 +1288,7 @@ const RouteScreen: React.FC = () => {
               originCoords={route[0]}
               destinationCoords={route[1]}
               nearbySpots={nearbySpots}
+              scrollToSpot={scrollToSpot} // NEW: Pass scrollToSpot to ReviewModal
               onSpotsFetched={(spots) => setNearbySpots(spots)}
               onSpotSelect={(selectedSpot) => {
                 setNearbySpots([]);
@@ -1290,7 +1318,7 @@ const RouteScreen: React.FC = () => {
                   latitude: selectedSpot.latitude,
                   longitude: selectedSpot.longitude,
                 });
-                setModalVisible(false); // Added to close the modal after viewing the spot
+                setModalVisible(false);
               }}
             />
           )}
@@ -1328,6 +1356,11 @@ const RouteScreen: React.FC = () => {
             nearbySpots={nearbySpots}
             selectedSpot={selectedSpot}
             isLoading={isRouteLoading}
+            onSpotClick={(spotName) => {
+              // NEW: When a spot is clicked, set scrollToSpot and open the modal
+              setScrollToSpot(spotName);
+              setModalVisible(true);
+            }}
           />
         </Animated.View>
         <ScrollView
@@ -1355,6 +1388,11 @@ const RouteScreen: React.FC = () => {
             style={styles.map}
             polylineColor={polylineColor}
             webviewRef={webviewRef}
+            onSpotClick={(spotName) => {
+              // NEW: When a spot is clicked, set scrollToSpot and open the modal
+              setScrollToSpot(spotName);
+              setModalVisible(true);
+            }}
           />
         </Animated.View>
         {detailsContent}
