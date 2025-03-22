@@ -217,8 +217,18 @@ const getMapHTML = (
     }
   }
 
+  // Update the icon HTML
+  markersJS += `
+    var icon = L.divIcon({
+      html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #28a745; font-size: 16px;"></i></div>',
+      className: 'custom-icon',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32]
+    });
+  `;
+
   let polylinesJS = "";
-  // Kapag roadPath ay SegmentPath[]
+  // When roadPath is SegmentPath[]
   if (
     Array.isArray(roadPath) &&
     roadPath.length > 0 &&
@@ -238,7 +248,7 @@ const getMapHTML = (
         .join("\n")}
     `;
   }
-  // Kapag roadPath ay LatLng[][]
+  // When roadPath is LatLng[][]
   else if (
     Array.isArray(roadPath) &&
     roadPath.length > 0 &&
@@ -258,7 +268,7 @@ const getMapHTML = (
         .join("\n")}
     `;
   }
-  // Kapag roadPath ay string o LatLng[]
+  // When roadPath is string or LatLng[]
   else if (
     (typeof roadPath === "string" && roadPath.length > 0) ||
     (Array.isArray(roadPath) && roadPath.length > 0)
@@ -291,7 +301,6 @@ const getMapHTML = (
       map.fitBounds(roadPolyline.getBounds());
     }
   `;
-
   let messageListenerJS = `
     var highlightedIndices = [];
     
@@ -524,39 +533,45 @@ const MapComponent: React.FC<MapComponentProps> = ({
   useEffect(() => {
     if (isWebViewReady && selectedSpot) {
       const js = `
-        if (window.map) {
-          const targetLat = ${selectedSpot.latitude};
-          const targetLng = ${selectedSpot.longitude};
-          
-          // Fly to the selected spot
-          window.map.flyTo([targetLat, targetLng], 16, {
-            animate: true,
-            duration: 2
-          });
-  
-          // After animation, find and open the popup
-          setTimeout(() => {
-            let foundMarker = null;
-            
-            window.map.eachLayer(layer => {
-              if (layer instanceof L.CircleMarker) {
-                const layerLatLng = layer.getLatLng();
-                // Compare coordinates with precision threshold
-                if (Math.abs(layerLatLng.lat - targetLat) < 0.000001 && 
-                    Math.abs(layerLatLng.lng - targetLng) < 0.000001) {
-                  foundMarker = layer;
-                }
-              }
-            });
-  
-            if (foundMarker) {
-              // Close any existing popups
-              window.map.closePopup();
-              foundMarker.openPopup();
+      if (window.map) {
+        const targetLat = ${selectedSpot.latitude};
+        const targetLng = ${selectedSpot.longitude};
+        
+        // Fly to the selected spot with zoom
+        window.map.flyTo([targetLat, targetLng], 16, {
+          animate: true,
+          duration: 2
+        });
+
+        // Highlight the marker
+        window.map.eachLayer(layer => {
+          if (layer instanceof L.Marker) {
+            const latLng = layer.getLatLng();
+            if (Math.abs(latLng.lat - targetLat) < 0.000001 && 
+                Math.abs(latLng.lng - targetLng) < 0.000001) {
+              layer.openPopup();
+              layer.setIcon(
+                L.divIcon({
+                  html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #dc3545; font-size: 16px;"></i></div>',
+                  className: 'selected-icon',
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 32]
+                })
+              );
+            } else {
+              layer.setIcon(
+                L.divIcon({
+                  html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #28a745; font-size: 16px;"></i></div>',
+                  className: 'custom-icon',
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 32]
+                })
+              );
             }
-          }, 500); // Short delay for flyTo completion
-        }
-      `;
+          }
+        });
+      }
+    `;
       webViewRef.current?.injectJavaScript(js);
     }
   }, [selectedSpot, isWebViewReady]);
