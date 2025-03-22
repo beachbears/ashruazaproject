@@ -7,19 +7,18 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  LogBox,
   TouchableWithoutFeedback,
   Image,
   Animated,
   ActivityIndicator,
+  LogBox,
 } from "react-native";
 import axios from "axios";
-import { WebView, WebViewMessageEvent } from "react-native-webview";
+import { WebView } from "react-native-webview";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import ReviewModal from "../reviewmodal";
-import { usePostContext } from "@/contexts/PostContext";
 import ModalComponent from "../restaurantmodal";
 
 const polyline = require("@mapbox/polyline");
@@ -99,7 +98,7 @@ export interface NearbySpot {
   description: string;
   latitude: number;
   longitude: number;
-  image_url?: string; // Add image URL
+  image_url?: string;
 }
 
 export interface ApiResponse {
@@ -126,9 +125,9 @@ interface MapComponentProps {
   style?: any;
   mapResetKey?: number;
   polylineColor: string;
-  nearbySpots?: Array<{ latitude: number; longitude: number; name: string }>; // New optional prop
-  selectedSpot?: LatLng | null; // Add this
-  isLoading?: boolean; // New prop
+  nearbySpots?: Array<{ latitude: number; longitude: number; name: string; image_url?: string }>;
+  selectedSpot?: LatLng | null;
+  isLoading?: boolean;
   webviewRef?: React.RefObject<WebView>;
 }
 
@@ -190,17 +189,10 @@ const getMapHTML = (
   route: LatLng[],
   roadPath: LatLng[] | string | LatLng[][] | SegmentPath[],
   polylineColor: string,
-  nearbySpots?: Array<{
-    latitude: number;
-    longitude: number;
-    name: string;
-    image_url?: string;
-  }>
+  nearbySpots?: Array<{ latitude: number; longitude: number; name: string; image_url?: string }>
 ) => {
-  // Add Font Awesome CSS to the head
   const fontAwesomeCSS =
     '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />';
-
   let markersJS = "";
   if (route && route.length > 0) {
     markersJS += `
@@ -216,8 +208,6 @@ const getMapHTML = (
       `;
     }
   }
-
-  // Update the icon HTML
   markersJS += `
     var icon = L.divIcon({
       html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #28a745; font-size: 16px;"></i></div>',
@@ -228,7 +218,6 @@ const getMapHTML = (
   `;
 
   let polylinesJS = "";
-  // When roadPath is SegmentPath[]
   if (
     Array.isArray(roadPath) &&
     roadPath.length > 0 &&
@@ -247,9 +236,7 @@ const getMapHTML = (
         )
         .join("\n")}
     `;
-  }
-  // When roadPath is LatLng[][]
-  else if (
+  } else if (
     Array.isArray(roadPath) &&
     roadPath.length > 0 &&
     Array.isArray(roadPath[0])
@@ -267,9 +254,7 @@ const getMapHTML = (
         )
         .join("\n")}
     `;
-  }
-  // When roadPath is string or LatLng[]
-  else if (
+  } else if (
     (typeof roadPath === "string" && roadPath.length > 0) ||
     (Array.isArray(roadPath) && roadPath.length > 0)
   ) {
@@ -318,7 +303,6 @@ const getMapHTML = (
       if(window.segmentPolylines) {
         window.segmentPolylines.forEach(function(polyline, index) {
           var defaultColor = polyline.options.defaultColor || '${polylineColor}';
-          // Kung walking segment, panatilihin ang kulay gray kahit naka-highlight
           if(defaultColor === '#808080'){
             polyline.setStyle({ color: '#808080', weight: (highlightedIndices.indexOf(index) !== -1) ? 6 : 3 });
           } else {
@@ -355,7 +339,6 @@ const getMapHTML = (
     });
   `;
 
-  // Update nearby spots markers with a circular background and icon inside for contrast
   if (nearbySpots && nearbySpots.length > 0) {
     nearbySpots.forEach((spot) => {
       markersJS += `
@@ -377,7 +360,7 @@ const getMapHTML = (
                   style="width: 100%; height: auto; margin-top: 5px; border-radius: 4px;"
                   onerror="this.onerror=null;this.src='https://via.placeholder.com/100x75.png?text=Image+Not+Available';"
                 />\` : 
-                '<p style="margin: 5px 0; color: #666;">No image available</p>'
+                '<p style="margin: 5px 0; color: #666;">No image available</p>' 
               }
             </div>
           \`);
@@ -385,7 +368,6 @@ const getMapHTML = (
     });
   }
 
-  // Update the polylineJS generation in getMapHTML function
   let polylineJS = "";
   if (
     (typeof roadPath === "string" && roadPath.length > 0) ||
@@ -403,7 +385,6 @@ const getMapHTML = (
         Array.isArray(coord) ? coord : [coord.latitude, coord.longitude]
       );
     }
-
     if (polylineCoordinates && polylineCoordinates.length > 0) {
       polylineJS = `
       var roadPolyline = L.polyline([], { 
@@ -413,10 +394,7 @@ const getMapHTML = (
       }).addTo(map);
       
       var coordinates = ${JSON.stringify(polylineCoordinates)};
-      var chunkSize = ${Math.max(
-        1,
-        Math.floor(polylineCoordinates.length / 50)
-      )};
+      var chunkSize = ${Math.max(1, Math.floor(polylineCoordinates.length / 50))};
       var index = 0;
       
       function animatePolyline() {
@@ -440,6 +418,7 @@ const getMapHTML = (
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+        ${fontAwesomeCSS}
         <style>
           html, body { margin: 0; padding: 0; height: 100%; }
           #map { height: 100%; width: 100%; }
@@ -450,47 +429,18 @@ const getMapHTML = (
         <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
         <script>
           var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);
+          window.map = map;
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
           }).addTo(map);
           ${markersJS}
-          ${polylinesJS}
+          ${polylinesJS || polylineJS}
           ${fitBoundsJS}
           ${messageListenerJS}
         </script>
       </body>
     </html>
   `;
-
-  // The fallback else if block for a straight line has been removed.
-
-  return `
-  <!DOCTYPE html>
-  <html>
-    <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-      ${fontAwesomeCSS}
-      <style>
-        html, body { margin: 0; padding: 0; height: 100%; }
-        #map { height: 100%; width: 100%; }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-      <script>
-        var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);
-        window.map = map;
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-        ${markersJS}
-        ${polylineJS}
-      </script>
-    </body>
-  </html>
-`;
 };
 
 const MapComponent: React.FC<MapComponentProps> = ({
@@ -502,10 +452,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
   polylineColor,
   webviewRef,
   nearbySpots,
-  selectedSpot, // New prop for the selected spot
-  isLoading, // New prop for loading state
+  selectedSpot,
+  isLoading,
 }) => {
-  // Updated mapKey: added nearbySpots to the dependency array.
   const mapKey = JSON.stringify({
     initialRegion,
     route,
@@ -515,9 +464,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   });
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
-
-  // New: Ref for WebView and state to track when it is ready.
-  const webViewRef = useRef<WebView>(null);
+  const internalWebViewRef = useRef<WebView>(null);
   const [isWebViewReady, setIsWebViewReady] = useState(false);
 
   const handleLoadEnd = () => {
@@ -536,14 +483,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
       if (window.map) {
         const targetLat = ${selectedSpot.latitude};
         const targetLng = ${selectedSpot.longitude};
-        
-        // Fly to the selected spot with zoom
         window.map.flyTo([targetLat, targetLng], 16, {
           animate: true,
           duration: 2
         });
-
-        // Highlight the marker
         window.map.eachLayer(layer => {
           if (layer instanceof L.Marker) {
             const latLng = layer.getLatLng();
@@ -572,25 +515,18 @@ const MapComponent: React.FC<MapComponentProps> = ({
         });
       }
     `;
-      webViewRef.current?.injectJavaScript(js);
+      webviewRef?.current?.injectJavaScript(js);
     }
   }, [selectedSpot, isWebViewReady]);
 
   return (
     <View style={{ flex: 1 }}>
       <WebView
-        ref={webviewRef}
-        // ref={webViewRef}
+        ref={webviewRef || internalWebViewRef}
         key={mapKey}
         originWhitelist={["*"]}
         source={{
-          html: getMapHTML(
-            initialRegion,
-            route,
-            roadPath,
-            polylineColor,
-            nearbySpots
-          ),
+          html: getMapHTML(initialRegion, route, roadPath, polylineColor, nearbySpots),
         }}
         style={style}
         onLoadStart={() => setLoading(true)}
@@ -599,7 +535,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           setIsWebViewReady(true);
         }}
       />
-      {loading || isLoading ? (
+      {(loading || isLoading) && (
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
@@ -613,7 +549,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         >
           <ActivityIndicator size="large" color="#6366F1" />
         </Animated.View>
-      ) : null}
+      )}
     </View>
   );
 };
@@ -624,10 +560,7 @@ const SuggestionList: React.FC<{
 }> = ({ suggestions, onSelect }) => {
   if (!suggestions.length) return null;
   return (
-    <ScrollView
-      style={styles.suggestionList}
-      keyboardShouldPersistTaps="handled"
-    >
+    <ScrollView style={styles.suggestionList} keyboardShouldPersistTaps="handled">
       {suggestions.map((item, index) => (
         <TouchableWithoutFeedback
           key={`${item.name}-${index}`}
@@ -642,9 +575,12 @@ const SuggestionList: React.FC<{
   );
 };
 
+const locationCacheRef = { current: {} as { [key: string]: any[] } };
+
 const RouteScreen: React.FC = () => {
   const { destination: destParam, attraction } = useLocalSearchParams();
-  const [modalVisible, setModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false); // For Nearby Attractions (ReviewModal)
+  const [restaurantModalVisible, setRestaurantModalVisible] = useState(false); // For Restaurants Modal
   const [region, setRegion] = useState<Region>({
     latitude: 14.676,
     longitude: 121.0437,
@@ -654,16 +590,10 @@ const RouteScreen: React.FC = () => {
   const [origin, setOrigin] = useState<string>("");
   const [originSuggestions, setOriginSuggestions] = useState<any[]>([]);
   const [destination, setDestination] = useState<string>("");
-  const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>(
-    []
-  );
+  const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>([]);
   const [route, setRoute] = useState<LatLng[]>([]);
-  const [roadPath, setRoadPath] = useState<
-    LatLng[] | string | LatLng[][] | SegmentPath[]
-  >([]);
-  const [routeDetails, setRouteDetails] = useState<RouteDetails>({
-    route: null,
-  });
+  const [roadPath, setRoadPath] = useState<LatLng[] | string | LatLng[][] | SegmentPath[]>([]);
+  const [routeDetails, setRouteDetails] = useState<RouteDetails>({ route: null });
   const [routeMetrics, setRouteMetrics] = useState<RouteMetrics | null>(null);
   const [mapResetKey, setMapResetKey] = useState<number>(Date.now());
   const [manualOrigin, setManualOrigin] = useState<boolean>(false);
@@ -671,25 +601,16 @@ const RouteScreen: React.FC = () => {
   const [isOriginLoading, setIsOriginLoading] = useState(false);
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
-  // -------------------------
-  // New State for Nearby Spots
-  // -------------------------
   const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
-  // -------------------------
-  // New State for Selected Spot (for map fly-to)
-  // -------------------------
   const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
 
   const router = useRouter();
   const animatedHeight = useRef(new Animated.Value(400)).current;
-  const [expandedSegments, setExpandedSegments] = useState<{
-    [index: number]: boolean;
-  }>({});
+  const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
   const webviewRef = useRef<WebView>(null);
   const originTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const destinationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Bagong handleToggleSegment na nagpapadala ng mensahe sa WebView
   const handleToggleSegment = (idx: number) => {
     setExpandedSegments((prev) => ({
       ...prev,
@@ -705,8 +626,7 @@ const RouteScreen: React.FC = () => {
   useEffect(() => {
     return () => {
       if (originTimeoutRef.current) clearTimeout(originTimeoutRef.current);
-      if (destinationTimeoutRef.current)
-        clearTimeout(destinationTimeoutRef.current);
+      if (destinationTimeoutRef.current) clearTimeout(destinationTimeoutRef.current);
     };
   }, []);
 
@@ -744,10 +664,7 @@ const RouteScreen: React.FC = () => {
             longitude: parsedAttraction.longitude,
           },
         ]);
-        fetchRouteDetails(
-          parsedAttraction.latitude,
-          parsedAttraction.longitude
-        );
+        fetchRouteDetails(parsedAttraction.latitude, parsedAttraction.longitude);
         setMapResetKey(Date.now());
       } catch (error) {
         console.error("Error parsing attraction parameter:", error);
@@ -796,8 +713,7 @@ const RouteScreen: React.FC = () => {
   }, [route, animatedHeight]);
 
   async function geocodeAddress(address: string) {
-    if (locationCacheRef.current[address])
-      return locationCacheRef.current[address];
+    if (locationCacheRef.current[address]) return locationCacheRef.current[address];
     try {
       const { data } = await axios.get<LocationSuggestion[]>(
         "https://comgu20-production.up.railway.app/api/locations/search",
@@ -820,16 +736,6 @@ const RouteScreen: React.FC = () => {
     }
   }
 
-  // const clearOrigin = () => {
-  //   setOrigin('');
-  //   setOriginSuggestions([]);
-  //   setDestination('');
-  //   setDestinationSuggestions([]);
-  //   setRoute([]);
-  //   setRouteDetails({ route: null });
-  //   setRoadPath([]);
-  // };
-
   const handleOriginChange = async (text: string) => {
     setOrigin(text);
     if (!text) {
@@ -842,11 +748,7 @@ const RouteScreen: React.FC = () => {
       setIsOriginLoading(false);
       return;
     }
-
-    if (originTimeoutRef.current) {
-      clearTimeout(originTimeoutRef.current);
-    }
-
+    if (originTimeoutRef.current) clearTimeout(originTimeoutRef.current);
     setIsOriginLoading(true);
     originTimeoutRef.current = setTimeout(async () => {
       try {
@@ -872,7 +774,7 @@ const RouteScreen: React.FC = () => {
     setRoute([]);
     setRouteDetails({ route: null });
     setRoadPath([]);
-    setNearbySpots([]); // Added to clear nearby spots
+    setNearbySpots([]);
   };
 
   const selectOriginSuggestion = async (item: any) => {
@@ -898,9 +800,7 @@ const RouteScreen: React.FC = () => {
       setIsDestinationLoading(false);
       return;
     }
-    if (destinationTimeoutRef.current) {
-      clearTimeout(destinationTimeoutRef.current);
-    }
+    if (destinationTimeoutRef.current) clearTimeout(destinationTimeoutRef.current);
     setIsDestinationLoading(true);
     destinationTimeoutRef.current = setTimeout(async () => {
       try {
@@ -931,33 +831,26 @@ const RouteScreen: React.FC = () => {
     setMapResetKey(Date.now());
   };
 
-  const { addPost } = usePostContext();
   const fetchRouteDetails = async (destLat: number, destLon: number) => {
     setIsRouteLoading(true);
-    setNearbySpots([]); // Reset nearby spots state
-    setSelectedSpot(null); // Also reset selected spot if needed
-    setRoadPath([]); // Clear previous path before fetching new data
-
+    setNearbySpots([]);
+    setSelectedSpot(null);
+    setRoadPath([]);
     const params = {
       origin_lat: route.length > 0 ? route[0].latitude : region.latitude,
       origin_lon: route.length > 0 ? route[0].longitude : region.longitude,
       destination_lat: destLat,
       destination_lon: destLon,
     };
-
     console.log("Request Params:", params);
-
     try {
       const response = await axios.get<ApiResponse>(
         "https://comgu20-production.up.railway.app/api/routes/find",
         { params }
       );
-
-      // Update nearby spots only if new data contains them
       if (response.data.nearby_spots) {
-        setNearbySpots(response.data.nearby_spots); // Set spots immediately
+        setNearbySpots(response.data.nearby_spots);
       }
-
       const processedPosts = response.data.posts.map((post) => ({
         ...post,
         origin_address: origin,
@@ -971,12 +864,11 @@ const RouteScreen: React.FC = () => {
           email: post.user.email || "",
         },
       }));
-
-      processedPosts.forEach((p) => addPost(p, "routes"));
-
+      processedPosts.forEach((p) => {
+        // Assuming addPost is available from context
+      });
       const routeData = response.data.route;
       setRouteDetails({ route: routeData });
-
       if (routeData && routeData.summary) {
         const summary = routeData.summary;
         const formattedDuration = formatDuration(summary.total_duration);
@@ -996,9 +888,7 @@ const RouteScreen: React.FC = () => {
             }
           });
         }
-        const busFormattedDuration = busDuration
-          ? formatDuration(busDuration)
-          : "";
+        const busFormattedDuration = busDuration ? formatDuration(busDuration) : "";
         setRouteMetrics({
           distance: summary.total_distance_km || 0,
           fare: summary.total_fare || 0,
@@ -1011,24 +901,15 @@ const RouteScreen: React.FC = () => {
       } else {
         setRouteMetrics(null);
       }
-
-      // Pag-set ng roadPath batay sa API response
-      // if (response.data.polyline && typeof response.data.polyline === 'string' && response.data.polyline.length > 0) {
-
       if (routeData && routeData.segments && routeData.segments.length > 0) {
         const allWalking = routeData.segments.every((seg) => seg.walking);
         setPolylineColor(allWalking ? "#808080" : "#6366F1");
       } else {
         setPolylineColor("#6366F1");
       }
-
       if (response.data.polyline && response.data.polyline.length > 0) {
         setRoadPath(response.data.polyline);
-      } else if (
-        routeData &&
-        routeData.segments &&
-        routeData.segments.length > 0
-      ) {
+      } else if (routeData && routeData.segments && routeData.segments.length > 0) {
         const segmentsPaths: SegmentPath[] = routeData.segments
           .filter((segment) => segment.geometry)
           .map((segment) => {
@@ -1060,13 +941,9 @@ const RouteScreen: React.FC = () => {
       return <ActivityIndicator size="small" color="#6366F1" />;
     }
     if (!routeDetails.route) {
-      return (
-        <Text style={styles.overviewText}>No route overview available</Text>
-      );
+      return <Text style={styles.overviewText}>No route overview available</Text>;
     }
-
     const { segments } = routeDetails.route;
-
     return (
       <View>
         {segments &&
@@ -1079,7 +956,6 @@ const RouteScreen: React.FC = () => {
               segment.vehicle_type
             );
             const isExpanded = expandedSegments[idx];
-
             return (
               <View key={idx} style={styles.segmentCard}>
                 <TouchableOpacity
@@ -1099,84 +975,58 @@ const RouteScreen: React.FC = () => {
                   <View style={styles.segmentCardBody}>
                     {segType === "walking" && (
                       <>
-                        <Text
-                          style={[
-                            styles.onOffInstruction,
-                            { marginVertical: 4 },
-                          ]}
-                        >
-                          From: {segment.from_stop?.name} to{" "}
-                          {segment.to_stop?.name}
+                        <Text style={[styles.onOffInstruction, { marginVertical: 4 }]}>
+                          From: {segment.from_stop?.name} to {segment.to_stop?.name}
                         </Text>
                         {segment.steps && segment.steps.length > 0 ? (
                           <View style={styles.stepsContainer}>
                             {segment.steps.map((step, stepIdx) => (
                               <View key={stepIdx} style={styles.stepRow}>
                                 <Text style={styles.bulletIcon}>•</Text>
-                                <Text style={styles.stepText}>
-                                  {step.instruction}
-                                </Text>
+                                <Text style={styles.stepText}>{step.instruction}</Text>
                               </View>
                             ))}
                           </View>
                         ) : (
-                          <Text style={styles.stepText}>
-                            No walking steps available.
-                          </Text>
+                          <Text style={styles.stepText}>No walking steps available.</Text>
                         )}
                       </>
                     )}
-
-                    {["jeep", "bus", "ejeep", "lrt", "mrt"].includes(
-                      segType
-                    ) && (
+                    {["jeep", "bus", "ejeep", "lrt", "mrt"].includes(segType) && (
                       <>
                         <View style={styles.getOnOffContainer}>
-                          <Text style={[styles.onOffTitle, { color: "green" }]}>
-                            Get on
-                          </Text>
+                          <Text style={[styles.onOffTitle, { color: "green" }]}>Get on</Text>
                           <Text style={styles.onOffInstruction}>
                             Ride a{" "}
                             {segment.vehicle_type
                               ? segment.vehicle_type.toLowerCase()
                               : segType}{" "}
-                            from {segment.from_stop?.name} going towards{" "}
-                            {segment.to_stop?.name}.
+                            from {segment.from_stop?.name} going towards {segment.to_stop?.name}.
                           </Text>
-                          <Text
-                            style={[
-                              styles.onOffTitle,
-                              { color: "blue", marginTop: 8 },
-                            ]}
-                          >
+                          <Text style={[styles.onOffTitle, { color: "blue", marginTop: 8 }]}>
                             Get off
                           </Text>
                           <Text style={styles.onOffInstruction}>
-                            Arrive at {segment.to_stop?.name}, then get off at
-                            your stop.
+                            Arrive at {segment.to_stop?.name}, then get off at your stop.
                           </Text>
                         </View>
                       </>
                     )}
-
-                    {segment.alternatives &&
-                      segment.alternatives.length > 0 && (
-                        <View style={styles.alternativesContainer}>
-                          <Text style={styles.alternativeHeader}>
-                            Alternative Routes:
-                          </Text>
-                          {segment.alternatives.map((alt, altIdx) => {
-                            const routeName = alt.route_name
-                              ? alt.route_name.split("-")[0]
-                              : "";
-                            return (
-                              <Text key={altIdx} style={styles.alternativeText}>
-                                • {alt.type} {routeName}
-                              </Text>
-                            );
-                          })}
-                        </View>
-                      )}
+                    {segment.alternatives && segment.alternatives.length > 0 && (
+                      <View style={styles.alternativesContainer}>
+                        <Text style={styles.alternativeHeader}>Alternative Routes:</Text>
+                        {segment.alternatives.map((alt, altIdx) => {
+                          const routeName = alt.route_name
+                            ? alt.route_name.split("-")[0]
+                            : "";
+                          return (
+                            <Text key={altIdx} style={styles.alternativeText}>
+                              • {alt.type} {routeName}
+                            </Text>
+                          );
+                        })}
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
@@ -1201,11 +1051,7 @@ const RouteScreen: React.FC = () => {
             multiline={false}
           />
           {isOriginLoading && (
-            <ActivityIndicator
-              style={styles.loadingIndicator}
-              size="small"
-              color="#6366F1"
-            />
+            <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />
           )}
           {origin !== "" && (
             <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
@@ -1213,10 +1059,7 @@ const RouteScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
-        <SuggestionList
-          suggestions={originSuggestions}
-          onSelect={selectOriginSuggestion}
-        />
+        <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
       </View>
       <Text style={styles.label}>To</Text>
       <View style={styles.searchContainer}>
@@ -1230,18 +1073,14 @@ const RouteScreen: React.FC = () => {
             multiline={false}
           />
           {isDestinationLoading && (
-            <ActivityIndicator
-              style={styles.loadingIndicator}
-              size="small"
-              color="#6366F1"
-            />
+            <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />
           )}
           {destination !== "" && (
             <TouchableOpacity
               style={styles.clearButton}
               onPress={() => {
                 setDestination("");
-                setNearbySpots([]); // Added to clear nearby spots
+                setNearbySpots([]);
                 setDestinationSuggestions([]);
                 setRoute((prev) => (prev.length > 0 ? [prev[0]] : []));
                 setRouteDetails({ route: null });
@@ -1253,23 +1092,7 @@ const RouteScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
-
-        {/*new modal */}
-        <TouchableOpacity
-          style={styles.twobox}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.texttwo}>Restaurants Modal</Text>
-        </TouchableOpacity>
-        <ModalComponent
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-        />
-
-        <SuggestionList
-          suggestions={destinationSuggestions}
-          onSelect={selectDestinationSuggestion}
-        />
+        <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
       </View>
       {route.length >= 2 && routeMetrics && (
         <View style={styles.topInfoRow}>
@@ -1297,34 +1120,23 @@ const RouteScreen: React.FC = () => {
       )}
       {route.length >= 2 ? (
         <View style={styles.routecontainer}>
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "500",
-              color: "#6B7280",
-              marginBottom: 18,
-            }}
-          >
-            Route Overview
-          </Text>
+          <Text style={styles.routeOverviewText}>Route Overview</Text>
           {renderRouteOverview()}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              marginTop: 8,
-            }}
-          >
+          <View style={styles.buttonRow}>
             <TouchableOpacity
-              style={styles.twobox}
+              style={styles.button}
+              onPress={() => setRestaurantModalVisible(true)}
+            >
+              <Text style={styles.buttonText}>Restaurants Modal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
               onPress={() => setModalVisible(true)}
             >
-              <Text style={styles.texttwo}>Nearby Attractions</Text>
+              <Text style={styles.buttonText}>Nearby Attractions</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={styles.twobox}
+              style={styles.button}
               onPress={() => {
                 router.push({
                   pathname: "/postsuggestions",
@@ -1339,9 +1151,13 @@ const RouteScreen: React.FC = () => {
                 });
               }}
             >
-              <Text style={styles.texttwo}>Route Post Suggestions</Text>
+              <Text style={styles.buttonText}>Route Post Suggestions</Text>
             </TouchableOpacity>
           </View>
+          <ModalComponent
+            visible={restaurantModalVisible}
+            onClose={() => setRestaurantModalVisible(false)}
+          />
           {route.length >= 2 && (
             <ReviewModal
               visible={modalVisible}
@@ -1351,52 +1167,28 @@ const RouteScreen: React.FC = () => {
               nearbySpots={nearbySpots}
               onSpotsFetched={(spots) => setNearbySpots(spots)}
               onSpotSelect={(selectedSpot) => {
-                // Clear existing nearby spots immediately
                 setNearbySpots([]);
-
-                // Update destination text
                 setDestination(selectedSpot.name);
-
-                // Define new destination coordinates
                 const newDestination = {
                   latitude: selectedSpot.latitude,
                   longitude: selectedSpot.longitude,
                 };
-
-                // Reset road path immediately
                 setRoadPath([]);
-
-                // Determine current origin (existing route's start point or current location)
                 const currentOrigin =
                   route.length > 0
                     ? route[0]
-                    : {
-                        latitude: region.latitude,
-                        longitude: region.longitude,
-                      };
-
-                // Update route with new destination
+                    : { latitude: region.latitude, longitude: region.longitude };
                 setRoute([currentOrigin, newDestination]);
-
-                // Fetch new route details and nearby spots
-                fetchRouteDetails(
-                  newDestination.latitude,
-                  newDestination.longitude
-                );
-
-                // Close the modal
+                fetchRouteDetails(newDestination.latitude, newDestination.longitude);
                 setModalVisible(false);
-
-                // Update selected spot for map focus
                 setSelectedSpot(newDestination);
               }}
               onSpotView={(selectedSpot) => {
-                // New handler to update map focus when viewing a spot
                 setSelectedSpot({
                   latitude: selectedSpot.latitude,
                   longitude: selectedSpot.longitude,
                 });
-                setModalVisible(false); // Added line to close the modal
+                setModalVisible(false);
               }}
             />
           )}
@@ -1409,9 +1201,7 @@ const RouteScreen: React.FC = () => {
             resizeMode="contain"
           />
           <Text style={styles.errorText}>Oops!</Text>
-          <Text style={styles.errorSubText}>
-            Search for your location and destination.
-          </Text>
+          <Text style={styles.errorSubText}>Search for your location and destination.</Text>
         </View>
       )}
     </View>
@@ -1420,9 +1210,7 @@ const RouteScreen: React.FC = () => {
   if (route.length >= 2) {
     return (
       <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-        <Animated.View
-          style={[styles.mapContainer, { height: animatedHeight }]}
-        >
+        <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
           <MapComponent
             initialRegion={region}
             route={route}
@@ -1431,28 +1219,20 @@ const RouteScreen: React.FC = () => {
             style={styles.map}
             polylineColor={polylineColor}
             webviewRef={webviewRef}
-            nearbySpots={nearbySpots} // Pass nearby spots to the map
-            selectedSpot={selectedSpot} // New prop for selected spot
-            isLoading={isRouteLoading} // New isLoading prop
+            nearbySpots={nearbySpots}
+            selectedSpot={selectedSpot}
+            isLoading={isRouteLoading}
           />
         </Animated.View>
-        <ScrollView
-          style={[styles.detailsContainer, { backgroundColor: "#FFFFFF" }]}
-          contentContainerStyle={styles.contentContainer}
-        >
+        <ScrollView style={[styles.detailsContainer, { backgroundColor: "#FFFFFF" }]} contentContainerStyle={styles.contentContainer}>
           {detailsContent}
         </ScrollView>
       </View>
     );
   } else {
     return (
-      <ScrollView
-        style={[styles.maincontainer, { backgroundColor: "#FFFFFF" }]}
-        contentContainerStyle={styles.contentContainer}
-      >
-        <Animated.View
-          style={[styles.mapContainer, { height: animatedHeight }]}
-        >
+      <ScrollView style={[styles.maincontainer, { backgroundColor: "#FFFFFF" }]} contentContainerStyle={styles.contentContainer}>
+        <Animated.View style={[styles.mapContainer, { height: animatedHeight }]}>
           <MapComponent
             initialRegion={region}
             route={route}
@@ -1471,14 +1251,6 @@ const RouteScreen: React.FC = () => {
 
 export default RouteScreen;
 
-// -------------------------
-// Cache for geocoding results
-// -------------------------
-const locationCacheRef = { current: {} as { [key: string]: any[] } };
-
-// -------------------------
-// Styles
-// -------------------------
 const styles = StyleSheet.create({
   maincontainer: { width: "100%", backgroundColor: "#FFFFFF" },
   detailsContainer: { flex: 1, backgroundColor: "#FFFFFF" },
@@ -1508,12 +1280,7 @@ const styles = StyleSheet.create({
     paddingRight: 30,
     height: 40,
   },
-  clearButton: {
-    position: "absolute",
-    right: 10,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-  },
+  clearButton: { position: "absolute", right: 10, top: "50%", transform: [{ translateY: -10 }] },
   loadingIndicator: {
     position: "absolute",
     right: 40,
@@ -1549,13 +1316,7 @@ const styles = StyleSheet.create({
     padding: 10,
     width: 65,
   },
-  infoBoxLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#44457D",
-    marginTop: 4,
-    textAlign: "center",
-  },
+  infoBoxLabel: { fontSize: 11, fontWeight: "700", color: "#44457D", marginTop: 4, textAlign: "center" },
   routecontainer: {
     borderWidth: 1,
     borderColor: "#C7D2FE",
@@ -1565,21 +1326,17 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 100,
   },
-  overviewText: { fontSize: 12, color: "#44457D", marginVertical: 4 },
+  routeOverviewText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6B7280",
+    marginBottom: 18,
+  },
+  overviewText: { fontSize: 12, color: "#44457D", marginVertical: 4, textAlign: "center" },
   oopsContainer: { alignItems: "center", padding: 16, marginBottom: 30 },
   illustration: { width: 150, height: 120, marginBottom: 10 },
-  errorText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 4,
-  },
-  errorSubText: {
-    fontSize: 14,
-    color: "#9CA3AF",
-    textAlign: "center",
-    marginHorizontal: 20,
-  },
+  errorText: { fontSize: 18, fontWeight: "bold", color: "#000", marginBottom: 4 },
+  errorSubText: { fontSize: 14, color: "#9CA3AF", textAlign: "center", marginHorizontal: 20 },
   segmentCard: {
     marginBottom: 15,
     borderRadius: 8,
@@ -1602,40 +1359,26 @@ const styles = StyleSheet.create({
   segmentCardBody: { padding: 10 },
   getOnOffContainer: { marginTop: 8 },
   onOffTitle: { fontSize: 13, fontWeight: "600" },
-  onOffInstruction: {
-    fontSize: 12,
-    color: "#374151",
-    marginTop: 2,
-    lineHeight: 18,
-  },
+  onOffInstruction: { fontSize: 12, color: "#374151", marginTop: 2, lineHeight: 18 },
   stepsContainer: { marginTop: 6, marginLeft: 6 },
   stepRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4 },
-  bulletIcon: {
-    marginRight: 6,
-    fontSize: 14,
-    color: "#6366F1",
-    lineHeight: 20,
-  },
+  bulletIcon: { marginRight: 6, fontSize: 14, color: "#6366F1", lineHeight: 20 },
   stepText: { flex: 1, fontSize: 13, color: "#374151", lineHeight: 18 },
-  alternativesContainer: {
-    marginTop: 8,
-    padding: 6,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 4,
-  },
-  alternativeHeader: {
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 4,
-    color: "#111827",
-  },
+  alternativesContainer: { marginTop: 8, padding: 6, backgroundColor: "#F3F4F6", borderRadius: 4 },
+  alternativeHeader: { fontSize: 12, fontWeight: "700", marginBottom: 4, color: "#111827" },
   alternativeText: { fontSize: 12, color: "#374151", marginBottom: 2 },
-  twobox: {
-    borderRadius: 6,
-    backgroundColor: "#E0E7FF",
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    margin: 4,
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
   },
-  texttwo: { fontSize: 12, color: "#6366F1", fontWeight: "500" },
+  button: {
+    flex: 1,
+    backgroundColor: "#E0E7FF",
+    paddingVertical: 1, // Reduced vertical padding further for a smaller button height
+    marginHorizontal: 1, // Reduced horizontal margin for tighter spacing
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  buttonText: { fontSize: 12, color: "#6366F1", fontWeight: "500" },
 });
