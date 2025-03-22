@@ -1,6 +1,6 @@
 import { LogBox } from 'react-native';
-import React, { useState, useContext, useEffect } from 'react';
-import { Tabs, useRouter, useLocalSearchParams } from 'expo-router';
+import React, { useState, useContext } from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { StyleSheet, View, Image, Text, TouchableOpacity } from 'react-native';
@@ -8,11 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import { Ionicons } from '@expo/vector-icons';
 import { APP_NAME } from '@/constants';
-import { AuthContext, AuthContextType } from '../../contexts/AuthContext';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { usePostContext, type Post } from '../../contexts/PostContext';
-import { useRouteContext } from '../../contexts/RouteContext';
+import { AuthContext } from '../../contexts/AuthContext'; // adjust path as necessary
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -21,60 +17,10 @@ LogBox.ignoreLogs([
   'VirtualizedLists',
 ]);
 
-type RootStackParamList = {
-  Community: { origin: string; destination: string; route: string };
-  // other routes...
-};
-type NavigationProp = StackNavigationProp<RootStackParamList, 'Community'>;
-
 export default function TabLayout() {
   const { isLoggedIn, userName, logout } = useContext(AuthContext);
   const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const { routeDetails } = useRouteContext();
-
-  // Local state for route data.
-  // Initially, these are empty or placeholders.
-  const [origin, setOrigin] = useState<string>('');
-  const [destination, setDestination] = useState<string>('');
-  const [route, setRoute] = useState([
-    { latitude: 0, longitude: 0 },
-    { latitude: 0, longitude: 0 },
-  ]);
-
-  // Compute addresses from routeDetails or URL params.
-  const origin_address =
-    routeDetails?.location ||
-    (params.origin_address ? decodeURIComponent(params.origin_address as string) : '');
-  const destination_address =
-    routeDetails?.destination ||
-    (params.destination_address ? decodeURIComponent(params.destination_address as string) : '');
-
-  // Update origin and destination state when computed values change.
-  useEffect(() => {
-    if (origin_address) {
-      setOrigin(origin_address);
-    }
-    if (destination_address) {
-      setDestination(destination_address);
-    }
-  }, [origin_address, destination_address]);
-
-  // Update route coordinates from URL parameters if available.
-  useEffect(() => {
-    if (
-      params.origin_lat &&
-      params.origin_lon &&
-      params.destination_lat &&
-      params.destination_lon
-    ) {
-      setRoute([
-        { latitude: Number(params.origin_lat), longitude: Number(params.origin_lon) },
-        { latitude: Number(params.destination_lat), longitude: Number(params.destination_lon) },
-      ]);
-    }
-  }, [params]);
 
   const userInitial = userName ? userName.charAt(0).toUpperCase() : '';
 
@@ -90,62 +36,6 @@ export default function TabLayout() {
   const handleSignup = () => {
     router.push('/signup');
   };
-
-  useEffect(() => {
-    if (params.origin_address) {
-      setOrigin(decodeURIComponent(params.origin_address as string));
-    }
-    if (params.destination_address) {
-      setDestination(decodeURIComponent(params.destination_address as string));
-    }
-    if (
-      params.origin_lat &&
-      params.origin_lon &&
-      params.destination_lat &&
-      params.destination_lon
-    ) {
-      setRoute([
-        { latitude: Number(params.origin_lat), longitude: Number(params.origin_lon) },
-        { latitude: Number(params.destination_lat), longitude: Number(params.destination_lon) },
-      ]);
-    }
-  }, [params]);
-  
-
-  // Navigation: using expo-router's router.push.
-  const handleNavigate = () => {
-    // Ensure route has at least two points and origin/destination are non-empty.
-    if (route.length < 2 || origin === '' || destination === '') {
-      console.warn("Missing required parameters:", { origin, destination, route });
-      return;
-    }
-    console.log('Navigating with:', { origin, destination, route });
-    router.push({
-      pathname: '/community',
-      params: {
-        location: encodeURIComponent(origin || 'DefaultOrigin'),
-        destination: encodeURIComponent(destination || 'DefaultDestination'),
-        origin_address: encodeURIComponent( origin || 'DefaultOrigin'),
-        destination_address: encodeURIComponent( destination || 'DefaultDestination'),
-     
-        origin_lat: route[0].latitude.toString(),
-        origin_lon: route[0].longitude.toString(),
-        destination_lat: route[1].latitude.toString(),
-        destination_lon: route[1].longitude.toString(),
- 
-      },
-    });
-  };
-
-  useEffect(() => {
-    console.log('URL Params:', params);
-    console.log('Updated origin:', origin);
-    console.log('Updated destination:', destination);
-    console.log('Updated route:', route);
-  }, [params, origin, destination, route]);
-  
-
-  console.log('Navigating with:', { origin, destination, route });
 
   return (
     <Tabs
@@ -238,32 +128,6 @@ export default function TabLayout() {
             </View>
           ),
           tabBarItemStyle: styles.tabBarItem,
-          tabBarButton: (props) => {
-            const {
-              delayLongPress,
-              disabled,
-              onBlur,
-              onFocus,
-              onPressIn,
-              onPressOut,
-              onLongPress,
-              onPress,
-              ...restProps
-            } = props;
-            return (
-              <TouchableOpacity
-                {...restProps}
-                delayLongPress={delayLongPress ?? undefined}
-                disabled={disabled ?? false}
-                onBlur={onBlur ?? undefined}
-                onFocus={onFocus ?? undefined}
-                onPressIn={onPressIn ?? undefined}
-                onPressOut={onPressOut ?? undefined}
-                onLongPress={onLongPress ?? undefined}
-                onPress={handleNavigate}
-              />
-            );
-          },
         }}
       />
       <Tabs.Screen
@@ -295,7 +159,6 @@ export default function TabLayout() {
     </Tabs>
   );
 }
- 
 
 const styles = StyleSheet.create({
   headerStyle: {

@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import ReviewModal from '../reviewmodal';
 import { usePostContext } from '@/contexts/PostContext';
-
+ 
 const polyline = require('@mapbox/polyline');
 
 LogBox.ignoreLogs(['textShadow*', 'shadow*']);
@@ -355,11 +355,12 @@ const RouteScreen: React.FC = () => {
   const [isOriginLoading, setIsOriginLoading] = useState(false);
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
-
+  const [routeData, setRouteData] = useState([]);
   const router = useRouter();
   const animatedHeight = useRef(new Animated.Value(400)).current;
   const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
-
+   
+ 
   const toggleSegment = (index: number) => {
     setExpandedSegments(prev => ({ ...prev, [index]: !prev[index] }));
   };
@@ -529,22 +530,45 @@ const RouteScreen: React.FC = () => {
   };
 
   const { addPost } = usePostContext();
+
   const fetchRouteDetails = async (destLat: number, destLon: number) => {
     setIsRouteLoading(true);
+    
     const params = {
       origin_lat: region.latitude,
       origin_lon: region.longitude,
       destination_lat: destLat,
-      destination_lon: destLon,
+      destination_lon: destLon
     };
-    console.log("Request Params:", params);
+
     try {
       const response = await axios.get<ApiResponse>(
         'https://comgu20-production.up.railway.app/api/routes/find',
         { params }
       );
-      console.log("API Response:", response.data);
+     
+      console.log('🌐 Navigation params:', {
+        location: origin,
+        destination: destination,
+        origin_lat: region.latitude,
+        origin_lon: region.longitude,
+        destination_lat: destLat,
+        destination_lon: destLon
+      });
 
+       router.push({
+  pathname: "/community",
+  params: {
+    // Add ALL parameters as strings
+    location: encodeURIComponent(origin),
+    destination: encodeURIComponent(destination),
+    origin_lat: region.latitude.toString(),
+    origin_lon: region.longitude.toString(),
+    destination_lat: destLat.toString(),
+    destination_lon: destLon.toString(),
+  }
+});
+      
       const processedPosts = response.data.posts.map(post => ({
         ...post,
         origin_address: origin,              // current origin from state
@@ -955,3 +979,5 @@ const styles = StyleSheet.create({
   twobox: { borderRadius: 6, backgroundColor: '#E0E7FF', paddingVertical: 5, paddingHorizontal: 12, margin: 4 },
   texttwo: { fontSize: 12, color: '#6366F1', fontWeight: '500' }
 });
+
+ 

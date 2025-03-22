@@ -73,14 +73,55 @@ export default function CommunityPage() {
    const [isModalVisible, setIsModalVisible] = useState(false);
 const [modalVisible, setModalVisible] = useState(false);
 const [isSubmitting, setIsSubmitting] = useState(false);
-  
+useEffect(() => {
+  if (!params.location || !params.destination) {
+    Alert.alert("Missing Route Data", "Please complete a route search first");
+    router.back();
+  }
+}, []);
+
 const router = useRouter();
   const params = useLocalSearchParams();
-   
-console.log('Received params in Community:', params);
-  const location = decodeURIComponent(params.location as string);
-  const destination = decodeURIComponent(params.destination as string);
- 
+  useEffect(() => {
+    console.log('Received params:', params);
+    const hasRequiredParams = 
+    params.location &&
+    params.destination &&
+    params.origin_lat &&
+    params.origin_lon &&
+    params.destination_lat &&
+    params.destination_lon;
+
+  if (!hasRequiredParams) {
+    console.warn('Missing one or more required parameters:', params);
+    Alert.alert("Missing Route Data", "Please complete a route search first");
+    router.push('/');
+  }
+}, []);
+
+const location = Array.isArray(params.location) 
+? decodeURIComponent(params.location[0])
+: params.location 
+  ? decodeURIComponent(params.location)
+  : '';
+
+const destination = Array.isArray(params.destination)
+? decodeURIComponent(params.destination[0])
+: params.destination
+  ? decodeURIComponent(params.destination)
+  : '';
+
+  
+  const originCoords = {
+    lat: Number(params.origin_lat) || 0,
+    lon: Number(params.origin_lon) || 0
+  };
+  
+  const destinationCoords = {
+    lat: Number(params.destination_lat) || 0,
+    lon: Number(params.destination_lon) || 0
+  };
+  
 const openReportModal = (postId: number) => {
     setSelectedPostId(postId);
     setIsModalVisible(true);
@@ -411,8 +452,14 @@ useEffect(() => {
                   {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
                 </Text>
               </View>
-              <Text style={styles.postLocation}>From: {post.location || origin}</Text>
-              <Text style={styles.postDestination}>To: {post.destination || destination}</Text>
+              
+           {/* In your post rendering section - Fixed syntax and logic */}
+<Text style={styles.postLocation}>
+  From: {post.location || (params.location ? decodeURIComponent(params.location as string) : 'Unknown Location')}
+</Text>
+<Text style={styles.postDestination}>
+  To: {post.destination || (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination')}
+</Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
                 <Text style={styles.label}>Their experience</Text>
@@ -465,8 +512,8 @@ useEffect(() => {
               visible={modalVisible}
               onClose={() => setModalVisible(false)}
               onSubmit={handlePostSubmit}
-              location={location}
-              destination={destination}
+              location={Array.isArray(location) ? location.join(', ') : location}
+              destination={Array.isArray(destination) ? destination.join(', ') : destination}
               origin_lat={origin_lat}
               origin_lon={origin_lon}
               destination_lat={destination_lat}

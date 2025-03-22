@@ -1,9 +1,6 @@
+import { ApiResponse } from '@/app/(tabs)/route';
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-
 export type PostCategory = 'routes' | 'postsuggestions' | 'community';
-
-
 export interface Post {
   id?: number;
   content: string;
@@ -35,7 +32,6 @@ export interface Post {
    origin_address?: string
 }
 
-
 interface PostContextType {
   posts: Post[];
   addPost: (newPost: Omit<Post, 'category'>, source: PostCategory) => void;
@@ -46,18 +42,18 @@ interface PostContextType {
   setExperienceOnly: (value: boolean) => void;
   updatePost: (updatedPost: Post) => void; // <-- Add this line
   setPosts: (posts: Post[]) => void;
+  currentRouteData: ApiResponse | null;
+  setCurrentRouteData: (data: ApiResponse | null) => void;
 }
-
-
 const PostContext = createContext<PostContextType | undefined>(undefined);
-
 
 export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [experienceOnly, setExperienceOnly] = useState(false);
+  const [currentRouteData, setCurrentRouteData] = useState<ApiResponse | null>(null);
 
 
-  const addPost = (newPost: Post, source: string) => {
+  const addPost = (newPost: Post, source: PostCategory) => {
     setPosts(prevPosts => {
         // Check if post already exists
         const existingIndex = prevPosts.findIndex(post => post.id === newPost.id);
@@ -76,17 +72,11 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 };
 
-
-
-
- 
- 
   const handleUpvote = (postId: number) => {
     setPosts(prev => prev.map(post =>
       post.id === postId ? { ...post, votes: (post.votes || 0) + 1 } : post
     ));
   };
-
 
   const handleDownvote = (postId: number) => {
     setPosts(prev => prev.map(post =>
@@ -94,14 +84,10 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ));
   };
 
-
   const getPostsByCategory = (category: PostCategory) => {
     return posts.filter(post => post.category === category);
   };
 
-
-  
- 
   const updatePost = (updatedPost: Post) => {
     setPosts(prevPosts =>
       prevPosts.map(post =>
@@ -111,9 +97,6 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       )
     );
 };
-
-
-
   return (
     <PostContext.Provider value={{
       posts,
@@ -125,13 +108,13 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       experienceOnly,
       setExperienceOnly,
       setPosts,
+      currentRouteData,
+      setCurrentRouteData
     }}>
       {children}
     </PostContext.Provider>
   );
 };
-
-
 
 export const usePostContext = () => {
   const context = useContext(PostContext);
@@ -146,7 +129,7 @@ export const usePostContext = () => {
       getPostsByCategory: () => [],
       experienceOnly: false,
       setExperienceOnly: () => {},
-      setPosts: () => {}, // Add this line
+      setPosts: () => {}, // Add this line 
     };
   }
   return context;
