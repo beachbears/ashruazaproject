@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Modal,
   View,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Text,
   ScrollView,
-  ActivityIndicator,
   Platform,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -14,33 +13,25 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 interface ModalProps {
   visible: boolean;
   onClose: () => void;
+  restaurants: Array<{
+    name: string;
+    latitude: number;
+    longitude: number;
+    cuisine?: string;
+    image_url?: string;
+    address?: string;
+    opening_hours?: string;
+  }>;
 }
 
-interface Details {
-  Cuisine?: string;
-  Brand?: string;
-  Operator?: string;
-}
-
-interface Spot {
-  name: string;
-  alsoKnown?: string;
-  amenity: string;
-  address: string;
-  opening_hours: string;
-  payment_methods: string;
-  details?: Details;
-  features?: string[];
-}
-
-const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
-  const [spots, setSpots] = useState<Spot[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // For the category dropdown
-  const [showCategories, setShowCategories] = useState(false);
+const ModalComponent: React.FC<ModalProps> = ({
+  visible,
+  onClose,
+  restaurants, // Receive restaurants directly
+}) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showCategories, setShowCategories] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // List of categories
   const categories = [
@@ -54,37 +45,20 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
     "Biergarten",
   ];
 
-  useEffect(() => {
-    if (visible) {
-      setLoading(true);
-      setTimeout(() => {
-        const dummyData: Spot[] = [
-          {
-            name: "Dunkin'",
-            alsoKnown: "Also known as: Dunkin' Donuts",
-            amenity: "Fast food",
-            address: "Zabarte Road",
-            opening_hours: "24/7",
-            payment_methods: "No payment methods specified",
-            details: {
-              Cuisine: "Donut, Coffee shop",
-              Brand: "Dunkin' (Wikidata: Q847743)",
-              Operator: "No data",
-            },
-            features: ["Takeaway", "Drive-Through"],
-          },
-        ];
-        setSpots(dummyData);
-        setLoading(false);
-      }, 500);
-    }
-  }, [visible]);
-
+  // Category selection handler
   const handleSelectCategory = (cat: string) => {
     setSelectedCategory(cat);
     setShowCategories(false);
-    // Optional: trigger filtering or re-fetch logic based on category.
   };
+
+  // Filter restaurants based on the selected category using the cuisine property.
+  const filteredSpots = selectedCategory
+    ? restaurants.filter(
+        (spot) =>
+          (spot.cuisine || "Not specified").toLowerCase() ===
+          selectedCategory.toLowerCase()
+      )
+    : restaurants;
 
   return (
     <Modal
@@ -104,7 +78,9 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
               onPress={() => setShowCategories(!showCategories)}
             >
               <Ionicons
-                name={showCategories ? "chevron-up-outline" : "chevron-down-outline"}
+                name={
+                  showCategories ? "chevron-up-outline" : "chevron-down-outline"
+                }
                 size={16}
                 color="#6366F1"
                 style={{ marginRight: 6 }}
@@ -145,24 +121,25 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
             )}
           </View>
 
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }} style={styles.scrollArea}>
-            {loading ? (
-              <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 20 }} />
-            ) : error ? (
+          {/* Scrollable Restaurant List */}
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: 20 }}
+            style={[styles.scrollArea, { maxHeight: 300 }]}
+          >
+            {error ? (
               <Text style={{ color: "red", marginTop: 20 }}>{error}</Text>
             ) : (
-              spots.map((spot, idx) => (
+              filteredSpots.map((spot, idx) => (
                 <View key={idx} style={styles.spotCard}>
                   {/* Top Row */}
                   <View style={styles.topRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.spotName}>{spot.name}</Text>
-                      {spot.alsoKnown && (
-                        <Text style={styles.alsoKnown}>{spot.alsoKnown}</Text>
-                      )}
                     </View>
                     <View style={styles.amenityPill}>
-                      <Text style={styles.amenityText}>Amenity: {spot.amenity}</Text>
+                      <Text style={styles.amenityText}>
+                        Cuisine: {spot.cuisine || "Not specified"}
+                      </Text>
                     </View>
                   </View>
 
@@ -171,43 +148,35 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
                     {/* Left Column */}
                     <View style={styles.leftColumn}>
                       <Text style={styles.sectionTitle}>
-                        <Ionicons name="location-outline" size={16} color="#44457D" /> Address
+                        <Ionicons
+                          name="location-outline"
+                          size={16}
+                          color="#44457D"
+                        />{" "}
+                        Address
                       </Text>
-                      <Text style={styles.sectionValue}>{spot.address}</Text>
+                      <Text style={styles.sectionValue}>
+                        {spot.address || "No address provided"}
+                      </Text>
 
                       <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
-                        <Ionicons name="information-circle-outline" size={16} color="#44457D" /> Details
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={16}
+                          color="#44457D"
+                        />{" "}
+                        Details
                       </Text>
-                      <Text style={styles.sectionValue}>Cuisine: {spot.details?.Cuisine}</Text>
-                      <Text style={styles.sectionValue}>Brand: {spot.details?.Brand}</Text>
-                      <Text style={styles.sectionValue}>Operator: {spot.details?.Operator}</Text>
+                      <Text style={styles.sectionValue}>
+                        Opening Hours: {spot.opening_hours || "Not available"}
+                      </Text>
                     </View>
 
                     {/* Right Column */}
                     <View style={styles.rightColumn}>
-                      <Text style={styles.sectionTitle}>
-                        <Ionicons name="time-outline" size={16} color="#44457D" /> Opening Hours
-                      </Text>
-                      <Text style={styles.sectionValue}>{spot.opening_hours}</Text>
-                      <Text style={[styles.sectionValue, { marginTop: 10 }]}>{spot.payment_methods}</Text>
+                      {/* Placeholder for additional details or actions */}
                     </View>
                   </View>
-
-                  {/* Features */}
-                  {spot.features && spot.features.length > 0 && (
-                    <View style={styles.featuresContainer}>
-                      <Text style={styles.sectionTitle}>
-                        <Ionicons name="star-outline" size={16} color="#44457D" /> Features
-                      </Text>
-                      <View style={styles.featuresRow}>
-                        {spot.features.map((feature, fidx) => (
-                          <View key={fidx} style={styles.featureTag}>
-                            <Text style={styles.featureText}>{feature}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
 
                   {/* Action Buttons */}
                   <View style={styles.buttonRow}>
@@ -215,7 +184,9 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
                       <Text style={styles.viewButtonText}>View Details</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.directionsButton}>
-                      <Text style={styles.directionsButtonText}>Get Directions</Text>
+                      <Text style={styles.directionsButtonText}>
+                        Get Directions
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -341,11 +312,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1F2937",
   },
-  alsoKnown: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
-  },
   amenityPill: {
     backgroundColor: "#E0E7FF",
     borderRadius: 16,
@@ -379,28 +345,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#374151",
     marginBottom: 2,
-  },
-  featuresContainer: {
-    marginTop: 12,
-  },
-  featuresRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 6,
-  },
-  // Pinalitan ang background color ng feature tag sa light green
-  featureTag: {
-    backgroundColor: "#c4ecd2",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  // Pinalitan ang text color para sa contrast
-  featureText: {
-    color: "#2F855A",
-    fontSize: 11,
-    fontWeight: "600",
   },
   buttonRow: {
     flexDirection: "row",
