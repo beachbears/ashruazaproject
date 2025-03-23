@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Modal,
   View,
@@ -14,6 +14,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 interface ModalProps {
   visible: boolean;
   onClose: () => void;
+  latitude: number;
+  longitude: number;
 }
 
 interface Details {
@@ -22,7 +24,7 @@ interface Details {
   Operator?: string;
 }
 
-interface Spot {
+export interface Spot {
   name: string;
   alsoKnown?: string;
   amenity: string;
@@ -31,19 +33,28 @@ interface Spot {
   payment_methods: string;
   details?: Details;
   features?: string[];
+  // Coordinates extracted dynamically from API response
+  latitude: number;
+  longitude: number;
 }
 
-const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
+const ModalComponent: React.FC<ModalProps> = ({ visible, onClose, latitude, longitude }) => {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // For the category dropdown
   const [showCategories, setShowCategories] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
-  // List of categories
+  // For dropdown position
+  const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const dropdownRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
+
+
+  // List of categories kasama ang "All"
   const categories = [
+    "All",
     "Restaurant",
     "Cafe",
     "Fast Food",
@@ -57,33 +68,68 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
   useEffect(() => {
     if (visible) {
       setLoading(true);
-      setTimeout(() => {
-        const dummyData: Spot[] = [
-          {
-            name: "Dunkin'",
-            alsoKnown: "Also known as: Dunkin' Donuts",
-            amenity: "Fast food",
-            address: "Zabarte Road",
-            opening_hours: "24/7",
-            payment_methods: "No payment methods specified",
+      const radius = 5; // in kilometers
+      const amenities = ["cafe", "restaurant", "fast food", "pub", "bar", "ice cream", "food court", "biergarten"].join(",");
+      const page = 1;
+      const perPage = 20;
+      const url = `https://comgu20-production.up.railway.app/api/sustenance?lat=${latitude}&lon=${longitude}&radius=${radius}&sort=nearest&amenity=${amenities}&page=${page}&per_page=${perPage}`;
+
+      fetch(url)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Failed to fetch data");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("Sample API item:", data.results[0]);
+          const mappedData: Spot[] = data.results.map((item: any) => ({
+            name: item.name,
+            address: item.address.full_address,
+            amenity: item.amenity,
+            opening_hours: item.metadata.opening_hours || "Not available",
+            payment_methods: item.payment_methods || "",
             details: {
-              Cuisine: "Donut, Coffee shop",
-              Brand: "Dunkin' (Wikidata: Q847743)",
-              Operator: "No data",
+              Cuisine: item.metadata.cuisine || "Not specified",
+              Brand: item.metadata.contact?.website || "Not specified",
+              Operator: item.metadata.contact?.phone || "Not specified",
             },
-            features: ["Takeaway", "Drive-Through"],
-          },
-        ];
-        setSpots(dummyData);
-        setLoading(false);
-      }, 500);
+            features: item.features || [],
+            latitude: item.coordinates?.lat,
+            longitude: item.coordinates?.lon,
+          }));
+          console.log("Mapped spots:", mappedData);
+          setSpots(mappedData);
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err.message);
+          setLoading(false);
+        });
     }
-  }, [visible]);
+  }, [visible, latitude, longitude]);
 
   const handleSelectCategory = (cat: string) => {
     setSelectedCategory(cat);
     setShowCategories(false);
-    // Optional: trigger filtering or re-fetch logic based on category.
+  };
+
+  // Kung napili ang "All", ipapakita lahat
+  const filteredSpots =
+    selectedCategory === "All"
+      ? spots
+      : spots.filter(
+          (spot) =>
+            spot.amenity.toLowerCase() === selectedCategory?.toLowerCase()
+        );
+
+  // Makukuha ang posisyon ng dropdown button
+  const onDropdownLayout = () => {
+    if (dropdownRef.current) {
+      dropdownRef.current.measure((fx: any, fy: any, width: any, height: any, px: any, py: any) => {
+        setDropdownPosition({ x: px, y: py, width, height });
+      });
+    }
   };
 
   return (
@@ -100,8 +146,10 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
           {/* Dropdown Container */}
           <View style={styles.dropdownContainer}>
             <TouchableOpacity
+              ref={dropdownRef}
+              onLayout={onDropdownLayout}
               style={styles.dropdownButton}
-              onPress={() => setShowCategories(!showCategories)}
+              onPress={() => setShowCategories(true)}
             >
               <Ionicons
                 name={showCategories ? "chevron-up-outline" : "chevron-down-outline"}
@@ -110,80 +158,49 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
                 style={{ marginRight: 6 }}
               />
               <Text style={styles.dropdownButtonText}>
-                {selectedCategory ? selectedCategory : "Select Category"}
+                {selectedCategory}
               </Text>
             </TouchableOpacity>
-
-            {/* Dropdown Overlay */}
-            {showCategories && (
-              <View style={styles.dropdownOverlay}>
-                <ScrollView style={{ maxHeight: 160 }}>
-                  {categories.map((cat, index) => {
-                    const isSelected = selectedCategory === cat;
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.dropdownItem,
-                          isSelected && styles.dropdownItemSelected,
-                        ]}
-                        onPress={() => handleSelectCategory(cat)}
-                      >
-                        <Text
-                          style={[
-                            styles.dropdownItemText,
-                            isSelected && styles.dropdownItemTextSelected,
-                          ]}
-                        >
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
           </View>
 
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }} style={styles.scrollArea}>
+          {/* Parent Scrollable Spot List */}
+          <ScrollView 
+            contentContainerStyle={{ paddingBottom: 20 }} 
+            style={[styles.scrollArea, { maxHeight: 300 }]}
+            scrollEnabled={!showCategories}
+          >
             {loading ? (
               <ActivityIndicator size="large" color="#6366F1" style={{ marginTop: 20 }} />
             ) : error ? (
               <Text style={{ color: "red", marginTop: 20 }}>{error}</Text>
             ) : (
-              spots.map((spot, idx) => (
+              filteredSpots.map((spot, idx) => (
                 <View key={idx} style={styles.spotCard}>
-                  {/* Top Row */}
                   <View style={styles.topRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.spotName}>{spot.name}</Text>
-                      {spot.alsoKnown && (
-                        <Text style={styles.alsoKnown}>{spot.alsoKnown}</Text>
-                      )}
                     </View>
                     <View style={styles.amenityPill}>
                       <Text style={styles.amenityText}>Amenity: {spot.amenity}</Text>
                     </View>
                   </View>
-
-                  {/* Middle Row: Two Columns */}
                   <View style={styles.middleRow}>
-                    {/* Left Column */}
                     <View style={styles.leftColumn}>
                       <Text style={styles.sectionTitle}>
                         <Ionicons name="location-outline" size={16} color="#44457D" /> Address
                       </Text>
                       <Text style={styles.sectionValue}>{spot.address}</Text>
-
                       <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
                         <Ionicons name="information-circle-outline" size={16} color="#44457D" /> Details
                       </Text>
-                      <Text style={styles.sectionValue}>Cuisine: {spot.details?.Cuisine}</Text>
-                      <Text style={styles.sectionValue}>Brand: {spot.details?.Brand}</Text>
-                      <Text style={styles.sectionValue}>Operator: {spot.details?.Operator}</Text>
+                      {spot.details && (
+                        <>
+                          <Text style={styles.sectionValue}>Cuisine: {spot.details.Cuisine}</Text>
+                          <Text style={styles.sectionValue}>Brand: {spot.details.Brand}</Text>
+                          <Text style={styles.sectionValue}>Operator: {spot.details.Operator}</Text>
+                        </>
+                      )}
                     </View>
-
-                    {/* Right Column */}
                     <View style={styles.rightColumn}>
                       <Text style={styles.sectionTitle}>
                         <Ionicons name="time-outline" size={16} color="#44457D" /> Opening Hours
@@ -192,24 +209,6 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
                       <Text style={[styles.sectionValue, { marginTop: 10 }]}>{spot.payment_methods}</Text>
                     </View>
                   </View>
-
-                  {/* Features */}
-                  {spot.features && spot.features.length > 0 && (
-                    <View style={styles.featuresContainer}>
-                      <Text style={styles.sectionTitle}>
-                        <Ionicons name="star-outline" size={16} color="#44457D" /> Features
-                      </Text>
-                      <View style={styles.featuresRow}>
-                        {spot.features.map((feature, fidx) => (
-                          <View key={fidx} style={styles.featureTag}>
-                            <Text style={styles.featureText}>{feature}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Action Buttons */}
                   <View style={styles.buttonRow}>
                     <TouchableOpacity style={styles.viewButton}>
                       <Text style={styles.viewButtonText}>View Details</Text>
@@ -223,7 +222,6 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
             )}
           </ScrollView>
 
-          {/* Close Button */}
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>Close</Text>
@@ -231,6 +229,61 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
           </View>
         </View>
       </View>
+
+      {/* Separate Modal for Dropdown Overlay */}
+      {showCategories && (
+        <Modal
+          transparent
+          animationType="fade"
+          visible={showCategories}
+          onRequestClose={() => setShowCategories(false)}
+        >
+          <TouchableOpacity
+            style={styles.dropdownModalBackground}
+            activeOpacity={1}
+            onPressOut={() => setShowCategories(false)}
+          >
+            <View
+              style={[
+                styles.dropdownModalContainer,
+                {
+                  top: dropdownPosition.y + dropdownPosition.height + 5,
+                  left: dropdownPosition.x,
+                },
+              ]}
+            >
+              <ScrollView 
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="always"
+                contentContainerStyle={{ flexGrow: 1 }}
+              >
+                {categories.map((cat, index) => {
+                  const isSelected = selectedCategory === cat;
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.dropdownItem,
+                        isSelected && styles.dropdownItemSelected,
+                      ]}
+                      onPress={() => handleSelectCategory(cat)}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          isSelected && styles.dropdownItemTextSelected,
+                        ]}
+                      >
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </Modal>
   );
 };
@@ -238,22 +291,19 @@ const ModalComponent: React.FC<ModalProps> = ({ visible, onClose }) => {
 export default ModalComponent;
 
 const styles = StyleSheet.create({
-  /********** BACKDROP **********/
   modalBackground: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
-
-  /********** CONTAINER **********/
   modalContainer: {
     width: "95%",
     minHeight: 500,
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 15,
-    overflow: "visible", // allow overlay to show
+    overflow: "visible",
   },
   modalTitle: {
     fontSize: 18,
@@ -261,8 +311,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 10,
   },
-
-  /********** DROPDOWN **********/
   dropdownContainer: {
     marginBottom: 10,
     alignSelf: "flex-start",
@@ -283,47 +331,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     flexShrink: 1,
   },
-  dropdownOverlay: {
-    position: "absolute",
-    top: 40,
-    left: 0,
-    backgroundColor: "#fff",
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 4,
-    width: 200,
-    maxHeight: 200,
-    paddingVertical: 5,
-    zIndex: 10000,
-    ...Platform.select({
-      android: { elevation: 10000 },
-    }),
-  },
-  dropdownItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderBottomColor: "#ccc",
-    borderBottomWidth: 1,
-  },
-  dropdownItemSelected: {
-    backgroundColor: "#6366F1",
-    borderBottomColor: "#6366F1",
-  },
-  dropdownItemText: {
-    fontSize: 12,
-    color: "#374151",
-    flexWrap: "wrap",
-  },
-  dropdownItemTextSelected: {
-    color: "#fff",
-  },
-
-  /********** SCROLL AREA **********/
   scrollArea: {
     zIndex: 0,
   },
-
-  /********** SPOT CARD **********/
   spotCard: {
     backgroundColor: "#fff",
     borderColor: "#ddd",
@@ -389,14 +399,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 6,
   },
-  // Pinalitan ang background color ng feature tag sa light green
   featureTag: {
     backgroundColor: "#c4ecd2",
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  // Pinalitan ang text color para sa contrast
   featureText: {
     color: "#2F855A",
     fontSize: 11,
@@ -433,8 +441,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
   },
-
-  /********** FOOTER **********/
   modalFooter: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -450,5 +456,40 @@ const styles = StyleSheet.create({
     color: "#6366F1",
     fontSize: 12,
     fontWeight: "bold",
+  },
+  dropdownModalBackground: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  dropdownModalContainer: {
+    position: "absolute",
+    width: 200,
+    backgroundColor: "#fff",
+    borderColor: "#ccc",
+    borderWidth: 0, // Tinatanggal ang mga linya
+    borderRadius: 4,
+    maxHeight: 200,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 5,
+  },
+  dropdownItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    // Tinatanggal ang border line para sa cleaner na design
+    borderBottomWidth: 0,
+  },
+  dropdownItemSelected: {
+    backgroundColor: "#6366F1",
+  },
+  dropdownItemText: {
+    fontSize: 12,
+    color: "#374151",
+    flexWrap: "wrap",
+  },
+  dropdownItemTextSelected: {
+    color: "#fff",
   },
 });

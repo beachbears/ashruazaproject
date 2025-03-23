@@ -135,6 +135,15 @@ interface MapComponentProps {
   isLoading?: boolean;
   webviewRef?: React.RefObject<WebView>;
   onSpotClick?: (spotName: string) => void; // Added new prop
+  // New props for restaurants
+  nearbyRestaurants?: Array<{
+    latitude: number;
+    longitude: number;
+    name: string;
+    cuisine?: string;
+    image_url?: string;
+  }>;
+  onRestaurantClick?: (restaurantName: string) => void;
 }
 
 interface RouteDetails {
@@ -199,6 +208,14 @@ const getMapHTML = (
     latitude: number;
     longitude: number;
     name: string;
+    image_url?: string;
+  }>,
+  // New parameter for restaurants
+  nearbyRestaurants?: Array<{
+    latitude: number;
+    longitude: number;
+    name: string;
+    cuisine?: string;
     image_url?: string;
   }>
 ) => {
@@ -384,6 +401,48 @@ const getMapHTML = (
     });
   }
 
+  // Add restaurant markers without breaking existing logic
+  if (nearbyRestaurants && nearbyRestaurants.length > 0) {
+    nearbyRestaurants.forEach((restaurant) => {
+      markersJS += `
+        var restaurantIcon = L.divIcon({
+          html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-utensils" style="color: #dc3545; font-size: 16px;"></i></div>',
+          className: 'restaurant-icon',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32]
+        });
+        
+        L.marker([${restaurant.latitude}, ${restaurant.longitude}], { 
+          icon: restaurantIcon,
+          isRestaurant: true
+        })
+          .addTo(map)
+          .bindPopup(\`
+            <div style="max-width: 200px;">
+              <b>${restaurant.name}</b>
+              ${
+                restaurant.cuisine
+                  ? `<p style="margin: 2px 0; color: #666;">Cuisine: ${restaurant.cuisine}</p>`
+                  : ""
+              }
+              \${${JSON.stringify(restaurant)}.image_url ? 
+                \`<img 
+                  src="${restaurant.image_url}" 
+                  style="width: 100%; height: auto; margin-top: 5px; border-radius: 4px; cursor: pointer;"
+                  onerror="this.onerror=null;this.src='https://via.placeholder.com/100x75.png?text=Image+Not+Available';"
+                  onclick="window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                    type: 'restaurantClick', 
+                    name: '${restaurant.name.replace(/'/g, "\\'")}' 
+                  }))"
+                />\` : 
+                '<p style="margin: 5px 0; color: #666;">No image available</p>' 
+              }
+            </div>
+          \`);
+      `;
+    });
+  }
+
   let polylineJS = "";
   if (
     (typeof roadPath === "string" && roadPath.length > 0) ||
@@ -475,7 +534,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
   nearbySpots,
   selectedSpot,
   isLoading,
-  onSpotClick, // Added new prop
+  onSpotClick, // Existing prop
+  nearbyRestaurants, // New prop for restaurants
+  onRestaurantClick, // New restaurant click callback
 }) => {
   const mapKey = JSON.stringify({
     initialRegion,
@@ -483,6 +544,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     roadPath,
     mapResetKey,
     nearbySpots,
+    nearbyRestaurants,
   });
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -564,7 +626,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
             route,
             roadPath,
             polylineColor,
-            nearbySpots
+            nearbySpots,
+            nearbyRestaurants // Add restaurants data
           ),
         }}
         style={style}
@@ -578,6 +641,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
             const data = JSON.parse(event.nativeEvent.data);
             if (data.type === "spotClick" && onSpotClick) {
               onSpotClick(data.name);
+            }
+            if (data.type === "restaurantClick" && onRestaurantClick) {
+              onRestaurantClick(data.name);
             }
           } catch (e) {
             console.error("Error parsing message:", e);
@@ -630,6 +696,7 @@ const SuggestionList: React.FC<{
 const locationCacheRef = { current: {} as { [key: string]: any[] } };
 
 const RouteScreen: React.FC = () => {
+  // Existing state variables
   const { destination: destParam, attraction } = useLocalSearchParams();
   const [modalVisible, setModalVisible] = useState(false); // For Nearby Attractions (ReviewModal)
   const [restaurantModalVisible, setRestaurantModalVisible] = useState(false); // For Restaurants Modal
@@ -662,6 +729,22 @@ const RouteScreen: React.FC = () => {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
+
+  // ===== New Restaurant-related State =====
+  const [nearbyRestaurants, setNearbyRestaurants] = useState<
+    Array<{
+      latitude: number;
+      longitude: number;
+      name: string;
+      cuisine?: string;
+      image_url?: string;
+    }>
+  >([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<{
+    latitude: number;
+    longitude: number;
+    name: string;
+  } | null>(null);
 
   const router = useRouter();
   const animatedHeight = useRef(new Animated.Value(400)).current;
@@ -787,6 +870,57 @@ const RouteScreen: React.FC = () => {
     }).start();
   }, [route, animatedHeight]);
 
+  // ===== Updated: fetchRestaurants Function =====
+  const fetchRestaurants = async (lat: number, lon: number) => {
+    try {
+      const response = await axios.get(
+        "https://comgu20-production.up.railway.app/api/sustenance",
+        {
+          params: {
+            lat,
+            lon,
+            radius: 3,
+            sort: "furthest",
+            amenity:
+              "cafe,restaurant,fast_food,pub,bar,ice_cream,food_court,biergarten",
+            page: 1,
+            per_page: 20,
+          },
+        }
+      );
+
+      console.log("API Response:", response.data); // Debugging log
+
+      const mapped = response.data.results.map((item: any) => ({
+        name: item.name,
+        latitude: item.coordinates.lat,
+        longitude: item.coordinates.lon,
+        cuisine: item.metadata.cuisine,
+        image_url: item.metadata.contact?.website,
+      }));
+
+      console.log("Mapped Restaurants:", mapped); // Verify the mapped data
+      setNearbyRestaurants(mapped); // Update state with the mapped results
+    } catch (error) {
+      console.error("Error fetching restaurants:", error);
+    }
+  };
+
+  // ===== useEffect: Call fetchRestaurants when region updates =====
+  useEffect(() => {
+    if (region.latitude && region.longitude) {
+      console.log("Fetching restaurants for:", region);
+      fetchRestaurants(region.latitude, region.longitude);
+    }
+  }, [region]);
+
+  useEffect(() => {
+    if (route.length === 2 && restaurantModalVisible) {
+      setRestaurantModalVisible(false);
+    }
+  }, [route]);
+  
+  // ===== geocodeAddress Function =====
   async function geocodeAddress(address: string) {
     if (locationCacheRef.current[address])
       return locationCacheRef.current[address];
@@ -1280,6 +1414,8 @@ const RouteScreen: React.FC = () => {
           <ModalComponent
             visible={restaurantModalVisible}
             onClose={() => setRestaurantModalVisible(false)}
+            latitude={region.latitude}
+            longitude={region.longitude}
           />
           {route.length >= 2 && (
             <ReviewModal
@@ -1339,6 +1475,7 @@ const RouteScreen: React.FC = () => {
     </View>
   );
 
+  // Render different layouts based on route length while updating MapComponent with new restaurant props
   if (route.length >= 2) {
     return (
       <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
@@ -1356,6 +1493,15 @@ const RouteScreen: React.FC = () => {
             nearbySpots={nearbySpots}
             selectedSpot={selectedSpot}
             isLoading={isRouteLoading}
+            // ===== New Restaurant props =====
+            nearbyRestaurants={nearbyRestaurants}
+            onRestaurantClick={(name) => {
+              const restaurant = nearbyRestaurants.find((r) => r.name === name);
+              if (restaurant) {
+                setSelectedRestaurant(restaurant);
+                setRestaurantModalVisible(true);
+              }
+            }}
             onSpotClick={(spotName) => {
               // NEW: When a spot is clicked, set scrollToSpot and open the modal
               setScrollToSpot(spotName);
@@ -1388,6 +1534,15 @@ const RouteScreen: React.FC = () => {
             style={styles.map}
             polylineColor={polylineColor}
             webviewRef={webviewRef}
+            // ===== New Restaurant props =====
+            nearbyRestaurants={nearbyRestaurants}
+            onRestaurantClick={(name) => {
+              const restaurant = nearbyRestaurants.find((r) => r.name === name);
+              if (restaurant) {
+                setSelectedRestaurant(restaurant);
+                setRestaurantModalVisible(true);
+              }
+            }}
             onSpotClick={(spotName) => {
               // NEW: When a spot is clicked, set scrollToSpot and open the modal
               setScrollToSpot(spotName);
@@ -1396,6 +1551,13 @@ const RouteScreen: React.FC = () => {
           />
         </Animated.View>
         {detailsContent}
+        {/* ===== New: Render Restaurant Modal in case route is not >=2 */}
+        <ModalComponent
+          visible={restaurantModalVisible}
+          onClose={() => setRestaurantModalVisible(false)}
+          latitude={region.latitude}
+          longitude={region.longitude}
+        />
       </ScrollView>
     );
   }
@@ -1579,5 +1741,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
   },
+
   buttonText: { fontSize: 12, color: "#6366F1", fontWeight: "500" },
+  restaurantMarker: {
+    backgroundColor: "#fff",
+    borderColor: "#dc3545",
+  },
 });
