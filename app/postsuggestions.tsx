@@ -58,6 +58,14 @@ export default function PostSuggestions() {
   const [selectedOption, setSelectedOption] = useState<string>('Time');
   const { authToken } = useContext(AuthContext) as AuthContextType;
   const [modalVisible, setModalVisible] = useState(false);
+  const params = useLocalSearchParams();
+
+  useEffect(() => {
+    if (params.source === 'community') {
+      setModalVisible(true);
+    }
+  }, [params.source]);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const authContext = useContext(AuthContext) as AuthContextType | null;
@@ -67,8 +75,7 @@ export default function PostSuggestions() {
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const location = decodeURIComponent(params.location as string);
+   const location = decodeURIComponent(params.location as string);
   const destination = decodeURIComponent(params.destination as string);
   const origin_lat = Number(params.origin_lat);
   const origin_lon = Number(params.origin_lon);
@@ -449,6 +456,7 @@ export default function PostSuggestions() {
         authToken={authToken}
         userEmail={''}
         userPassword={''}
+        isFromCommunity={true} 
       />
 
 {isModalVisible && selectedPostId !== null && (

@@ -64,40 +64,17 @@ export default function CommunityPage() {
     updatePost } = usePostContext();
   const { routeDetails } = useRouteContext();
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
- 
-  
-   const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const authContext = useContext(AuthContext) as AuthContextType | null;
-   const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // Store post ID
-   const [isModalVisible, setIsModalVisible] = useState(false);
-const [modalVisible, setModalVisible] = useState(false);
-const [isSubmitting, setIsSubmitting] = useState(false);
-useEffect(() => {
-  if (!params.location || !params.destination) {
-    Alert.alert("Missing Route Data", "Please complete a route search first");
-    router.back();
-  }
-}, []);
-
-const router = useRouter();
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // vote id
+  const [isModalVisible, setIsModalVisible] = useState(false); // report
+  const [modalVisible, setModalVisible] = useState(false); // post
+  const [isSubmitting, setIsSubmitting] = useState(false); 
+  const router = useRouter();
   const params = useLocalSearchParams();
-  useEffect(() => {
-    console.log('Received params:', params);
-    const hasRequiredParams = 
-    params.location &&
-    params.destination &&
-    params.origin_lat &&
-    params.origin_lon &&
-    params.destination_lat &&
-    params.destination_lon;
 
-  if (!hasRequiredParams) {
-    console.warn('Missing one or more required parameters:', params);
-    Alert.alert("Missing Route Data", "Please complete a route search first");
-    router.push('/');
-  }
-}, []);
+   
 
 const location = Array.isArray(params.location) 
 ? decodeURIComponent(params.location[0])
@@ -134,11 +111,7 @@ const openReportModal = (postId: number) => {
 
   if (!authContext) return null; // Prevents errors if context is null
   const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
-  const [selectedOption, setSelectedOption] = useState<string>('Time');
-
-    
-   
-     
+  const [selectedOption, setSelectedOption] = useState<string>('Time'); // dropdown
 
   const handleOptionSelect = (option: string) => {
     setSelectedOption(option);
@@ -179,10 +152,7 @@ const openReportModal = (postId: number) => {
       created_at: post.created_at,
       timestamp: new Date(post.created_at).getTime(),
     }));
-
-   
     setPosts(transformedPosts);
- 
   } catch (error) {
     console.error('Fetch error:', error);
   }
@@ -200,13 +170,13 @@ useEffect(() => {
     try {
       const requestBody = {
         route_post: {
-          ...formData,
-          location,
-          destination,
-          origin_lat,
-          origin_lon,
-          dest_lat: destination_lat,
-          dest_lon: destination_lon,
+          content: formData.content,
+          origin_address: formData.location,  // Use formData values
+          destination_address: formData.destination,
+          origin_lat: formData.origin_lat,
+          origin_lon: formData.origin_lon,
+          dest_lat: formData.destination_lat,
+          dest_lon: formData.destination_lon,
         },
       };
       const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
@@ -328,8 +298,6 @@ useEffect(() => {
     }
   };
   
-
-
   const handlePostPress = (postId: number, action: VoteType) => {
     if (!isLoggedIn) {
       router.push('/login');
@@ -338,8 +306,6 @@ useEffect(() => {
     handleVote(postId, action);
   };
  
- 
-
   const sortedPosts = useMemo(() => {
     return [...contextPosts].sort((a, b) => {
       switch (selectedOption) {
@@ -379,8 +345,7 @@ useEffect(() => {
     }
   };
 
-  // Helper function for dynamic text colors based on status.
-  const getStatusTextColor = (status: string) => {
+   const getStatusTextColor = (status: string) => {
     switch(status.toLowerCase()) {
       case "flagged":
         return { color: "#b31b1b" };
@@ -407,7 +372,6 @@ useEffect(() => {
   return (
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
-
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
@@ -416,7 +380,6 @@ useEffect(() => {
                   <Text style={styles.postButtonText}>Post</Text>
                 </TouchableOpacity>
       </View>
-
       {isLoading && (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
       )}
@@ -442,12 +405,9 @@ useEffect(() => {
                     <Text style={styles.suggestorusername}>{post.user?.email}</Text>
                   </View>
                 </View>
-                  
                 <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
   <Text>Report</Text>
 </TouchableOpacity>
-
-
                 <Text style={styles.postTimestamp}>
                   {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
                 </Text>
@@ -465,7 +425,6 @@ useEffect(() => {
                 <Text style={styles.label}>Their experience</Text>
                 <Text style={styles.experience}>{post.content}</Text>
               </View>
-
               <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={styles.content}>
                     <View style={[styles.badge, getStatusStyle(post.status || '')]}>
@@ -473,7 +432,6 @@ useEffect(() => {
                                   </View>
                 </View>
                 <View style={styles.arrowcontainer}>
-
                   <TouchableOpacity
                     style={[
                       styles.arrowup,

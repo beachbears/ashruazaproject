@@ -547,27 +547,7 @@ const RouteScreen: React.FC = () => {
         { params }
       );
      
-      console.log('🌐 Navigation params:', {
-        location: origin,
-        destination: destination,
-        origin_lat: region.latitude,
-        origin_lon: region.longitude,
-        destination_lat: destLat,
-        destination_lon: destLon
-      });
-
-       router.push({
-  pathname: "/community",
-  params: {
-    // Add ALL parameters as strings
-    location: encodeURIComponent(origin),
-    destination: encodeURIComponent(destination),
-    origin_lat: region.latitude.toString(),
-    origin_lon: region.longitude.toString(),
-    destination_lat: destLat.toString(),
-    destination_lon: destLon.toString(),
-  }
-});
+       
       
       const processedPosts = response.data.posts.map(post => ({
         ...post,

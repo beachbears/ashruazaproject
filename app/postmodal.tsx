@@ -1,8 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, TextInput, TouchableOpacity, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { usePostContext, type Post } from './../contexts/PostContext';
-import { AuthContext, AuthContextType } from './../contexts/AuthContext';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import axios from 'axios';
+
+interface LocationSuggestion {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
+async function geocodeAddress(address: string): Promise<LocationSuggestion[]> {
+  try {
+    const { data } = await axios.get<LocationSuggestion[]>(
+      'https://comgu20-production.up.railway.app/api/locations/search',
+      { params: { term: address } }
+    );
+    return data?.map((item: any) => ({
+      name: item.label,
+      lat: parseFloat(item.latitude),
+      lon: parseFloat(item.longitude),
+    })) || [];
+  } catch (err) {
+    console.error('Geocoding error:', err);
+    return [];
+  }
+}
 
 interface PostModalProps {
   visible: boolean;
@@ -17,7 +39,7 @@ interface PostModalProps {
   authToken: string;
   userEmail: string;
   userPassword: string;
-  isFromCommunity?: boolean; // New prop: if true, location/destination are editable
+  isFromCommunity?: boolean;
 }
 
 export default function PostModal({
@@ -30,23 +52,48 @@ export default function PostModal({
   origin_lon,
   destination_lat,
   destination_lon,
-  authToken,
-  userEmail,
-  userPassword,
   isFromCommunity = false,
 }: PostModalProps) {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Local state for location and destination so they can be edited if needed.
-  const [location, setLocation] = useState(initialLocation);
-  const [destination, setDestination] = useState(initialDestination);
+  // Community search state
+  const [localLocation, setLocalLocation] = useState(initialLocation);
+  const [localDestination, setLocalDestination] = useState(initialDestination);
+  const [currentOriginCoords, setCurrentOriginCoords] = useState({ lat: origin_lat, lon: origin_lon });
+  const [currentDestinationCoords, setCurrentDestinationCoords] = useState({ lat: destination_lat, lon: destination_lon });
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState<LocationSuggestion[]>([]);
 
-  // Reset local state when modal opens/closes or when initial values change.
+  // Keep local state in sync with props
   useEffect(() => {
-    setLocation(initialLocation);
-    setDestination(initialDestination);
-  }, [initialLocation, initialDestination, visible]);
+    setLocalLocation(initialLocation);
+    setLocalDestination(initialDestination);
+    setCurrentOriginCoords({ lat: origin_lat, lon: origin_lon });
+    setCurrentDestinationCoords({ lat: destination_lat, lon: destination_lon });
+  }, [visible, initialLocation, initialDestination]);
+
+  // Location search handler
+  useEffect(() => {
+    let active = true;
+    if (isFromCommunity && localLocation.length > 2) {
+      geocodeAddress(localLocation).then(results => {
+        if (active) setLocationSuggestions(results);
+      });
+    }
+    return () => { active = false; };
+  }, [localLocation, isFromCommunity]);
+
+  // Destination search handler
+  useEffect(() => {
+    let active = true;
+    if (isFromCommunity && localDestination.length > 2) {
+      geocodeAddress(localDestination).then(results => {
+        if (active) setDestinationSuggestions(results);
+      });
+    }
+    return () => { active = false; };
+  }, [localDestination, isFromCommunity]);
 
   const handleSubmit = () => {
     if (isSubmitting) return;
@@ -54,17 +101,18 @@ export default function PostModal({
       Alert.alert("Error", "Please enter some content before submitting.");
       return;
     }
-    setIsSubmitting(true);
+
     const newPost: Post = {
       content,
-      origin_lat,
-      origin_lon,
-      destination_lon,
-      destination_lat,
-      location,
-      destination,
+      origin_lat: isFromCommunity ? currentOriginCoords.lat : origin_lat,
+      origin_lon: isFromCommunity ? currentOriginCoords.lon : origin_lon,
+      destination_lat: isFromCommunity ? currentDestinationCoords.lat : destination_lat,
+      destination_lon: isFromCommunity ? currentDestinationCoords.lon : destination_lon,
+      location: isFromCommunity ? localLocation : initialLocation,
+      destination: isFromCommunity ? localDestination : initialDestination,
     };
 
+    setIsSubmitting(true);
     onSubmit(newPost);
     setContent('');
     onClose();
@@ -76,24 +124,81 @@ export default function PostModal({
       <View style={styles.modalContainer}>
         <View style={styles.postContainer}>
           <ScrollView>
+            {/* Location Section */}
             <Text style={styles.label}>From:</Text>
-            <TextInput
-              placeholder="From: E.g. Glori Bayan"
-              value={location}
-              onChangeText={isFromCommunity ? setLocation : undefined}
-              style={[styles.input, !isFromCommunity && styles.disabledInput]}
-              editable={isFromCommunity}
-            />
+            {isFromCommunity ? (
+              <>
+                <TextInput
+                  placeholder="From: E.g. Glori Bayan"
+                  value={localLocation}
+                  onChangeText={setLocalLocation}
+                  style={styles.input}
+                  editable={true}
+                />
+                {locationSuggestions.length > 0 && (
+                  <View style={styles.suggestionContainer}>
+                    {locationSuggestions.map((s, i) => (
+                      <TouchableOpacity 
+                        key={i} 
+                        onPress={() => {
+                          setLocalLocation(s.name);
+                          setCurrentOriginCoords({ lat: s.lat, lon: s.lon });
+                          setLocationSuggestions([]);
+                        }} 
+                        style={styles.suggestionItem}
+                      >
+                        <Text>{s.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : (
+              <TextInput
+                value={initialLocation}
+                style={[styles.input, styles.disabledInput]}
+                editable={false}
+              />
+            )}
 
+            {/* Destination Section */}
             <Text style={styles.label}>To:</Text>
-            <TextInput
-              placeholder="To: E.g. Intramuros"
-              value={destination}
-              onChangeText={isFromCommunity ? setDestination : undefined}
-              style={[styles.input, !isFromCommunity && styles.disabledInput]}
-              editable={isFromCommunity}
-            />
- 
+            {isFromCommunity ? (
+              <>
+                <TextInput
+                  placeholder="To: E.g. Intramuros"
+                  value={localDestination}
+                  onChangeText={setLocalDestination}
+                  style={styles.input}
+                  editable={true}
+                />
+                {destinationSuggestions.length > 0 && (
+                  <View style={styles.suggestionContainer}>
+                    {destinationSuggestions.map((s, i) => (
+                      <TouchableOpacity 
+                        key={i} 
+                        onPress={() => {
+                          setLocalDestination(s.name);
+                          setCurrentDestinationCoords({ lat: s.lat, lon: s.lon });
+                          setDestinationSuggestions([]);
+                        }} 
+                        style={styles.suggestionItem}
+                      >
+                        <Text>{s.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : (
+              <TextInput
+                value={initialDestination}
+                style={[styles.input, styles.disabledInput]}
+                editable={false}
+              />
+            )}
+
+            {/* Original Content Section */}
             <Text style={styles.exp}>Your Experiences:</Text>
             <TextInput
               placeholder={"Type here...\n\n\n\n"}
@@ -123,9 +228,7 @@ export default function PostModal({
     </Modal>
   );
 }
-
  
-
 
  
 
@@ -212,6 +315,19 @@ const styles = StyleSheet.create({
   
   disabledInput: {
     backgroundColor: '#E5E7EB', // Gray out to indicate non-editable field
+  },
+  suggestionContainer: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    maxHeight: 150,
+    marginBottom: 10,
+  },
+  suggestionItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
 });
 
