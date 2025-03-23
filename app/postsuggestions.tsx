@@ -456,7 +456,8 @@ export default function PostSuggestions() {
         authToken={authToken}
         userEmail={''}
         userPassword={''}
-        isFromCommunity={true} 
+        
+        isFromCommunity={false} 
       />
 
 {isModalVisible && selectedPostId !== null && (

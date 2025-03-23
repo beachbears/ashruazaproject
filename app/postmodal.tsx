@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, View, TextInput, TouchableOpacity, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { usePostContext, type Post } from './../contexts/PostContext';
 import axios from 'axios';
+import { wrap } from 'lodash';
 
 interface LocationSuggestion {
   name: string;
@@ -56,7 +57,6 @@ export default function PostModal({
 }: PostModalProps) {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
   // Community search state
   const [localLocation, setLocalLocation] = useState(initialLocation);
   const [localDestination, setLocalDestination] = useState(initialDestination);
@@ -64,7 +64,6 @@ export default function PostModal({
   const [currentDestinationCoords, setCurrentDestinationCoords] = useState({ lat: destination_lat, lon: destination_lon });
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState<LocationSuggestion[]>([]);
-
   // Keep local state in sync with props
   useEffect(() => {
     setLocalLocation(initialLocation);
@@ -72,29 +71,31 @@ export default function PostModal({
     setCurrentOriginCoords({ lat: origin_lat, lon: origin_lon });
     setCurrentDestinationCoords({ lat: destination_lat, lon: destination_lon });
   }, [visible, initialLocation, initialDestination]);
-
-  // Location search handler
+ 
   useEffect(() => {
+    if (!isFromCommunity) return; // Prevent fetching when not in community mode
+  
     let active = true;
-    if (isFromCommunity && localLocation.length > 2) {
+    if (localLocation.length > 2) {
       geocodeAddress(localLocation).then(results => {
         if (active) setLocationSuggestions(results);
       });
     }
     return () => { active = false; };
   }, [localLocation, isFromCommunity]);
-
-  // Destination search handler
+  
   useEffect(() => {
+    if (!isFromCommunity) return; // Prevent fetching when not in community mode
+  
     let active = true;
-    if (isFromCommunity && localDestination.length > 2) {
+    if (localDestination.length > 2) {
       geocodeAddress(localDestination).then(results => {
         if (active) setDestinationSuggestions(results);
       });
     }
     return () => { active = false; };
   }, [localDestination, isFromCommunity]);
-
+  
   const handleSubmit = () => {
     if (isSubmitting) return;
     if (!content.trim()) {
@@ -111,7 +112,6 @@ export default function PostModal({
       location: isFromCommunity ? localLocation : initialLocation,
       destination: isFromCommunity ? localDestination : initialDestination,
     };
-
     setIsSubmitting(true);
     onSubmit(newPost);
     setContent('');
@@ -128,15 +128,23 @@ export default function PostModal({
             <Text style={styles.label}>From:</Text>
             {isFromCommunity ? (
               <>
+              <View style={styles.inputContainer}> 
                 <TextInput
-                  placeholder="From: E.g. Glori Bayan"
+                  placeholder="Type here..."
                   value={localLocation}
                   onChangeText={setLocalLocation}
-                  style={styles.input}
-                  editable={true}
+                  style={[styles.input, !isFromCommunity && styles.disabledInput]}
+                  editable={isFromCommunity}
+                  selectTextOnFocus={isFromCommunity} 
+                  multiline={true}
                 />
+ 
                 {locationSuggestions.length > 0 && (
                   <View style={styles.suggestionContainer}>
+                      <ScrollView 
+        contentContainerStyle={{ flexGrow: 1 }}
+        nestedScrollEnabled={true}
+      > 
                     {locationSuggestions.map((s, i) => (
                       <TouchableOpacity 
                         key={i} 
@@ -150,30 +158,41 @@ export default function PostModal({
                         <Text>{s.name}</Text>
                       </TouchableOpacity>
                     ))}
+                    </ScrollView>
                   </View>
                 )}
+                </View>
               </>
             ) : (
               <TextInput
                 value={initialLocation}
-                style={[styles.input, styles.disabledInput]}
                 editable={false}
+                multiline={true}
+                style={[styles.non]}
               />
             )}
+            
 
             {/* Destination Section */}
             <Text style={styles.label}>To:</Text>
             {isFromCommunity ? (
               <>
                 <TextInput
-                  placeholder="To: E.g. Intramuros"
+                  placeholder="Type here..."
                   value={localDestination}
                   onChangeText={setLocalDestination}
-                  style={styles.input}
-                  editable={true}
+                  style={[styles.input, !isFromCommunity && styles.disabledInput]}
+                  editable={isFromCommunity}
+                  selectTextOnFocus={isFromCommunity} 
+                  multiline={true}
                 />
+                 
                 {destinationSuggestions.length > 0 && (
                   <View style={styles.suggestionContainer}>
+                    <ScrollView 
+        contentContainerStyle={{ flexGrow: 1 }}
+        nestedScrollEnabled={true}
+      >
                     {destinationSuggestions.map((s, i) => (
                       <TouchableOpacity 
                         key={i} 
@@ -187,14 +206,18 @@ export default function PostModal({
                         <Text>{s.name}</Text>
                       </TouchableOpacity>
                     ))}
+                       </ScrollView> 
                   </View>
                 )}
+                  
               </>
             ) : (
               <TextInput
                 value={initialDestination}
-                style={[styles.input, styles.disabledInput]}
+                style={[styles.non]}
                 editable={false}
+                multiline={true}
+      
               />
             )}
 
@@ -233,7 +256,6 @@ export default function PostModal({
  
 
 const styles = StyleSheet.create({
-  
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -273,11 +295,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FF',
     borderWidth: 1,
     borderColor: '#C7D2FE',
-    borderRadius: 8,
-    padding: 8,
+    borderRadius: 5,
+    padding: 6,
     fontSize: 11,
     color: '#374151',
-    marginVertical: 8,
+   
+    width: '100%',
+    marginBottom: 10,
+    
   },
   
   buttonContainer: {
@@ -316,6 +341,14 @@ const styles = StyleSheet.create({
   disabledInput: {
     backgroundColor: '#E5E7EB', // Gray out to indicate non-editable field
   },
+  non: {
+    padding: 6,
+    backgroundColor: '#fff',
+    flexWrap: 'wrap',     
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 6
+  },
   suggestionContainer: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -323,11 +356,21 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     maxHeight: 150,
     marginBottom: 10,
+    zIndex: 999, // Ensures it appears on top of other elements.
+    elevation: 1000,    
+  
   },
   suggestionItem: {
-    padding: 10,
+    padding: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+     
+  },
+  inputContainer: {
+    position: 'relative',   // Necessary for absolute positioning of the dropdown
+    width: '100%',
+    overflow: 'visible',     // Ensure the suggestion container is visible outside the bounds
+     
   },
 });
 
