@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { Linking } from "react-native"; // Added as requested
+
 import {
   Modal,
   View,
@@ -7,6 +9,7 @@ import {
   Text,
   ScrollView,
   Platform,
+  Linking as RNLinking,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -17,21 +20,36 @@ interface ModalProps {
     name: string;
     latitude: number;
     longitude: number;
-    cuisine?: string;
+    cuisine: string;
+    address: string;
+    opening_hours: string;
+    amenity: string;
+    phone?: string;
+    website?: string;
     image_url?: string;
-    address?: string;
-    opening_hours?: string;
   }>;
 }
 
 const ModalComponent: React.FC<ModalProps> = ({
   visible,
   onClose,
-  restaurants, // Receive restaurants directly
+  restaurants,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategories, setShowCategories] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Function to open website URLs
+  const handleWebsitePress = (url: string) => {
+    Linking.canOpenURL(url).then((supported) => {
+      if (supported) Linking.openURL(url);
+    });
+  };
+
+  // Function to handle phone number press
+  const handlePhonePress = (phone: string) => {
+    Linking.openURL(`tel:${phone}`);
+  };
 
   // List of categories
   const categories = [
@@ -51,12 +69,10 @@ const ModalComponent: React.FC<ModalProps> = ({
     setShowCategories(false);
   };
 
-  // Filter restaurants based on the selected category using the cuisine property.
+  // Update the filtered spots to handle all required fields
   const filteredSpots = selectedCategory
     ? restaurants.filter(
-        (spot) =>
-          (spot.cuisine || "Not specified").toLowerCase() ===
-          selectedCategory.toLowerCase()
+        (spot) => spot.amenity?.toLowerCase() === selectedCategory.toLowerCase()
       )
     : restaurants;
 
@@ -138,57 +154,75 @@ const ModalComponent: React.FC<ModalProps> = ({
                     </View>
                     <View style={styles.amenityPill}>
                       <Text style={styles.amenityText}>
-                        Cuisine: {spot.cuisine || "Not specified"}
+                        {spot.amenity || "Restaurant"}
                       </Text>
                     </View>
                   </View>
 
-                  {/* Middle Row: Two Columns */}
-                  <View style={styles.middleRow}>
-                    {/* Left Column */}
-                    <View style={styles.leftColumn}>
-                      <Text style={styles.sectionTitle}>
-                        <Ionicons
-                          name="location-outline"
-                          size={16}
-                          color="#44457D"
-                        />{" "}
-                        Address
-                      </Text>
-                      <Text style={styles.sectionValue}>
-                        {spot.address || "No address provided"}
-                      </Text>
+                  {/* Address */}
+                  <Text style={styles.sectionTitle}>
+                    <Ionicons
+                      name="location-outline"
+                      size={16}
+                      color="#44457D"
+                    />{" "}
+                    Address
+                  </Text>
+                  <Text style={styles.sectionValue}>{spot.address}</Text>
 
-                      <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
-                        <Ionicons
-                          name="information-circle-outline"
-                          size={16}
-                          color="#44457D"
-                        />{" "}
-                        Details
-                      </Text>
-                      <Text style={styles.sectionValue}>
-                        Opening Hours: {spot.opening_hours || "Not available"}
-                      </Text>
-                    </View>
+                  {/* Cuisine */}
+                  <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
+                    <Ionicons
+                      name="restaurant-outline"
+                      size={16}
+                      color="#44457D"
+                    />{" "}
+                    Cuisine
+                  </Text>
+                  <Text style={styles.sectionValue}>
+                    {spot.cuisine || "Not specified"}
+                  </Text>
 
-                    {/* Right Column */}
-                    <View style={styles.rightColumn}>
-                      {/* Placeholder for additional details or actions */}
-                    </View>
-                  </View>
-
-                  {/* Action Buttons */}
-                  <View style={styles.buttonRow}>
-                    <TouchableOpacity style={styles.viewButton}>
-                      <Text style={styles.viewButtonText}>View Details</Text>
+                  {/* Contact Section */}
+                  <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
+                    <Ionicons name="call-outline" size={16} color="#44457D" />{" "}
+                    Contact
+                  </Text>
+                  <Text style={styles.sectionValue}>
+                    Phone:{" "}
+                    {spot.phone ? (
+                      <TouchableOpacity
+                        onPress={() =>
+                          spot.phone && handlePhonePress(spot.phone)
+                        }
+                      >
+                        <Text style={styles.websiteText}>{spot.phone}</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      "Not available"
+                    )}
+                  </Text>
+                  {spot.website && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        spot.website && handleWebsitePress(spot.website)
+                      }
+                      style={{ marginTop: 4 }}
+                    >
+                      <Text style={styles.websiteText}>Visit Website</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.directionsButton}>
-                      <Text style={styles.directionsButtonText}>
-                        Get Directions
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                  )}
+
+                  {/* Hours */}
+                  <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
+                    <Ionicons name="time-outline" size={16} color="#44457D" />{" "}
+                    Hours
+                  </Text>
+                  <Text style={styles.sectionValue}>
+                    {spot.opening_hours === "Hours not specified"
+                      ? "Opening hours not available"
+                      : spot.opening_hours}
+                  </Text>
                 </View>
               ))
             )}
@@ -305,6 +339,7 @@ const styles = StyleSheet.create({
   },
   topRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 10,
   },
   spotName: {
@@ -317,23 +352,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 4,
     paddingHorizontal: 8,
-    marginLeft: 10,
-    alignSelf: "flex-start",
+    alignSelf: "center",
   },
   amenityText: {
     fontSize: 11,
     color: "#44457D",
-  },
-  middleRow: {
-    flexDirection: "row",
-    marginTop: 8,
-  },
-  leftColumn: {
-    flex: 1,
-    marginRight: 10,
-  },
-  rightColumn: {
-    flex: 1,
   },
   sectionTitle: {
     fontSize: 12,
@@ -345,37 +368,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#374151",
     marginBottom: 2,
+    lineHeight: 18,
+    minHeight: 18,
   },
-  buttonRow: {
-    flexDirection: "row",
-    marginTop: 16,
-  },
-  viewButton: {
-    flex: 1,
-    backgroundColor: "#1751b3",
-    paddingVertical: 8,
-    borderRadius: 5,
-    marginRight: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  directionsButton: {
-    flex: 1,
-    backgroundColor: "#197814",
-    paddingVertical: 8,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  viewButtonText: {
-    color: "#FFFFFF",
+  websiteText: {
+    color: "#6366F1",
+    textDecorationLine: "underline",
     fontSize: 12,
-    fontWeight: "bold",
-  },
-  directionsButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "bold",
   },
 
   /********** FOOTER **********/
@@ -394,5 +393,13 @@ const styles = StyleSheet.create({
     color: "#6366F1",
     fontSize: 12,
     fontWeight: "bold",
+  },
+
+  // New styles added
+  cuisinePill: {
+    backgroundColor: "#E0E7FF",
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
 });

@@ -733,10 +733,15 @@ const RouteScreen: React.FC = () => {
   // ===== New Restaurant-related State =====
   const [nearbyRestaurants, setNearbyRestaurants] = useState<
     Array<{
+      name: string;
       latitude: number;
       longitude: number;
-      name: string;
-      cuisine?: string;
+      cuisine: string;
+      amenity: string;
+      address: string;
+      opening_hours: string;
+      phone?: string;
+      website?: string;
       image_url?: string;
     }>
   >([]);
@@ -891,22 +896,24 @@ const RouteScreen: React.FC = () => {
       );
 
       const mapped = response.data.results.map((item: any) => ({
-        name: item.name,
-        latitude: item.coordinates.lat,
-        longitude: item.coordinates.lon,
-        cuisine: item.metadata.cuisine,
-        image_url: item.metadata.contact?.website,
-        // Add these fields from the API response
-        address: item.address?.full_address,
-        opening_hours: item.metadata?.opening_hours,
+        name: item.name || "Unnamed Restaurant",
+        latitude: item.coordinates?.lat || 0,
+        longitude: item.coordinates?.lon || 0,
+        amenity: item.amenity || "Restaurant",
+        cuisine: item.metadata?.cuisine || "Various",
+        address: item.address?.full_address || "Address not available",
+        opening_hours: item.metadata?.opening_hours || "Hours not specified",
+        phone: item.metadata?.contact?.phone,
+        website: item.metadata?.contact?.website,
+        image_url: item.metadata?.contact?.website,
       }));
 
       setNearbyRestaurants(mapped);
     } catch (error) {
       console.error("Error fetching restaurants:", error);
+      setNearbyRestaurants([]);
     }
   };
-
   // ===== useEffect: Call fetchRestaurants when route updates =====
   useEffect(() => {
     if (route.length >= 2) {
@@ -1416,10 +1423,12 @@ const RouteScreen: React.FC = () => {
               latitude: r.latitude,
               longitude: r.longitude,
               cuisine: r.cuisine,
+              amenity: r.amenity, // Add this line
+              address: r.address,
+              opening_hours: r.opening_hours,
+              phone: r.phone,
+              website: r.website,
               image_url: r.image_url,
-              // Add any additional fields needed for the modal
-              address: "", // You may need to add these to your interface
-              opening_hours: "",
             }))}
           />
           {route.length >= 2 && (
@@ -1565,10 +1574,12 @@ const RouteScreen: React.FC = () => {
             latitude: r.latitude,
             longitude: r.longitude,
             cuisine: r.cuisine,
+            amenity: r.amenity, // Add this line
+            address: r.address,
+            opening_hours: r.opening_hours,
+            phone: r.phone,
+            website: r.website,
             image_url: r.image_url,
-            // Add any additional fields needed for the modal
-            address: "",
-            opening_hours: "",
           }))}
         />
       </ScrollView>
