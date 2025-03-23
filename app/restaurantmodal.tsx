@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { Linking } from "react-native"; // Added as requested
-
 import {
   Modal,
   View,
@@ -9,31 +7,46 @@ import {
   Text,
   ScrollView,
   Platform,
-  Linking as RNLinking,
+  Image,
+  Linking,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+
+// A placeholder image if restaurant.image_url is not provided.
+const placeholderImage = "https://via.placeholder.com/150";
+
+interface Restaurant {
+  name: string;
+  latitude: number;
+  longitude: number;
+  cuisine?: string;
+  address?: string;
+  opening_hours?: string;
+  amenity?: string;
+  phone?: string;
+  website?: string;
+  image_url?: string;
+}
 
 interface ModalProps {
   visible: boolean;
   onClose: () => void;
-  restaurants: Array<{
-    name: string;
+  restaurants: Restaurant[];
+  onView?: (restaurant: {
     latitude: number;
     longitude: number;
-    cuisine: string;
-    address: string;
-    opening_hours: string;
-    amenity: string;
-    phone?: string;
-    website?: string;
-    image_url?: string;
-  }>;
+    name: string;
+  }) => void;
+  // New prop added here
+  onGoHere?: (restaurant: Restaurant) => void;
 }
 
 const ModalComponent: React.FC<ModalProps> = ({
   visible,
   onClose,
   restaurants,
+  onView,
+  onGoHere,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategories, setShowCategories] = useState(false);
@@ -69,7 +82,7 @@ const ModalComponent: React.FC<ModalProps> = ({
     setShowCategories(false);
   };
 
-  // Update the filtered spots to handle all required fields
+  // Filter spots based on selected category (if provided)
   const filteredSpots = selectedCategory
     ? restaurants.filter(
         (spot) => spot.amenity?.toLowerCase() === selectedCategory.toLowerCase()
@@ -147,10 +160,49 @@ const ModalComponent: React.FC<ModalProps> = ({
             ) : (
               filteredSpots.map((spot, idx) => (
                 <View key={idx} style={styles.spotCard}>
-                  {/* Top Row */}
+                  {/* New header section when onView prop is provided */}
+                  {onView && (
+                    <View style={styles.restaurantItem}>
+                      <Image
+                        source={{ uri: spot.image_url || placeholderImage }}
+                        style={styles.restaurantImage}
+                      />
+                      <View style={styles.restaurantInfo}>
+                        <Text style={styles.restaurantName}>{spot.name}</Text>
+                        <Text style={styles.restaurantCuisine}>
+                          {spot.cuisine || "Not specified"}
+                        </Text>
+                      </View>
+                      <View style={styles.buttonGroup}>
+                        <TouchableOpacity
+                          style={styles.viewButton}
+                          onPress={() =>
+                            onView({
+                              latitude: spot.latitude,
+                              longitude: spot.longitude,
+                              name: spot.name,
+                            })
+                          }
+                        >
+                          <Text style={styles.viewButtonText}>View</Text>
+                        </TouchableOpacity>
+                        {/* Add Go Here button */}
+                        <TouchableOpacity
+                          style={styles.goHereButton}
+                          onPress={() => onGoHere?.(spot)}
+                        >
+                          <Text style={styles.goHereButtonText}>Go Here</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Original Details */}
                   <View style={styles.topRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.spotName}>{spot.name}</Text>
+                      {!onView && (
+                        <Text style={styles.spotName}>{spot.name}</Text>
+                      )}
                     </View>
                     <View style={styles.amenityPill}>
                       <Text style={styles.amenityText}>
@@ -159,18 +211,20 @@ const ModalComponent: React.FC<ModalProps> = ({
                     </View>
                   </View>
 
-                  {/* Address */}
-                  <Text style={styles.sectionTitle}>
-                    <Ionicons
-                      name="location-outline"
-                      size={16}
-                      color="#44457D"
-                    />{" "}
-                    Address
-                  </Text>
-                  <Text style={styles.sectionValue}>{spot.address}</Text>
+                  {spot.address && (
+                    <>
+                      <Text style={styles.sectionTitle}>
+                        <Ionicons
+                          name="location-outline"
+                          size={16}
+                          color="#44457D"
+                        />{" "}
+                        Address
+                      </Text>
+                      <Text style={styles.sectionValue}>{spot.address}</Text>
+                    </>
+                  )}
 
-                  {/* Cuisine */}
                   <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
                     <Ionicons
                       name="restaurant-outline"
@@ -183,7 +237,6 @@ const ModalComponent: React.FC<ModalProps> = ({
                     {spot.cuisine || "Not specified"}
                   </Text>
 
-                  {/* Contact Section */}
                   <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
                     <Ionicons name="call-outline" size={16} color="#44457D" />{" "}
                     Contact
@@ -213,7 +266,6 @@ const ModalComponent: React.FC<ModalProps> = ({
                     </TouchableOpacity>
                   )}
 
-                  {/* Hours */}
                   <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
                     <Ionicons name="time-outline" size={16} color="#44457D" />{" "}
                     Hours
@@ -258,7 +310,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 15,
-    overflow: "visible", // allow overlay to show
+    overflow: "visible",
   },
   modalTitle: {
     fontSize: 18,
@@ -395,11 +447,57 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  // New styles added
-  cuisinePill: {
-    backgroundColor: "#E0E7FF",
-    borderRadius: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  /********** UPDATED STYLES FOR VIEW MODE **********/
+  restaurantItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+  },
+  restaurantImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+  },
+  restaurantInfo: {
+    flex: 1,
+  },
+  restaurantName: {
+    fontWeight: "500",
+    color: "#333",
+  },
+  restaurantCuisine: {
+    color: "#666",
+    fontSize: 12,
+  },
+  buttonGroup: {
+    flexDirection: "row",
+    gap: 8,
+    marginLeft: "auto",
+    alignItems: "center",
+  },
+  viewButton: {
+    backgroundColor: "#6366F1",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  viewButtonText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  goHereButton: {
+    backgroundColor: "#10B981",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  goHereButtonText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "500",
   },
 });

@@ -561,8 +561,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
     });
   };
 
-  // In route.tsx - MapComponent's useEffect for selectedSpot
-  // In route.tsx - Update the selectedSpot useEffect
   useEffect(() => {
     if (isWebViewReady && selectedSpot) {
       const js = `
@@ -729,6 +727,47 @@ const RouteScreen: React.FC = () => {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
+  const handleViewRestaurant = (lat: number, lng: number) => {
+    if (webviewRef.current) {
+      const js = `
+      if (window.map) {
+        window.map.flyTo([${lat}, ${lng}], 16, {
+          animate: true,
+          duration: 2
+        });
+
+        window.map.eachLayer(layer => {
+          if (layer instanceof L.Marker && layer.options.isRestaurant) {
+            const latLng = layer.getLatLng();
+            if (Math.abs(latLng.lat - ${lat}) < 0.000001 && 
+                Math.abs(latLng.lng - ${lng}) < 0.000001) {
+              layer.openPopup();
+              layer.setIcon(
+                L.divIcon({
+                  html: '<div style="background-color: #fff; border: 2px solid #1d4ed8; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-utensils" style="color: #1d4ed8; font-size: 16px;"></i></div>',
+                  className: 'selected-restaurant-icon',
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 32]
+                })
+              );
+            } else {
+              layer.setIcon(
+                L.divIcon({
+                  html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-utensils" style="color: #dc3545; font-size: 16px;"></i></div>',
+                  className: 'restaurant-icon',
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 32]
+                })
+              );
+            }
+          }
+        });
+      }
+    `;
+
+      webviewRef.current.injectJavaScript(js);
+    }
+  };
 
   // ===== New Restaurant-related State =====
   const [nearbyRestaurants, setNearbyRestaurants] = useState<
@@ -1430,7 +1469,31 @@ const RouteScreen: React.FC = () => {
               website: r.website,
               image_url: r.image_url,
             }))}
+            onView={(restaurant) => {
+              handleViewRestaurant(restaurant.latitude, restaurant.longitude);
+              setRestaurantModalVisible(false);
+            }}
+            // Add this new handler
+            onGoHere={(restaurant) => {
+              setDestination(restaurant.address || restaurant.name);
+              const newDestination = {
+                latitude: restaurant.latitude,
+                longitude: restaurant.longitude,
+              };
+              setRoadPath([]);
+              const currentOrigin =
+                route.length > 0
+                  ? route[0]
+                  : { latitude: region.latitude, longitude: region.longitude };
+              setRoute([currentOrigin, newDestination]);
+              fetchRouteDetails(
+                newDestination.latitude,
+                newDestination.longitude
+              );
+              setRestaurantModalVisible(false);
+            }}
           />
+
           {route.length >= 2 && (
             <ReviewModal
               visible={modalVisible}
@@ -1497,6 +1560,7 @@ const RouteScreen: React.FC = () => {
           style={[styles.mapContainer, { height: animatedHeight }]}
         >
           <MapComponent
+            key={`map-${mapResetKey}-${nearbyRestaurants.length}`}
             initialRegion={region}
             route={route}
             roadPath={roadPath}
@@ -1541,6 +1605,7 @@ const RouteScreen: React.FC = () => {
           style={[styles.mapContainer, { height: animatedHeight }]}
         >
           <MapComponent
+            key={`map-${mapResetKey}-${nearbyRestaurants.length}`}
             initialRegion={region}
             route={route}
             roadPath={roadPath}
