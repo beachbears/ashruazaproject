@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
@@ -12,6 +12,9 @@ import {
   Animated,
   ActivityIndicator,
   LogBox,
+  Dimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent
 } from "react-native";
 import axios from "axios";
 import { WebView } from "react-native-webview";
@@ -20,6 +23,10 @@ import { Ionicons } from "@expo/vector-icons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import ReviewModal from "../reviewmodal";
 import ModalComponent from "../restaurantmodal";
+import { GestureHandlerRootView, ScrollView, } from 'react-native-gesture-handler';
+import BottomSheet from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+
 
 const polyline = require("@mapbox/polyline");
 
@@ -98,7 +105,8 @@ export interface NearbySpot {
   description: string;
   latitude: number;
   longitude: number;
-  image_url?: string;
+  image_url?: string;  // Add image URL
+
 }
 
 export interface ApiResponse {
@@ -297,9 +305,9 @@ const getMapHTML = (
       polylineCoordinates = Array.isArray(roadPath[0])
         ? roadPath
         : (roadPath as LatLng[]).map((coord: LatLng) => [
-            coord.latitude,
-            coord.longitude,
-          ]);
+          coord.latitude,
+          coord.longitude,
+        ]);
     }
     polylinesJS += `var roadPolyline = L.polyline(${JSON.stringify(
       polylineCoordinates
@@ -420,11 +428,10 @@ const getMapHTML = (
           .bindPopup(\`
             <div style="max-width: 200px;">
               <b>${restaurant.name}</b>
-              ${
-                restaurant.cuisine
-                  ? `<p style="margin: 2px 0; color: #666;">Cuisine: ${restaurant.cuisine}</p>`
-                  : ""
-              }
+              ${restaurant.cuisine
+          ? `<p style="margin: 2px 0; color: #666;">Cuisine: ${restaurant.cuisine}</p>`
+          : ""
+        }
               \${${JSON.stringify(restaurant)}.image_url ? 
                 \`<img 
                   src="${restaurant.image_url}" 
@@ -442,6 +449,7 @@ const getMapHTML = (
       `;
     });
   }
+
 
   let polylineJS = "";
   if (
@@ -506,9 +514,8 @@ const getMapHTML = (
         <div id="map"></div>
         <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
         <script>
-          var map = L.map('map').setView([${region.latitude}, ${
-    region.longitude
-  }], 13);
+          var map = L.map('map').setView([${region.latitude}, ${region.longitude
+    }], 13);
           window.map = map;
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
@@ -564,53 +571,61 @@ const MapComponent: React.FC<MapComponentProps> = ({
   useEffect(() => {
     if (isWebViewReady && selectedSpot) {
       const js = `
-      if (window.map) {
-        const targetLat = ${selectedSpot.latitude};
-        const targetLng = ${selectedSpot.longitude};
-        
-        // Reset all tourist spot markers to original color first
-        window.map.eachLayer(layer => {
-          if (layer instanceof L.Marker && layer.options.isTouristSpot) {
-            layer.setIcon(
-              L.divIcon({
-                html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #28a745; font-size: 16px;"></i></div>',
-                className: 'custom-icon',
-                iconSize: [32, 32],
-                iconAnchor: [16, 32]
-              })
-            );
-          }
-        });
-
-        // Smooth zoom animation
-        window.map.flyTo([targetLat, targetLng], 16, {
-          animate: true,
-          duration: 2
-        });
-
-        // Highlight new selected marker
-        window.map.eachLayer(layer => {
-          if (layer instanceof L.Marker && layer.options.isTouristSpot) {
-            const latLng = layer.getLatLng();
-            if (Math.abs(latLng.lat - targetLat) < 0.000001 && 
-                Math.abs(latLng.lng - targetLng) < 0.000001) {
-              layer.openPopup();
+        if (window.map) {
+          const targetLat = ${selectedSpot.latitude};
+          const targetLng = ${selectedSpot.longitude};
+          
+          // Reset all tourist spot markers to original style.
+          window.map.eachLayer(layer => {
+            if (layer instanceof L.Marker && layer.options.isTouristSpot) {
               layer.setIcon(
                 L.divIcon({
-                  html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #dc3545; font-size: 16px;"></i></div>',
-                  className: 'selected-icon',
+                  html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #28a745; font-size: 16px;"></i></div>',
+                  className: 'custom-icon',
                   iconSize: [32, 32],
                   iconAnchor: [16, 32]
                 })
               );
             }
-          }
-        });
-      }
-    `;
+          });
+          
+          // Fly to the target coordinates.
+          window.map.flyTo([targetLat, targetLng], 16, { animate: true, duration: 2 });
+          
+          // After a delay, adjust the center upward.
+          setTimeout(() => {
+            var markerLatLng = L.latLng(targetLat, targetLng);
+            var containerPoint = window.map.latLngToContainerPoint(markerLatLng);
+            // Shift upward by 100 pixels; adjust this value as needed.
+            var adjustedPoint = L.point(containerPoint.x, containerPoint.y - 500);
+            var adjustedCenter = window.map.containerPointToLatLng(adjustedPoint);
+            window.map.setView(adjustedCenter, window.map.getZoom(), { animate: true });
+          }, 500);
+          
+          // Highlight the selected marker.
+          window.map.eachLayer(layer => {
+            if (layer instanceof L.Marker && layer.options.isTouristSpot) {
+              const latLng = layer.getLatLng();
+              if (Math.abs(latLng.lat - targetLat) < 0.000001 &&
+                  Math.abs(latLng.lng - targetLng) < 0.000001) {
+                layer.openPopup();
+                layer.setIcon(
+                  L.divIcon({
+                    html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #dc3545; font-size: 16px;"></i></div>',
+                    className: 'selected-icon',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                  })
+                );
+              }
+            }
+          });
+        }
+      `;
       webviewRef?.current?.injectJavaScript(js);
     }
   }, [selectedSpot, isWebViewReady]);
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -666,7 +681,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
     </View>
   );
 };
-
 const SuggestionList: React.FC<{
   suggestions: any[];
   onSelect: (item: any) => void;
@@ -675,22 +689,21 @@ const SuggestionList: React.FC<{
   return (
     <ScrollView
       style={styles.suggestionList}
-      keyboardShouldPersistTaps="handled"
+      keyboardShouldPersistTaps="always"
+      nestedScrollEnabled
     >
       {suggestions.map((item, index) => (
-        <TouchableWithoutFeedback
+        <TouchableOpacity
           key={`${item.name}-${index}`}
+          style={styles.suggestionItem}
           onPress={() => onSelect(item)}
         >
-          <View style={styles.suggestionItem}>
-            <Text style={styles.suggestionText}>{item.name}</Text>
-          </View>
-        </TouchableWithoutFeedback>
+          <Text style={styles.suggestionText}>{item.name}</Text>
+        </TouchableOpacity>
       ))}
     </ScrollView>
   );
 };
-
 const locationCacheRef = { current: {} as { [key: string]: any[] } };
 
 const RouteScreen: React.FC = () => {
@@ -725,6 +738,50 @@ const RouteScreen: React.FC = () => {
   const [isOriginLoading, setIsOriginLoading] = useState(false);
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const snapPoints = ['25%', '60%', '90%'];
+  const [mapHeight, setMapHeight] = useState(Dimensions.get('window').height * 0.6); // initial map height
+  const screenHeight = Dimensions.get('window').height;
+  const fixedMapHeight = screenHeight * 0.6;
+
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    // Hide both tab bar and header when this screen is focused
+    navigation.setOptions({
+      tabBarStyle: { display: 'none' },
+      headerShown: false,
+    });
+
+    // Restore options when leaving this screen
+    return () =>
+      navigation.setOptions({
+        tabBarStyle: undefined,
+        headerShown: true,
+      });
+  }, [navigation]);
+
+  const handleScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { y } = event.nativeEvent.contentOffset;
+    const { height: layoutHeight } = event.nativeEvent.layoutMeasurement;
+    const contentHeight = event.nativeEvent.contentSize.height;
+    const tolerance = 500; // Increased tolerance
+
+    // Prevent snapping if content isn't scrollable
+    if (contentHeight <= layoutHeight + tolerance) {
+      return;
+    }
+
+    // Snap to top if near the top
+    if (y <= tolerance) {
+      bottomSheetRef.current?.snapToIndex(0);
+    }
+    // Snap to bottom if near the bottom
+    // else if (y + layoutHeight >= contentHeight - tolerance) {
+    //   bottomSheetRef.current?.snapToIndex(2);
+    // }
+  };
+
   const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
   const handleViewRestaurant = (lat: number, lng: number) => {
@@ -791,7 +848,7 @@ const RouteScreen: React.FC = () => {
   } | null>(null);
 
   const router = useRouter();
-  const animatedHeight = useRef(new Animated.Value(400)).current;
+
   const [expandedSegments, setExpandedSegments] = useState<{
     [index: number]: boolean;
   }>({});
@@ -841,9 +898,9 @@ const RouteScreen: React.FC = () => {
             prev.length > 0
               ? [prev[0], { latitude: selected.lat, longitude: selected.lon }]
               : [
-                  { latitude: region.latitude, longitude: region.longitude },
-                  { latitude: selected.lat, longitude: selected.lon },
-                ]
+                { latitude: region.latitude, longitude: region.longitude },
+                { latitude: selected.lat, longitude: selected.lon },
+              ]
           );
           fetchRouteDetails(selected.lat, selected.lon);
         }
@@ -890,9 +947,8 @@ const RouteScreen: React.FC = () => {
       });
       const locAddr =
         addresses && addresses.length > 0
-          ? `${addresses[0].name ? addresses[0].name + ", " : ""}${
-              addresses[0].street ? addresses[0].street + ", " : ""
-            }${addresses[0].city}, ${addresses[0].region}`
+          ? `${addresses[0].name ? addresses[0].name + ", " : ""}${addresses[0].street ? addresses[0].street + ", " : ""
+          }${addresses[0].city}, ${addresses[0].region}`
           : "Unknown Location";
       setRegion((prev) => ({ ...prev, latitude, longitude }));
       if (!manualOrigin && !origin) {
@@ -905,14 +961,6 @@ const RouteScreen: React.FC = () => {
       }
     })();
   }, []);
-
-  useEffect(() => {
-    Animated.timing(animatedHeight, {
-      toValue: route.length >= 2 ? 400 : 200,
-      duration: 500,
-      useNativeDriver: false,
-    }).start();
-  }, [route, animatedHeight]);
 
   // ===== Updated: fetchRestaurants Function =====
 
@@ -1076,9 +1124,9 @@ const RouteScreen: React.FC = () => {
       prev.length > 0
         ? [prev[0], { latitude: item.lat, longitude: item.lon }]
         : [
-            { latitude: region.latitude, longitude: region.longitude },
-            { latitude: item.lat, longitude: item.lon },
-          ]
+          { latitude: region.latitude, longitude: region.longitude },
+          { latitude: item.lat, longitude: item.lon },
+        ]
     );
     await fetchRouteDetails(item.lat, item.lon);
     setMapResetKey(Date.now());
@@ -1101,6 +1149,8 @@ const RouteScreen: React.FC = () => {
         "https://comgu20-production.up.railway.app/api/routes/find",
         { params }
       );
+
+      // Update nearby spots only if new data contains them
       if (response.data.nearby_spots) {
         setNearbySpots(response.data.nearby_spots);
       }
@@ -1195,6 +1245,8 @@ const RouteScreen: React.FC = () => {
     }
   };
 
+
+
   const renderRouteOverview = () => {
     if (isRouteLoading) {
       return <ActivityIndicator size="small" color="#6366F1" />;
@@ -1266,34 +1318,34 @@ const RouteScreen: React.FC = () => {
                     {["jeep", "bus", "ejeep", "lrt", "mrt"].includes(
                       segType
                     ) && (
-                      <>
-                        <View style={styles.getOnOffContainer}>
-                          <Text style={[styles.onOffTitle, { color: "green" }]}>
-                            Get on
-                          </Text>
-                          <Text style={styles.onOffInstruction}>
-                            Ride a{" "}
-                            {segment.vehicle_type
-                              ? segment.vehicle_type.toLowerCase()
-                              : segType}{" "}
-                            from {segment.from_stop?.name} going towards{" "}
-                            {segment.to_stop?.name}.
-                          </Text>
-                          <Text
-                            style={[
-                              styles.onOffTitle,
-                              { color: "blue", marginTop: 8 },
-                            ]}
-                          >
-                            Get off
-                          </Text>
-                          <Text style={styles.onOffInstruction}>
-                            Arrive at {segment.to_stop?.name}, then get off at
-                            your stop.
-                          </Text>
-                        </View>
-                      </>
-                    )}
+                        <>
+                          <View style={styles.getOnOffContainer}>
+                            <Text style={[styles.onOffTitle, { color: "green" }]}>
+                              Get on
+                            </Text>
+                            <Text style={styles.onOffInstruction}>
+                              Ride a{" "}
+                              {segment.vehicle_type
+                                ? segment.vehicle_type.toLowerCase()
+                                : segType}{" "}
+                              from {segment.from_stop?.name} going towards{" "}
+                              {segment.to_stop?.name}.
+                            </Text>
+                            <Text
+                              style={[
+                                styles.onOffTitle,
+                                { color: "blue", marginTop: 8 },
+                              ]}
+                            >
+                              Get off
+                            </Text>
+                            <Text style={styles.onOffInstruction}>
+                              Arrive at {segment.to_stop?.name}, then get off at
+                              your stop.
+                            </Text>
+                          </View>
+                        </>
+                      )}
                     {segment.alternatives &&
                       segment.alternatives.length > 0 && (
                         <View style={styles.alternativesContainer}>
@@ -1515,9 +1567,9 @@ const RouteScreen: React.FC = () => {
                   route.length > 0
                     ? route[0]
                     : {
-                        latitude: region.latitude,
-                        longitude: region.longitude,
-                      };
+                      latitude: region.latitude,
+                      longitude: region.longitude,
+                    };
                 setRoute([currentOrigin, newDestination]);
                 fetchRouteDetails(
                   newDestination.latitude,
@@ -1553,111 +1605,90 @@ const RouteScreen: React.FC = () => {
   );
 
   // Render different layouts based on route length while updating MapComponent with new restaurant props
-  if (route.length >= 2) {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-        <Animated.View
-          style={[styles.mapContainer, { height: animatedHeight }]}
-        >
-          <MapComponent
-            key={`map-${mapResetKey}-${nearbyRestaurants.length}`}
-            initialRegion={region}
-            route={route}
-            roadPath={roadPath}
-            mapResetKey={mapResetKey}
-            style={styles.map}
-            polylineColor={polylineColor}
-            webviewRef={webviewRef}
-            nearbySpots={nearbySpots}
-            selectedSpot={selectedSpot}
-            isLoading={isRouteLoading}
-            // ===== New Restaurant props =====
-            nearbyRestaurants={nearbyRestaurants}
-            onRestaurantClick={(name) => {
-              const restaurant = nearbyRestaurants.find((r) => r.name === name);
-              if (restaurant) {
-                setSelectedRestaurant(restaurant);
-                setRestaurantModalVisible(true);
-              }
-            }}
-            onSpotClick={(spotName) => {
-              // NEW: When a spot is clicked, set scrollToSpot and open the modal
-              setScrollToSpot(spotName);
-              setModalVisible(true);
-            }}
-          />
-        </Animated.View>
-        <ScrollView
-          style={[styles.detailsContainer, { backgroundColor: "#FFFFFF" }]}
-          contentContainerStyle={styles.contentContainer}
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* Full-screen map as the background */}
+      <View style={styles.mapWrapper}>
+        <MapComponent
+          key={`map-${mapResetKey}-${nearbyRestaurants.length}`}
+
+          initialRegion={region}
+          route={route}
+          roadPath={roadPath}
+          mapResetKey={mapResetKey}
+          style={styles.map}
+          polylineColor={polylineColor}
+          webviewRef={webviewRef}
+          nearbySpots={nearbySpots}
+          selectedSpot={selectedSpot}
+          isLoading={isRouteLoading}
+          nearbyRestaurants={nearbyRestaurants}
+          onRestaurantClick={(name) => {
+            const restaurant = nearbyRestaurants.find((r) => r.name === name);
+            if (restaurant) {
+              setSelectedRestaurant(restaurant);
+              setRestaurantModalVisible(true);
+            }
+          }}
+          onSpotClick={(spotName) => {
+            setScrollToSpot(spotName);
+            setModalVisible(true);
+          }}
+        />
+        {isRouteLoading && (
+          <ActivityIndicator style={styles.loadingIndicator} size="large" color="#6366F1" />
+        )}
+      </View>
+
+      {/* Bottom Sheet overlay */}
+      <BottomSheet
+        ref={bottomSheetRef}
+        snapPoints={snapPoints}
+        index={1}
+        enableContentPanningGesture={true}
+        enableHandlePanningGesture={true}
+        backgroundComponent={({ style }) => (
+          <View style={[style, { backgroundColor: "#FFFFFF", borderRadius: 20 }]} />
+        )}
+        handleComponent={CustomHandle} // Make sure CustomHandle is defined/imported
+      >
+        <BottomSheetScrollView
+          nestedScrollEnabled
+          contentContainerStyle={{ flexGrow: 1, paddingVertical: 10 }}
+          showsVerticalScrollIndicator={false}
+          onScrollEndDrag={handleScrollEndDrag}
+          onMomentumScrollEnd={handleScrollEndDrag}
+          keyboardShouldPersistTaps="always"
         >
           {detailsContent}
-        </ScrollView>
-      </View>
-    );
-  } else {
-    return (
-      <ScrollView
-        style={[styles.maincontainer, { backgroundColor: "#FFFFFF" }]}
-        contentContainerStyle={styles.contentContainer}
-      >
-        <Animated.View
-          style={[styles.mapContainer, { height: animatedHeight }]}
-        >
-          <MapComponent
-            key={`map-${mapResetKey}-${nearbyRestaurants.length}`}
-            initialRegion={region}
-            route={route}
-            roadPath={roadPath}
-            mapResetKey={mapResetKey}
-            style={styles.map}
-            polylineColor={polylineColor}
-            webviewRef={webviewRef}
-            // ===== New Restaurant props =====
-            nearbyRestaurants={nearbyRestaurants}
-            onRestaurantClick={(name) => {
-              const restaurant = nearbyRestaurants.find((r) => r.name === name);
-              if (restaurant) {
-                setSelectedRestaurant(restaurant);
-                setRestaurantModalVisible(true);
-              }
-            }}
-            onSpotClick={(spotName) => {
-              // NEW: When a spot is clicked, set scrollToSpot and open the modal
-              setScrollToSpot(spotName);
-              setModalVisible(true);
-            }}
-          />
-        </Animated.View>
-        {detailsContent}
-        {/* ===== New: Render Restaurant Modal in case route is not >=2 */}
-        <ModalComponent
-          visible={restaurantModalVisible}
-          onClose={() => setRestaurantModalVisible(false)}
-          restaurants={nearbyRestaurants.map((r) => ({
-            name: r.name,
-            latitude: r.latitude,
-            longitude: r.longitude,
-            cuisine: r.cuisine,
-            amenity: r.amenity, // Add this line
-            address: r.address,
-            opening_hours: r.opening_hours,
-            phone: r.phone,
-            website: r.website,
-            image_url: r.image_url,
-          }))}
-        />
-      </ScrollView>
-    );
-  }
+        </BottomSheetScrollView>
+      </BottomSheet>
+    </GestureHandlerRootView >
+  );
 };
 
 export default RouteScreen;
 
+
+const CustomHandle = () => (
+  <View style={styles.customHandle}>
+    <View style={styles.handleIndicator} />
+  </View>
+);
+
+// -------------------------
+// Styles
+// -------------------------
 const styles = StyleSheet.create({
+  bottomSheetContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
   maincontainer: { width: "100%", backgroundColor: "#FFFFFF" },
   detailsContainer: { flex: 1, backgroundColor: "#FFFFFF" },
-  contentContainer: { paddingBottom: 30 },
+  contentContainer: {
+    padding: 16,
+  },
   mapContainer: {
     borderWidth: 2,
     borderColor: "#FFFFFF",
@@ -1665,7 +1696,13 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 15,
   },
-  map: { height: "100%", width: "100%" },
+  mapWrapper: {
+    ...StyleSheet.absoluteFillObject, // Fill the screen
+    zIndex: 0,
+  },
+  map: {
+    flex: 1,
+  },
   text: { color: "#44457D", fontWeight: "500", fontSize: 16 },
   container: { padding: 15, marginBottom: 20 },
   label: { fontSize: 12, fontWeight: "500", color: "#6B7280", marginTop: 10 },
@@ -1705,10 +1742,16 @@ const styles = StyleSheet.create({
     zIndex: 10,
     borderRadius: 8,
     elevation: 4,
-    maxHeight: 150,
+    maxHeight: 250
   },
-  suggestionItem: { padding: 10, borderBottomWidth: 1, borderColor: "#ddd" },
-  suggestionText: { color: "#444" },
+  suggestionItem: {
+    padding: 12, // Increased padding for better touch target.
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
+  },
+  suggestionText: {
+    color: "#444",
+  },
   topInfoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1836,4 +1879,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderColor: "#dc3545",
   },
+  customHandle: {
+    alignItems: 'center',
+    paddingVertical: 16, // Increased vertical padding for a larger touch area
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  handleIndicator: {
+    width: 60,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#ccc',
+  }
 });
