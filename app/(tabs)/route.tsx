@@ -12,6 +12,7 @@ import {
   Animated,
   ActivityIndicator,
   LogBox,
+  Platform,
 } from "react-native";
 import axios from "axios";
 import { WebView } from "react-native-webview";
@@ -134,8 +135,7 @@ interface MapComponentProps {
   selectedSpot?: LatLng | null;
   isLoading?: boolean;
   webviewRef?: React.RefObject<WebView>;
-  onSpotClick?: (spotName: string) => void; // Added new prop
-  // New props for restaurants
+  onSpotClick?: (spotName: string) => void;
   nearbyRestaurants?: Array<{
     latitude: number;
     longitude: number;
@@ -210,7 +210,6 @@ const getMapHTML = (
     name: string;
     image_url?: string;
   }>,
-  // New parameter for restaurants
   nearbyRestaurants?: Array<{
     latitude: number;
     longitude: number;
@@ -311,7 +310,7 @@ const getMapHTML = (
     var group = new L.featureGroup(window.segmentPolylines);
   }
   // Initial view set by the selectedSpot useEffect
-`;
+  `;
   let messageListenerJS = `
     var highlightedIndices = [];
     
@@ -377,7 +376,7 @@ const getMapHTML = (
       
       L.marker([${spot.latitude}, ${spot.longitude}], { 
         icon: icon,
-        isTouristSpot: true // Add custom property
+        isTouristSpot: true
       })
         .addTo(map)
         .bindPopup(\`
@@ -401,7 +400,6 @@ const getMapHTML = (
     });
   }
 
-  // Add restaurant markers without breaking existing logic
   if (nearbyRestaurants && nearbyRestaurants.length > 0) {
     nearbyRestaurants.forEach((restaurant) => {
       markersJS += `
@@ -534,9 +532,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
   nearbySpots,
   selectedSpot,
   isLoading,
-  onSpotClick, // Existing prop
-  nearbyRestaurants, // New prop for restaurants
-  onRestaurantClick, // New restaurant click callback
+  onSpotClick,
+  nearbyRestaurants,
+  onRestaurantClick,
 }) => {
   const mapKey = JSON.stringify({
     initialRegion,
@@ -568,7 +566,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         const targetLat = ${selectedSpot.latitude};
         const targetLng = ${selectedSpot.longitude};
         
-        // Reset all tourist spot markers to original color first
+        // Reset all tourist spot markers to original color
         window.map.eachLayer(layer => {
           if (layer instanceof L.Marker && layer.options.isTouristSpot) {
             layer.setIcon(
@@ -583,17 +581,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
         });
 
         // Smooth zoom animation
-        window.map.flyTo([targetLat, targetLng], 16, {
-          animate: true,
-          duration: 2
-        });
+        window.map.flyTo([targetLat, targetLng], 16, { animate: true, duration: 2 });
 
-        // Highlight new selected marker
+        // Highlight selected tourist spot marker
         window.map.eachLayer(layer => {
           if (layer instanceof L.Marker && layer.options.isTouristSpot) {
             const latLng = layer.getLatLng();
-            if (Math.abs(latLng.lat - targetLat) < 0.000001 && 
-                Math.abs(latLng.lng - targetLng) < 0.000001) {
+            if (Math.abs(latLng.lat - targetLat) < 0.000001 && Math.abs(latLng.lng - targetLng) < 0.000001) {
               layer.openPopup();
               layer.setIcon(
                 L.divIcon({
@@ -625,7 +619,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
             roadPath,
             polylineColor,
             nearbySpots,
-            nearbyRestaurants // Add restaurants data
+            nearbyRestaurants
           ),
         }}
         style={style}
@@ -694,11 +688,10 @@ const SuggestionList: React.FC<{
 const locationCacheRef = { current: {} as { [key: string]: any[] } };
 
 const RouteScreen: React.FC = () => {
-  // Existing state variables
   const { destination: destParam, attraction } = useLocalSearchParams();
-  const [modalVisible, setModalVisible] = useState(false); // For Nearby Attractions (ReviewModal)
-  const [restaurantModalVisible, setRestaurantModalVisible] = useState(false); // For Restaurants Modal
-  const [scrollToSpot, setScrollToSpot] = useState<string | null>(null); // NEW: For handling scroll to a spot
+  const [modalVisible, setModalVisible] = useState(false);
+  const [restaurantModalVisible, setRestaurantModalVisible] = useState(false);
+  const [scrollToSpot, setScrollToSpot] = useState<string | null>(null);
   const [region, setRegion] = useState<Region>({
     latitude: 14.676,
     longitude: 121.0437,
@@ -727,49 +720,6 @@ const RouteScreen: React.FC = () => {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
-  const handleViewRestaurant = (lat: number, lng: number) => {
-    if (webviewRef.current) {
-      const js = `
-      if (window.map) {
-        window.map.flyTo([${lat}, ${lng}], 16, {
-          animate: true,
-          duration: 2
-        });
-
-        window.map.eachLayer(layer => {
-          if (layer instanceof L.Marker && layer.options.isRestaurant) {
-            const latLng = layer.getLatLng();
-            if (Math.abs(latLng.lat - ${lat}) < 0.000001 && 
-                Math.abs(latLng.lng - ${lng}) < 0.000001) {
-              layer.openPopup();
-              layer.setIcon(
-                L.divIcon({
-                  html: '<div style="background-color: #fff; border: 2px solid #1d4ed8; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-utensils" style="color: #1d4ed8; font-size: 16px;"></i></div>',
-                  className: 'selected-restaurant-icon',
-                  iconSize: [32, 32],
-                  iconAnchor: [16, 32]
-                })
-              );
-            } else {
-              layer.setIcon(
-                L.divIcon({
-                  html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-utensils" style="color: #dc3545; font-size: 16px;"></i></div>',
-                  className: 'restaurant-icon',
-                  iconSize: [32, 32],
-                  iconAnchor: [16, 32]
-                })
-              );
-            }
-          }
-        });
-      }
-    `;
-
-      webviewRef.current.injectJavaScript(js);
-    }
-  };
-
-  // ===== New Restaurant-related State =====
   const [nearbyRestaurants, setNearbyRestaurants] = useState<
     Array<{
       name: string;
@@ -790,6 +740,17 @@ const RouteScreen: React.FC = () => {
     name: string;
   } | null>(null);
 
+  // --- NEW: Algorithm dropdown state ---
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState<string>("best");
+  const [showAlgorithmDropdown, setShowAlgorithmDropdown] =
+    useState<boolean>(false);
+  const algorithmOptions = [
+    { label: "Best", value: "best" },
+    { label: "Fewest Transfers", value: "fewest-transfers" },
+    { label: "Minimal Walking", value: "minimal-walking" },
+    { label: "Fastest", value: "fastest" },
+  ];
+
   const router = useRouter();
   const animatedHeight = useRef(new Animated.Value(400)).current;
   const [expandedSegments, setExpandedSegments] = useState<{
@@ -799,10 +760,20 @@ const RouteScreen: React.FC = () => {
   const originTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const destinationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // NEW: Effect to handle scroll when modal is visible
+  // --- NEW: Fix for "View" error in Restaurant Modal ---
+  const handleViewRestaurant = (lat: number, lng: number) => {
+    if (webviewRef.current) {
+      const js = `
+        if (window.map) {
+          window.map.flyTo([${lat}, ${lng}], 16, { animate: true, duration: 2 });
+        }
+      `;
+      webviewRef.current.injectJavaScript(js);
+    }
+  };
+
   useEffect(() => {
     if (modalVisible && scrollToSpot) {
-      // Small timeout to ensure modal is fully rendered
       setTimeout(() => {
         setScrollToSpot(null);
       }, 300);
@@ -810,10 +781,7 @@ const RouteScreen: React.FC = () => {
   }, [modalVisible, scrollToSpot]);
 
   const handleToggleSegment = (idx: number) => {
-    setExpandedSegments((prev) => ({
-      ...prev,
-      [idx]: !prev[idx],
-    }));
+    setExpandedSegments((prev) => ({ ...prev, [idx]: !prev[idx] }));
     if (webviewRef.current) {
       webviewRef.current.postMessage(
         JSON.stringify({ type: "toggleSegmentHighlight", index: idx })
@@ -914,8 +882,6 @@ const RouteScreen: React.FC = () => {
     }).start();
   }, [route, animatedHeight]);
 
-  // ===== Updated: fetchRestaurants Function =====
-
   const fetchRestaurants = async (lat: number, lon: number) => {
     try {
       const response = await axios.get(
@@ -933,7 +899,6 @@ const RouteScreen: React.FC = () => {
           },
         }
       );
-
       const mapped = response.data.results.map((item: any) => ({
         name: item.name || "Unnamed Restaurant",
         latitude: item.coordinates?.lat || 0,
@@ -946,23 +911,21 @@ const RouteScreen: React.FC = () => {
         website: item.metadata?.contact?.website,
         image_url: item.metadata?.contact?.website,
       }));
-
       setNearbyRestaurants(mapped);
     } catch (error) {
       console.error("Error fetching restaurants:", error);
       setNearbyRestaurants([]);
     }
   };
-  // ===== useEffect: Call fetchRestaurants when route updates =====
+
   useEffect(() => {
     if (route.length >= 2) {
       const destinationCoords = route[1];
       console.log("Fetching restaurants for destination:", destinationCoords);
       fetchRestaurants(destinationCoords.latitude, destinationCoords.longitude);
     }
-  }, [route]); // This now tracks route changes instead of region
+  }, [route]);
 
-  // ===== geocodeAddress Function =====
   async function geocodeAddress(address: string) {
     if (locationCacheRef.current[address])
       return locationCacheRef.current[address];
@@ -1084,7 +1047,11 @@ const RouteScreen: React.FC = () => {
     setMapResetKey(Date.now());
   };
 
-  const fetchRouteDetails = async (destLat: number, destLon: number) => {
+  const fetchRouteDetails = async (
+    destLat: number,
+    destLon: number,
+    algorithm = "best"
+  ) => {
     setIsRouteLoading(true);
     setNearbySpots([]);
     setSelectedSpot(null);
@@ -1094,6 +1061,7 @@ const RouteScreen: React.FC = () => {
       origin_lon: route.length > 0 ? route[0].longitude : region.longitude,
       destination_lat: destLat,
       destination_lon: destLon,
+      algorithm: algorithm,
     };
     console.log("Request Params:", params);
     try {
@@ -1112,13 +1080,10 @@ const RouteScreen: React.FC = () => {
         origin_lon: region.longitude,
         destination_lat: destLat,
         destination_lon: destLon,
-        user: {
-          ...post.user,
-          email: post.user.email || "",
-        },
+        user: { ...post.user, email: post.user.email || "" },
       }));
       processedPosts.forEach((p) => {
-        // Assuming addPost is available from context
+        // addPost context functionality
       });
       const routeData = response.data.route;
       setRouteDetails({ route: routeData });
@@ -1377,7 +1342,7 @@ const RouteScreen: React.FC = () => {
               onPress={() => {
                 setDestination("");
                 setNearbySpots([]);
-                setNearbyRestaurants([]); // ← Add this line
+                setNearbyRestaurants([]);
                 setDestinationSuggestions([]);
                 setRoute((prev) => (prev.length > 0 ? [prev[0]] : []));
                 setRouteDetails({ route: null });
@@ -1394,6 +1359,70 @@ const RouteScreen: React.FC = () => {
           onSelect={selectDestinationSuggestion}
         />
       </View>
+      {/* --- NEW: Algorithm Dropdown --- */}
+      {route.length >= 2 && (
+        <View style={styles.dropdownContainer}>
+          <TouchableOpacity
+            style={styles.algorithmDropdownButton}
+            onPress={() => setShowAlgorithmDropdown(!showAlgorithmDropdown)}
+          >
+            <Ionicons
+              name={
+                showAlgorithmDropdown
+                  ? "chevron-up-outline"
+                  : "chevron-down-outline"
+              }
+              size={16}
+              color="#6366F1"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.algorithmDropdownButtonText}>
+              {algorithmOptions.find((opt) => opt.value === selectedAlgorithm)
+                ?.label || "Select Algorithm"}
+            </Text>
+          </TouchableOpacity>
+          {showAlgorithmDropdown && (
+            <View style={[styles.algorithmDropdownOverlay, { zIndex: 10001 }]}>
+              <ScrollView style={{ maxHeight: 160 }}>
+                {algorithmOptions.map((option, index) => {
+                  const isSelected = selectedAlgorithm === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.algorithmDropdownItem,
+                        isSelected && styles.algorithmDropdownItemSelected,
+                      ]}
+                      onPress={() => {
+                        setSelectedAlgorithm(option.value);
+                        setShowAlgorithmDropdown(false);
+                        if (route.length >= 2) {
+                          const dest = route[1];
+                          fetchRouteDetails(
+                            dest.latitude,
+                            dest.longitude,
+                            option.value
+                          );
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.algorithmDropdownItemText,
+                          isSelected &&
+                            styles.algorithmDropdownItemTextSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      )}
       {route.length >= 2 && routeMetrics && (
         <View style={styles.topInfoRow}>
           <View style={styles.infoBox}>
@@ -1462,7 +1491,7 @@ const RouteScreen: React.FC = () => {
               latitude: r.latitude,
               longitude: r.longitude,
               cuisine: r.cuisine,
-              amenity: r.amenity, // Add this line
+              amenity: r.amenity,
               address: r.address,
               opening_hours: r.opening_hours,
               phone: r.phone,
@@ -1473,7 +1502,6 @@ const RouteScreen: React.FC = () => {
               handleViewRestaurant(restaurant.latitude, restaurant.longitude);
               setRestaurantModalVisible(false);
             }}
-            // Add this new handler
             onGoHere={(restaurant) => {
               setDestination(restaurant.address || restaurant.name);
               const newDestination = {
@@ -1493,7 +1521,6 @@ const RouteScreen: React.FC = () => {
               setRestaurantModalVisible(false);
             }}
           />
-
           {route.length >= 2 && (
             <ReviewModal
               visible={modalVisible}
@@ -1501,7 +1528,7 @@ const RouteScreen: React.FC = () => {
               originCoords={route[0]}
               destinationCoords={route[1]}
               nearbySpots={nearbySpots}
-              scrollToSpot={scrollToSpot} // NEW: Pass scrollToSpot to ReviewModal
+              scrollToSpot={scrollToSpot}
               onSpotsFetched={(spots) => setNearbySpots(spots)}
               onSpotSelect={(selectedSpot) => {
                 setNearbySpots([]);
@@ -1552,7 +1579,6 @@ const RouteScreen: React.FC = () => {
     </View>
   );
 
-  // Render different layouts based on route length while updating MapComponent with new restaurant props
   if (route.length >= 2) {
     return (
       <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
@@ -1571,7 +1597,6 @@ const RouteScreen: React.FC = () => {
             nearbySpots={nearbySpots}
             selectedSpot={selectedSpot}
             isLoading={isRouteLoading}
-            // ===== New Restaurant props =====
             nearbyRestaurants={nearbyRestaurants}
             onRestaurantClick={(name) => {
               const restaurant = nearbyRestaurants.find((r) => r.name === name);
@@ -1581,7 +1606,6 @@ const RouteScreen: React.FC = () => {
               }
             }}
             onSpotClick={(spotName) => {
-              // NEW: When a spot is clicked, set scrollToSpot and open the modal
               setScrollToSpot(spotName);
               setModalVisible(true);
             }}
@@ -1613,7 +1637,6 @@ const RouteScreen: React.FC = () => {
             style={styles.map}
             polylineColor={polylineColor}
             webviewRef={webviewRef}
-            // ===== New Restaurant props =====
             nearbyRestaurants={nearbyRestaurants}
             onRestaurantClick={(name) => {
               const restaurant = nearbyRestaurants.find((r) => r.name === name);
@@ -1623,14 +1646,12 @@ const RouteScreen: React.FC = () => {
               }
             }}
             onSpotClick={(spotName) => {
-              // NEW: When a spot is clicked, set scrollToSpot and open the modal
               setScrollToSpot(spotName);
               setModalVisible(true);
             }}
           />
         </Animated.View>
         {detailsContent}
-        {/* ===== New: Render Restaurant Modal in case route is not >=2 */}
         <ModalComponent
           visible={restaurantModalVisible}
           onClose={() => setRestaurantModalVisible(false)}
@@ -1639,7 +1660,7 @@ const RouteScreen: React.FC = () => {
             latitude: r.latitude,
             longitude: r.longitude,
             cuisine: r.cuisine,
-            amenity: r.amenity, // Add this line
+            amenity: r.amenity,
             address: r.address,
             opening_hours: r.opening_hours,
             phone: r.phone,
@@ -1746,7 +1767,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: 18,
   },
-  // Added style for overviewText to fix the error
   overviewText: {
     fontSize: 12,
     color: "#44457D",
@@ -1825,15 +1845,63 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     backgroundColor: "#E0E7FF",
-    paddingVertical: 6, // Adjusted vertical padding for better appearance
+    paddingVertical: 6,
     marginHorizontal: 4,
     borderRadius: 6,
     alignItems: "center",
   },
-
   buttonText: { fontSize: 12, color: "#6366F1", fontWeight: "500" },
-  restaurantMarker: {
-    backgroundColor: "#fff",
-    borderColor: "#dc3545",
+  restaurantMarker: { backgroundColor: "#fff", borderColor: "#dc3545" },
+  dropdownContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+    marginTop: 10,
+    alignSelf: "center",
+    width: "50%",
   },
+  algorithmDropdownButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E0E7FF",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+  },
+  algorithmDropdownButtonText: {
+    color: "#6366F1",
+    fontSize: 12,
+    fontWeight: "bold",
+    flexShrink: 1,
+  },
+  algorithmDropdownOverlay: {
+    position: "absolute",
+    top: 40,
+    left: 0,
+    backgroundColor: "#fff",
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 4,
+    width: 150,
+    maxHeight: 160,
+    paddingVertical: 5,
+    ...Platform.select({ android: { elevation: 10000 } }),
+  },
+  algorithmDropdownItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderBottomColor: "#ccc",
+    borderBottomWidth: 1,
+  },
+  algorithmDropdownItemSelected: {
+    backgroundColor: "#6366F1",
+    borderBottomColor: "#6366F1",
+  },
+  algorithmDropdownItemText: {
+    fontSize: 12,
+    color: "#374151",
+    flexWrap: "wrap",
+  },
+  algorithmDropdownItemTextSelected: { color: "#fff" },
 });
