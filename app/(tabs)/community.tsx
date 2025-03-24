@@ -7,7 +7,9 @@ import { usePostContext, type Post } from '../../contexts/PostContext';
 import { useRouteContext } from '../../contexts/RouteContext';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
-import { APP_NAME } from "../../constants";
+import ModalComponent from '../reportmodal';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+
 
 const dropdownOptions = ['Popularity', 'Time'];
 
@@ -55,20 +57,59 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 
 type VoteType = 'upvote' | 'downvote';
 export default function CommunityPage() {
-  const { posts: contextPosts, addPost } = usePostContext();
+   
+
+  const { posts: contextPosts, addPost,  setPosts,
+    handleUpvote,
+    handleDownvote,
+    updatePost } = usePostContext();
   const { routeDetails } = useRouteContext();
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
-  const router = useRouter();
-  const params = useLocalSearchParams();
-  const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const authContext = useContext(AuthContext) as AuthContextType | null;
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // vote id
+  const [isModalVisible, setIsModalVisible] = useState(false); // report
+  const [modalVisible, setModalVisible] = useState(false); // post
+  const [isSubmitting, setIsSubmitting] = useState(false); 
+  const router = useRouter();
+  const params = useLocalSearchParams();
+
+   
+
+const location = Array.isArray(params.location) 
+? decodeURIComponent(params.location[0])
+: params.location 
+  ? decodeURIComponent(params.location)
+  : '';
+
+const destination = Array.isArray(params.destination)
+? decodeURIComponent(params.destination[0])
+: params.destination
+  ? decodeURIComponent(params.destination)
+  : '';
+
+  
+  const originCoords = {
+    lat: Number(params.origin_lat) || 0,
+    lon: Number(params.origin_lon) || 0
+  };
+  
+  const destinationCoords = {
+    lat: Number(params.destination_lat) || 0,
+    lon: Number(params.destination_lon) || 0
+  };
+  
+ 
+  
+  const closeReportModal = () => {
+    setIsModalVisible(false);
+    setSelectedPostId(null); // Reset after closing
+  };
 
   if (!authContext) return null; // Prevents errors if context is null
   const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
-  const [selectedOption, setSelectedOption] = useState<string>('Time');
-
+  const [selectedOption, setSelectedOption] = useState<string>('Time'); // dropdown
 
   const handleOptionSelect = (option: string) => {
     setSelectedOption(option);
@@ -76,10 +117,10 @@ export default function CommunityPage() {
 
   // Use routeDetails if available; otherwise, try URL params or fall back to default names.
   const origin_address =
-    routeDetails?.origin_address ||
+    routeDetails?.location ||
     (params.origin_address ? decodeURIComponent(params.origin_address as string) : 'Unknown Origin');
   const destination_address =
-    routeDetails?.destination_address ||
+    routeDetails?.destination ||
     (params.destination_address ? decodeURIComponent(params.destination_address as string) : 'Unknown Destination');
   const origin_lat = routeDetails?.origin_lat ?? (params.origin_lat ? Number(params.origin_lat) : 0);
   const origin_lon = routeDetails?.origin_lon ?? (params.origin_lon ? Number(params.origin_lon) : 0);
@@ -89,123 +130,180 @@ export default function CommunityPage() {
     routeDetails?.destination_lon ?? (params.destination_lon ? Number(params.destination_lon) : 0);
 
   // Fetch old posts from the API when the component mounts.
-  async function fetchOldPosts() {
-    try {
-      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
-      if (!response.ok) {
-        console.error('Error fetching posts:', response.status);
-        return;
-      }
-      const data = await response.json();
-      // Reverse the array so that addPost (which prepends) maintains the API’s descending order
-      data.reverse().forEach((post: any) => {
-        // Transform API fields to match your Post type
-        const transformedPost: Post = {
-          ...post,
-          destination_lat: post.dest_lat,
-          destination_lon: post.dest_lon,
-          // If API response is missing these fields, fallback to our current values
-          origin_address: post.origin_address || origin_address,
-          destination_address: post.destination_address || destination_address,
-        };
-        addPost(transformedPost, 'postsuggestions');
-      });
-    } catch (error) {
-      console.error('Fetch error:', error);
-    }
+ // Modify fetchOldPosts to properly sync with context:
+ const fetchOldPosts = async () => {
+  try {
+    const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
+    if (!response.ok) return;
+    
+    const data = await response.json();
+    
+    const transformedPosts: Post[] = data.map((post: any) => ({
+      ...post,
+      // Map API fields to your Post interface
+      location: post.origin_address || origin_address,
+      destination: post.destination_address || destination_address,
+      origin_lat: post.origin_lat,
+      origin_lon: post.origin_lon,
+      destination_lat: post.dest_lat,
+      destination_lon: post.dest_lon,
+      created_at: post.created_at,
+      timestamp: new Date(post.created_at).getTime(),
+    }));
+    setPosts(transformedPosts);
+  } catch (error) {
+    console.error('Fetch error:', error);
   }
+};
 
-  useEffect(() => {
-    fetchOldPosts();
-  }, []);
+// Add polling effect
+useEffect(() => {
+  const interval = setInterval(fetchOldPosts, 5000); // Every 5 seconds
+  return () => clearInterval(interval);
+}, []);
+ 
+ const handlePostSubmit = async (formData: Post) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const requestBody = {
+        route_post: {
+          content: formData.content,
+          origin_address: formData.location,  // Use formData values
+          destination_address: formData.destination,
+          origin_lat: formData.origin_lat,
+          origin_lon: formData.origin_lon,
+          dest_lat: formData.destination_lat,
+          dest_lon: formData.destination_lon,
+        },
+      };
+      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-  useEffect(() => {
-    fetchOldPosts();
-  }, [origin_address, destination_address]);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Server Error Response:", errorData);
+        throw new Error(errorData.error || 'Failed to create post');
+      }
 
-  // Handle post submission
-  const handlePostSubmit = (formData: { content: string }) => {
-    const newPost = {
-      ...formData,
-      origin_address,
-      destination_address,
-      origin_lat,
-      origin_lon,
-      destination_lat,
-      destination_lon,
-    };
-    addPost(newPost, 'postsuggestions');
-    setModalVisible(false);
+      await response.json();
+      fetchOldPosts();
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Post submission error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleVote = async (id: number, action: VoteType) => {
-    if (selectedVotes[id] === action) {
+    if (!authToken) {
+      router.push('/login');
+      return;
+    }
+  
+    const previousVote = selectedVotes[id];
+    const previousVotesCount = contextPosts.find(p => p.id === id)?.votes || 0;
+  
+    try {
+      // API call
       const success = await sendVoteRequest(id.toString(), action);
-      if (success) {
-        // Maintain current vote highlight.
+      
+      if (!success) {
+        // Revert if failed
+        setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
+        updatePost({
+          id,
+          votes: previousVotesCount,
+        } as Post);
       }
-    } else {
-      const success = await sendVoteRequest(id.toString(), action);
-      if (success) {
-        setSelectedVotes(prev => ({ ...prev, [id]: action }));
-      }
+    } catch (error) {
+      setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
+      updatePost({
+        id,
+        votes: previousVotesCount,
+      } as Post);
     }
   };
-
+  
+  // Modify sendVoteRequest to remove the fetchOldPosts call:
   const sendVoteRequest = async (postId: string, action: VoteType) => {
-    const endpoint = `https://comgu20-production.up.railway.app/api/route_posts/${postId}/${action}`;
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch(`https://comgu20-production.up.railway.app/api/route_posts/${postId}/${action}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to send vote:', response.status, errorText);
-        Alert.alert('Error', 'There was a problem registering your vote.');
-        return false;
-      }
-
-      await response.json();
-      // Re-fetch posts after voting to update the view.
-      fetchOldPosts();
-      Alert.alert('Success', 'Your vote has been registered.');
-      return true;
+  
+      return response.ok;
     } catch (error) {
       console.error('Vote error:', error);
-      Alert.alert('Error', 'There was a problem sending your vote.');
       return false;
     }
   };
 
-
-  // Navigate to Route Finder if needed.
-  const handleGoToRouteFinder = () => {
-    router.push('/route');
-  };
-
-  const handlePostButtonPress = () => {
-    const isLoggedIn = !!authToken;
-    if (!isLoggedIn) {
-      router.push('/login');
+  const handleReportSubmit = async (reason: string) => {
+    if (!isLoggedIn || !selectedPostId) {
+      Alert.alert("Error", "You must be logged in to report a post.");
       return;
     }
-    setModalVisible(true);
+  
+    const API_URL = "https://comgu20-production.up.railway.app/api/reports";  
+    console.log("Submitting report to:", API_URL); // ✅ Debugging API URL
+  
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          report: {
+            reason: reason,
+            route_post_id: selectedPostId,
+          },
+        }),
+      });
+  
+      console.log("Raw response status:", response.status); // ✅ Check response status
+  
+      if (!response.ok) {
+        const errorText = await response.text(); // Read error message
+        console.error("API Error Response:", errorText);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
+      }
+  
+      const text = await response.text();
+      console.log("Raw response:", text); // ✅ Debugging server response
+  
+      const data = JSON.parse(text); // Convert response to JSON
+      console.log("Report submitted:", data);
+  
+      Alert.alert("Success", data.message);
+      closeReportModal();
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      Alert.alert("Error", "Failed to submit report. Please try again.");
+    }
   };
-
+  
   const handlePostPress = (postId: number, action: VoteType) => {
     if (!isLoggedIn) {
       router.push('/login');
       return;
     }
-
     handleVote(postId, action);
   };
-
+ 
   const sortedPosts = useMemo(() => {
     return [...contextPosts].sort((a, b) => {
       switch (selectedOption) {
@@ -230,35 +328,66 @@ export default function CommunityPage() {
     if (diff < day) return `${Math.floor(diff / hour)}h ago`;
     return `${Math.floor(diff / day)}d ago`;
   };
+  const getStatusStyle = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "pending review":
+        return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
+      case "community approved":
+        return { backgroundColor: "#dbeafe", borderColor: "#dbeafe" };
+      case "flagged":
+        return { backgroundColor: "#fee2e2", borderColor: "#fee2e2" };
+      case "admin approved":
+        return { backgroundColor: "#dcfce7", borderColor: "#dcfce7" };
+      default:
+        return {};
+    }
+  };
 
+   const getStatusTextColor = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "flagged":
+        return { color: "#b31b1b" };
+      case "admin approved":
+        return { color: "#166534" };
+      case "pending review":
+        return { color: "#a44d0e" };
+      case "community approved":
+        return { color: "#4f40af" };
+      default:
+        return {};
+    }
+  };
+ 
+  const handlePostButtonPress = () => {
+    const isLoggedIn = !!authToken;
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    setModalVisible(true);
+  };
+
+  const openReportModal = (postId: number) => {
+    const isLoggedIn = !!authToken;
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    setSelectedPostId(postId);
+    setIsModalVisible(true);
+  };
+   
   return (
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
-
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
-        <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-          <Text style={styles.postButtonText}>Post</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+                  <Text style={styles.postButtonText}>Post</Text>
+                </TouchableOpacity>
       </View>
-
-      <PostModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSubmit={handlePostSubmit}
-        origin_address={origin_address}
-        destination_address={destination_address}
-        origin_lat={origin_lat}
-        origin_lon={origin_lon}
-        destination_lat={destination_lat}
-        destination_lon={destination_lon}
-        authToken={authToken}
-        userEmail={''}
-        userPassword={''}
-      />
-
       {isLoading && (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
       )}
@@ -284,27 +413,36 @@ export default function CommunityPage() {
                     <Text style={styles.suggestorusername}>{post.user?.email}</Text>
                   </View>
                 </View>
-                <Text style={styles.postTimestamp}>
-                  {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
-                </Text>
+                <View style={{flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
+              <Text style={styles.postTimestamp}>
+                {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+              </Text>
+               <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
+               <MaterialIcons name="report" size={20} color="#C52222" />
+              </TouchableOpacity>
+              
               </View>
-              <Text style={styles.postLocation}>From: {post.origin_address}</Text>
-              <Text style={styles.postDestination}>To: {post.destination_address}</Text>
+              </View>
+              
+           {/* In your post rendering section - Fixed syntax and logic */}
+<Text style={styles.postLocation}>
+  From: {post.location || (params.location ? decodeURIComponent(params.location as string) : 'Unknown Location')}
+</Text>
+<Text style={styles.postDestination}>
+  To: {post.destination || (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination')}
+</Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
-                <Text style={styles.label}>Their experience</Text>
+                <Text style={styles.label}>Experiences</Text>
                 <Text style={styles.experience}>{post.content}</Text>
               </View>
-
               <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={styles.content}>
-                  <View style={styles.badge}>
-                    <Entypo name="check" size={16} color="#03C04A" />
-                    <Text style={styles.cert}>Certified {APP_NAME}</Text>
-                  </View>
+                    <View style={[styles.badge, getStatusStyle(post.status || '')]}>
+                                    <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
+                                  </View>
                 </View>
                 <View style={styles.arrowcontainer}>
-
                   <TouchableOpacity
                     style={[
                       styles.arrowup,
@@ -332,20 +470,37 @@ export default function CommunityPage() {
                       color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
                     />
                   </TouchableOpacity>
-
-
-
                 </View>
               </View>
-
-
-
-
             </View>
-
           ))}
         </View>
       </View>
+
+      <PostModal
+              visible={modalVisible}
+              onClose={() => setModalVisible(false)}
+              onSubmit={handlePostSubmit}
+              location={Array.isArray(location) ? location.join(', ') : location}
+              destination={Array.isArray(destination) ? destination.join(', ') : destination}
+              origin_lat={origin_lat}
+              origin_lon={origin_lon}
+              destination_lat={destination_lat}
+              destination_lon={destination_lon}
+              authToken={authToken}
+              userEmail={''}
+              userPassword={''}
+              isFromCommunity={true} 
+            />
+       
+      {isModalVisible && selectedPostId !== null && (
+  <ModalComponent
+    visible={isModalVisible}
+    onClose={closeReportModal}
+    onSubmit={handleReportSubmit}
+    route_post_id={selectedPostId} // ✅ Now properly set
+  />
+)}
     </ScrollView>
   );
 }
@@ -392,9 +547,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   postTimestamp: {
+    marginTop: -8,
     fontSize: 10,
     color: '#999',
-    marginTop: 5,
     textAlign: 'right',
   },
   postContainer: {
@@ -425,12 +580,12 @@ const styles = StyleSheet.create({
   postLocation: {
     fontSize: 14,
     color: '#1F2937',
-    marginBottom: 2,
+    marginVertical: 14,
   },
   postDestination: {
     fontSize: 14,
     color: '#1F2937',
-    marginBottom: 2,
+    marginBottom: 16,
   },
   arrowup: {
     borderWidth: 1,
@@ -509,6 +664,5 @@ const styles = StyleSheet.create({
     color: '#44457D',
   },
 });
-
 
 

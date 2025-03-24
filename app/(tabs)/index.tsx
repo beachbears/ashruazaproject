@@ -236,7 +236,7 @@ const Home = () => {
                 Simply Travel with <Text style={styles.highlight}>kommutsera</Text>
               </Text>
               <Text style={styles.description}>
-                Conquer the Metro with ease! <Text style={styles.boldText}>Kommutsera: Gabay ko, Byahe Mo!!!</Text> your companion for hassle-free commuting, offering clear routes and navigation.
+                Conquer the Metro with ease! <Text style={styles.boldText}>Kommutsera: </Text> your companion for hassle-free commuting, offering clear routes and navigation.
               </Text>
 
               {/* Capture layout position ng search container */}

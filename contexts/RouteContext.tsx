@@ -2,8 +2,8 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 
 export interface RouteDetails {
-  origin_address: string;
-  destination_address: string;
+  location: string;
+  destination: string;
   origin_lat: number;
   origin_lon: number;
   destination_lat: number;

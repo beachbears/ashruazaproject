@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 // Updated: Use expo-router's useRouter instead of useNavigation
 import { useRouter } from 'expo-router';
 import { LogBox } from 'react-native';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../contexts/AuthContext';
 
 LogBox.ignoreLogs([
   'textShadow*',
@@ -109,7 +109,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
       if (response.data.token) {
         await AsyncStorage.setItem("token", response.data.token);
         // I-update ang global auth state gamit ang login function mula sa AuthContext
-        login(formData.email);
+        login(formData.email, response.data.token);
         router.replace("/(tabs)");
       }
     } catch (error: any) {
@@ -185,9 +185,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                 </View>
                 <Text style={[styles.checkboxLabel, { fontSize: width * 0.04 }]}>Remember me?</Text>
               </TouchableOpacity>
-              <TouchableOpacity>
-                <Text style={[styles.linkText, { fontSize: width * 0.04 }]}>Forgot Password?</Text>
-              </TouchableOpacity>
+            
             </View>
 
             <TouchableOpacity
@@ -217,7 +215,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     alignItems: 'center',
     padding: 16,
-    marginTop: 40,
+     
   },
   mainContainer: {
     backgroundColor: '#FFFFFF',
@@ -283,6 +281,7 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 14,
     color: '#2D3748',
+    
   },
   inputError: {
     borderColor: '#F56565',
@@ -364,12 +363,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#A0AEC0',
   },
   inputnameEmail: {
-    marginRight: 260,
+    marginRight: 210,
     marginBottom: 10,
     color: '#44457D',
   },
   inputnamePassword: {
-    marginRight: 240,
+    marginRight: 210,
     marginBottom: 10,
     color: '#44457D',
   },

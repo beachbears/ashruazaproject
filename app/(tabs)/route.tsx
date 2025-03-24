@@ -1141,9 +1141,9 @@ const RouteScreen: React.FC = () => {
       origin_lat: route.length > 0 ? route[0].latitude : region.latitude,
       origin_lon: route.length > 0 ? route[0].longitude : region.longitude,
       destination_lat: destLat,
-      destination_lon: destLon,
+      destination_lon: destLon
     };
-    console.log("Request Params:", params);
+
     try {
       const response = await axios.get<ApiResponse>(
         "https://comgu20-production.up.railway.app/api/routes/find",

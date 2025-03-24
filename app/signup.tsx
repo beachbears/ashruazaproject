@@ -231,9 +231,8 @@ const RegisterScreen = () => {
               <Image source={require('../assets/images/reg.png')} style={styles.headerImage} />
               <View style={styles.textOverlay}>
                 <Text style={[styles.heading, { fontSize: width * 0.08 }]}>Kommutsera</Text>
-                <Text style={[styles.description, { fontSize: width * 0.04 }]}>
-                  Kommutsera is the perfect guide for exploring Metro Manila. With easy-to-follow routes, it helps you navigate the city's cultural, historic, and modern attractions effortlessly.
-                </Text>
+                <Text style={[styles.description, { fontSize: width * 0.03 }]}>
+                Kommutsera is the perfect guide for exploring Metro Manila. With easy-to-follow routes, it helps you navigate the city’s cultural, historic, and modern attractions effortlessly. Whether you’re a tourist or a local, Kommutsera ensures a smooth, enjoyable, and efficient travel experience throughout Metro Manila.</Text>
               </View>
             </View>
 
@@ -322,7 +321,6 @@ const getStyles = (width: number) =>
       backgroundColor: '#F9FAFB',
       alignItems: 'center',
       padding: 16,
-      marginTop: 40,
     },
     mainContainer: {
       backgroundColor: '#FFFFFF',
@@ -333,8 +331,9 @@ const getStyles = (width: number) =>
       marginBottom: 50,
     },
     headerImageContainer: {
-      height: 200,
+      height: 260,
       position: 'relative',
+      
     },
     headerImage: {
       width: '100%',
@@ -343,8 +342,8 @@ const getStyles = (width: number) =>
     },
     textOverlay: {
       position: 'absolute',
-      bottom: 20,
-      left: 20,
+      bottom: 10,
+      left: 10,
       right: 20,
     },
     heading: {
@@ -356,7 +355,7 @@ const getStyles = (width: number) =>
     description: {
       color: '#FFFFFF',
       textAlign: 'left',
-      lineHeight: 20,
+      lineHeight: 14,
     },
     formContainer: {
       paddingHorizontal: width * 0.1,
@@ -368,6 +367,7 @@ const getStyles = (width: number) =>
       height: 80,
       alignSelf: 'center',
       marginBottom: 20,
+      borderRadius: 8
     },
     formTitle: {
       fontWeight: 'bold',

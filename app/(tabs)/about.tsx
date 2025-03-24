@@ -19,7 +19,7 @@ const About = () => {
 
         <Text style={styles.subtitle}>Founded by</Text>
         <Image source={require('../../assets/images/group.jpg')} style={styles.avatar} />
-        <Text style={styles.teamName}>Group 1</Text>
+        <Text style={styles.teamName}>Group 4</Text>
         <Text style={styles.teamRole}>CCS IT-3 Students</Text>
 
 

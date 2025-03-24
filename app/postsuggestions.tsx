@@ -1,14 +1,16 @@
 import React, { useMemo, useState, useEffect, useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator,  LogBox, } from 'react-native';
 import PostModal from './postmodal';
 import { AuthContext, AuthContextType } from './../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { APP_NAME } from "../constants";
 import { Post } from '@/contexts/PostContext';
+import ModalComponent from './reportmodal';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 const dropdownOptions = ['Popularity', 'Time'];
+type VoteType = 'upvote' | 'downvote';
 
 interface DropdownProps {
   options: string[];
@@ -51,24 +53,30 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   );
 };
 
-type VoteType = 'upvote' | 'downvote';
 
 export default function PostSuggestions() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Time');
   const { authToken } = useContext(AuthContext) as AuthContextType;
   const [modalVisible, setModalVisible] = useState(false);
+  const params = useLocalSearchParams();
+
+  useEffect(() => {
+    if (params.source === 'community') {
+      setModalVisible(true);
+    }
+  }, [params.source]);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const authContext = useContext(AuthContext) as AuthContextType | null;
-
+  
   if (!authContext) return null;
   const { isLoggedIn, userName, userHandle, userInitials } = authContext;
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const location = decodeURIComponent(params.location as string);
+   const location = decodeURIComponent(params.location as string);
   const destination = decodeURIComponent(params.destination as string);
   const origin_lat = Number(params.origin_lat);
   const origin_lon = Number(params.origin_lon);
@@ -79,45 +87,34 @@ export default function PostSuggestions() {
     setSelectedOption(option);
   };
 
-  // Helper function for dynamic background and border colors based on status.
-  const getStatusStyle = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "pending review":
-        return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
-      case "community approved":
-        return { backgroundColor: "#dbeafe", borderColor: "#dbeafe" };
-      case "flagged":
-        return { backgroundColor: "#fee2e2", borderColor: "#fee2e2" };
-      case "admin approved":
-        return { backgroundColor: "#dcfce7", borderColor: "#dcfce7" };
-      default:
-        return {};
-    }
-  };
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // Store post ID
+     const [isModalVisible, setIsModalVisible] = useState(false);
+  
+    
 
-  // Helper function for dynamic text colors based on status.
-  const getStatusTextColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "flagged":
-        return { color: "#b31b1b" };
-      case "admin approved":
-        return { color: "#166534" };
-      case "pending review":
-        return { color: "#a44d0e" };
-      case "community approved":
-        return { color: "#4f40af" };
-      default:
-        return {};
-    }
-  };
+    const openReportModal = (postId: number) => {
+      const isLoggedIn = !!authToken;
+      if (!isLoggedIn) {
+        router.push('/login');
+        return;
+      }
+      setSelectedPostId(postId);
+      setIsModalVisible(true);
+    };
+    
+    const closeReportModal = () => {
+      setIsModalVisible(false);
+      setSelectedPostId(null); // Reset after closing
+    };
+  
 
   const fetchPosts = async () => {
-    setIsLoading(true);
-    try {
+     try {
       const response = await fetch(
         `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${origin_lat}&origin_lon=${origin_lon}&destination_lat=${destination_lat}&destination_lon=${destination_lon}`
       );
       if (!response.ok) throw new Error('Failed to fetch posts');
+
       const postsData = await response.json();
       const transformedPosts: Post[] = (postsData.posts || []).map((p: any) => ({
         id: p.id,
@@ -137,15 +134,15 @@ export default function PostSuggestions() {
       setPosts(transformedPosts);
     } catch (error) {
       console.error('Error loading posts:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    }  
   };
 
   useEffect(() => {
-    fetchPosts();
-  }, [location, destination]);
-
+    fetchPosts(); // Add initial fetch
+    const interval = setInterval(fetchPosts, 5000);
+    return () => clearInterval(interval);
+  }, [location, destination, selectedOption]); // Add selectedOption to dependencies
+   
   const handlePostSubmit = async (formData: Post) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -161,7 +158,6 @@ export default function PostSuggestions() {
           dest_lon: destination_lon,
         },
       };
-
       const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
         method: 'POST',
         headers: {
@@ -207,14 +203,63 @@ export default function PostSuggestions() {
 
       await response.json();
       fetchPosts();
-      Alert.alert('Success', 'Your vote has been registered.');
+    
       return true;
     } catch (error) {
       console.error('Vote error:', error);
-      Alert.alert('Error', 'There was a problem sending your vote.');
+     
       return false;
     }
   };
+
+  
+    const handleReportSubmit = async (reason: string) => {
+      if (!isLoggedIn || !selectedPostId) {
+        Alert.alert("Error", "You must be logged in to report a post.");
+        return;
+      }
+    
+      const API_URL = "https://comgu20-production.up.railway.app/api/reports";  
+      console.log("Submitting report to:", API_URL); // ✅ Debugging API URL
+    
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            report: {
+              reason: reason,
+              route_post_id: selectedPostId,
+            },
+          }),
+        });
+    
+        console.log("Raw response status:", response.status); // ✅ Check response status
+    
+        if (!response.ok) {
+          const errorText = await response.text(); // Read error message
+          console.error("API Error Response:", errorText);
+          throw new Error(`API Error: ${response.status} - ${errorText}`);
+        }
+    
+        const text = await response.text();
+        console.log("Raw response:", text); // ✅ Debugging server response
+    
+        const data = JSON.parse(text); // Convert response to JSON
+        console.log("Report submitted:", data);
+    
+        Alert.alert("Success", data.message);
+        closeReportModal();
+      } catch (error) {
+        console.error("Error submitting report:", error);
+        Alert.alert("Error", "Failed to submit report. Please try again.");
+      }
+    };
+    
+  
 
   const sortedPosts = useMemo(() => {
     return [...posts].sort((a, b) => {
@@ -242,6 +287,10 @@ export default function PostSuggestions() {
   };
 
   const handleVote = async (id: number, action: VoteType) => {
+    if (!authToken) {
+      router.push('/login');
+      return;
+    }
     if (selectedVotes[id] === action) {
       const success = await sendVoteRequest(id.toString(), action);
       if (success) {
@@ -254,16 +303,9 @@ export default function PostSuggestions() {
       }
     }
   };
-
-  const handlePostPress = (postId: number, action: VoteType) => {
-    if (!isLoggedIn) {
-      router.push('/login');
-      return;
-    }
-    handleVote(postId, action);
-  };
-
+ 
   const handlePostButtonPress = () => {
+    const isLoggedIn = !!authToken;
     if (!isLoggedIn) {
       router.push('/login');
       return;
@@ -271,20 +313,59 @@ export default function PostSuggestions() {
     setModalVisible(true);
   };
 
+  const handlePostPress = (postId: number, action: VoteType) => {
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+
+    handleVote(postId, action);
+  };
+
+  // Helper function for dynamic background and border colors based on status.
+  const getStatusStyle = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "pending review":
+        return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
+      case "community approved":
+        return { backgroundColor: "#dbeafe", borderColor: "#dbeafe" };
+      case "flagged":
+        return { backgroundColor: "#fee2e2", borderColor: "#fee2e2" };
+      case "admin approved":
+        return { backgroundColor: "#dcfce7", borderColor: "#dcfce7" };
+      default:
+        return {};
+    }
+  };
+
+  // Helper function for dynamic text colors based on status.
+  const getStatusTextColor = (status: string) => {
+    switch(status.toLowerCase()) {
+      case "flagged":
+        return { color: "#b31b1b" };
+      case "admin approved":
+        return { color: "#166534" };
+      case "pending review":
+        return { color: "#a44d0e" };
+      case "community approved":
+        return { color: "#4f40af" };
+      default:
+        return {};
+    }
+  };
+
   return (
     <ScrollView style={styles.maincontainer}>
-      {isLoading && (
-        <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
-      )}
+      
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
       <View style={styles.sectionHeader}>
-        <Text style={styles.label}>Their experience</Text>
+       
         <View style={styles.detailsContainer}>
-          <Text style={styles.locationText}>{location}</Text>
-          <Text style={styles.locationText}>{destination}</Text>
+          <Text style={styles.locationText}>From: {location}</Text>
+          <Text style={styles.locationText}>To: {destination}</Text>
         </View>
       </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+      <View style={{ flexDirection:'row', justifyContent:'space-between', marginBottom: 10, alignItems: 'center' }}>
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
@@ -292,7 +373,10 @@ export default function PostSuggestions() {
           <Text style={styles.postButtonText}>Post</Text>
         </TouchableOpacity>
       </View>
-
+      
+      {isLoading && (
+        <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
+      )}
       <View style={{ marginBottom: 200 }}>
         {sortedPosts.map((post) => (
           <View key={post.id} style={styles.containerpost}>
@@ -314,14 +398,19 @@ export default function PostSuggestions() {
                   <Text style={styles.suggestorusername}>{post.user?.email}</Text>
                 </View>
               </View>
+              <View style={{flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
               <Text style={styles.postTimestamp}>
                 {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
               </Text>
+               <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
+               <MaterialIcons name="report" size={20} color="#C52222" />
+              </TouchableOpacity>
+              
+              </View>
             </View>
-            <Text>{post.origin_address}</Text>
-            <Text>{post.destination_address}</Text>
+            
             <View style={{ flexDirection: 'column', gap: 8 }}>
-              <Text style={styles.label}>Their experience</Text>
+              <Text style={styles.label}>Experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
@@ -331,45 +420,46 @@ export default function PostSuggestions() {
                 </View>
               </View>
               <View style={styles.arrowcontainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.arrowup,
-                    post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
-                  ]}
-                  onPress={() => post.id && handlePostPress(post.id, 'upvote')}
-                >
-                  <AntDesign
-                    name="arrowup"
-                    size={13}
-                    color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.arrowupnum}>{post.votes}</Text>
-                <TouchableOpacity
-                  style={[
-                    styles.arrowdown,
-                    post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
-                  ]}
-                  onPress={() => post.id && handlePostPress(post.id, 'downvote')}
-                >
-                  <AntDesign
-                    name="arrowdown"
-                    size={13}
-                    color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
-                  />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.arrowup,
+                      post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
+                    ]}
+                    onPress={() => post.id && handlePostPress(post.id, 'upvote')}
+                  >
+                    <AntDesign
+                      name="arrowup"
+                      size={13}
+                      color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
+                    />
+                  </TouchableOpacity>
+                  <Text style={styles.arrowupnum}>{post.votes}</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.arrowdown,
+                      post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
+                    ]}
+                    onPress={() => post.id && handlePostPress(post.id, 'downvote')}
+                  >
+                    <AntDesign
+                      name="arrowdown"
+                      size={13}
+                      color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
+                    />
+                  </TouchableOpacity>
+
               </View>
             </View>
           </View>
         ))}
       </View>
-
+       
       <PostModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handlePostSubmit}
-        origin_address={location}
-        destination_address={destination}
+        location={location}
+        destination={destination}
         origin_lat={origin_lat}
         origin_lon={origin_lon}
         destination_lat={destination_lat}
@@ -377,7 +467,18 @@ export default function PostSuggestions() {
         authToken={authToken}
         userEmail={''}
         userPassword={''}
+        
+        isFromCommunity={false} 
       />
+
+{isModalVisible && selectedPostId !== null && (
+  <ModalComponent
+    visible={isModalVisible}
+    onClose={closeReportModal}
+    onSubmit={handleReportSubmit}
+    route_post_id={selectedPostId} // ✅ Now properly set
+  />
+)}
     </ScrollView>
   );
 }
@@ -433,49 +534,49 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#44457D',
   },
-  dropdowncontainer: {
-    justifyContent: 'flex-end',
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  dropdownButton: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    width: 125,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 6,
-  },
-  buttonText: {
-    color: '#44457D',
-    fontSize: 12,
-    fontWeight: '400',
-  },
-  dropdownList: {
-    position: 'absolute',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderRadius: 8,
-    borderColor: '#E5E7EB',
-    zIndex: 1000,
-    width: 125,
-    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-    elevation: 4,
-    top: 40,
-  },
-  option: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    padding: 4,
-    alignItems: 'center',
-  },
-  optionText: {
-    fontSize: 13,
-    color: '#44457D',
-  },
+    dropdowncontainer: {
+      justifyContent: 'flex-end',
+      flexDirection: 'row',
+      marginBottom: 10,
+    },
+    dropdownButton: {
+      backgroundColor: '#F5F7FF',
+      borderWidth: 1,
+      borderColor: '#C7D2FE',
+      borderRadius: 8,
+      width: 125,
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      padding: 6,
+    },
+    buttonText: {
+      color: '#44457D',
+      fontSize: 12,
+      fontWeight: '400',
+    },
+    dropdownList: {
+      position: 'absolute',
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderRadius: 8,
+      borderColor: '#E5E7EB',
+      zIndex: 1000,
+      width: 125,
+      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+      elevation: 4,
+      top: 40,
+    },
+    option: {
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E7EB',
+      padding: 4,
+      alignItems: 'center',
+    },
+    optionText: {
+      fontSize: 13,
+      color: '#44457D',
+    },
   profile: {
     width: 36,
     height: 36,
@@ -533,7 +634,8 @@ const styles = StyleSheet.create({
   postTimestamp: {
     fontSize: 10,
     color: '#999',
-    marginTop: 5,
+    marginTop: -8,
+    marginBottom: 2,
     textAlign: 'right',
   },
   arrowup: {
