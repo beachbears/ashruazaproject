@@ -28,6 +28,11 @@ interface Restaurant {
   image_url?: string;
 }
 
+interface UserLocation {
+  latitude: number;
+  longitude: number;
+}
+
 interface ModalProps {
   visible: boolean;
   onClose: () => void;
@@ -39,6 +44,8 @@ interface ModalProps {
   }) => void;
   // New prop added here
   onGoHere?: (restaurant: Restaurant) => void;
+  // Optional user location for distance calculation
+  userLocation?: UserLocation;
 }
 
 const ModalComponent: React.FC<ModalProps> = ({
@@ -47,10 +54,16 @@ const ModalComponent: React.FC<ModalProps> = ({
   restaurants,
   onView,
   onGoHere,
+  userLocation,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategories, setShowCategories] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // New state for sorting dropdown - default set to "Nearest"(dropdown ni ved)
+  const [selectedSortOption, setSelectedSortOption] =
+    useState<string>("Nearest");
+  const [showSortOptions, setShowSortOptions] = useState(false);
 
   // Function to open website URLs
   const handleWebsitePress = (url: string) => {
@@ -76,18 +89,67 @@ const ModalComponent: React.FC<ModalProps> = ({
     "Biergarten",
   ];
 
+  // List of sort options (sa dropdown ni ved)
+  const sortOptions = ["Nearest", "Furthest"];
+
   // Category selection handler
   const handleSelectCategory = (cat: string) => {
     setSelectedCategory(cat);
     setShowCategories(false);
   };
 
+  // Sort selection handler
+  const handleSelectSortOption = (option: string) => {
+    setSelectedSortOption(option);
+    setShowSortOptions(false);
+  };
+
+  // Function to calculate distance between two coordinates using the haversine formula.
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
+    const toRad = (value: number) => (value * Math.PI) / 180;
+    const R = 6371; // Earth's radius in km
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+  };
+
   // Filter spots based on selected category (if provided)
-  const filteredSpots = selectedCategory
+  let filteredSpots = selectedCategory
     ? restaurants.filter(
         (spot) => spot.amenity?.toLowerCase() === selectedCategory.toLowerCase()
       )
     : restaurants;
+
+  // Sort the filtered spots based on selected sort option if userLocation is provided.(logic ni ved sa nearest and furthest dipa ayus)
+  if (userLocation && selectedSortOption) {
+    filteredSpots = filteredSpots.slice().sort((a, b) => {
+      const distA = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        a.latitude,
+        a.longitude
+      );
+      const distB = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        b.latitude,
+        b.longitude
+      );
+      return selectedSortOption === "Nearest" ? distA - distB : distB - distA;
+    });
+  }
 
   return (
     <Modal
@@ -100,7 +162,7 @@ const ModalComponent: React.FC<ModalProps> = ({
         <View style={styles.modalContainer}>
           <Text style={styles.modalTitle}>Nearby Restaurant</Text>
 
-          {/* Dropdown Container */}
+          {/* Category Dropdown Container */}
           <View style={styles.dropdownContainer}>
             <TouchableOpacity
               style={styles.dropdownButton}
@@ -118,10 +180,8 @@ const ModalComponent: React.FC<ModalProps> = ({
                 {selectedCategory ? selectedCategory : "Select Category"}
               </Text>
             </TouchableOpacity>
-
-            {/* Dropdown Overlay */}
             {showCategories && (
-              <View style={styles.dropdownOverlay}>
+              <View style={[styles.dropdownOverlay, { zIndex: 10001 }]}>
                 <ScrollView style={{ maxHeight: 160 }}>
                   {categories.map((cat, index) => {
                     const isSelected = selectedCategory === cat;
@@ -141,6 +201,56 @@ const ModalComponent: React.FC<ModalProps> = ({
                           ]}
                         >
                           {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
+          {/* Sort Dropdown Container */}
+          <View style={styles.dropdownContainer}>
+            <TouchableOpacity
+              style={styles.dropdownButton}
+              onPress={() => setShowSortOptions(!showSortOptions)}
+            >
+              <Ionicons
+                name={
+                  showSortOptions
+                    ? "chevron-up-outline"
+                    : "chevron-down-outline"
+                }
+                size={16}
+                color="#6366F1"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.dropdownButtonText}>
+                {selectedSortOption ? selectedSortOption : "Sort by Distance"}
+              </Text>
+            </TouchableOpacity>
+            {showSortOptions && (
+              <View style={[styles.dropdownOverlay, { zIndex: 10002 }]}>
+                <ScrollView style={{ maxHeight: 100 }}>
+                  {sortOptions.map((option, index) => {
+                    const isSelected = selectedSortOption === option;
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.dropdownItem,
+                          isSelected && styles.dropdownItemSelected,
+                        ]}
+                        onPress={() => handleSelectSortOption(option)}
+                      >
+                        <Text
+                          style={[
+                            styles.dropdownItemText,
+                            isSelected && styles.dropdownItemTextSelected,
+                          ]}
+                        >
+                          {option}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -324,7 +434,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignSelf: "flex-start",
     position: "relative",
-    zIndex: 1000,
   },
   dropdownButton: {
     flexDirection: "row",
@@ -351,7 +460,6 @@ const styles = StyleSheet.create({
     width: 200,
     maxHeight: 200,
     paddingVertical: 5,
-    zIndex: 10000,
     ...Platform.select({
       android: { elevation: 10000 },
     }),
