@@ -1606,7 +1606,7 @@ const RouteScreen: React.FC = () => {
         <BottomSheet
           ref={bottomSheetRef}
           snapPoints={snapPoints}
-          index={0}
+          index={1}
           // if enableContentPanningGesture is true, magcoconflict sa scrollables like search results,
           // but if false, scrollables will work but buttons like segments takes long to respond
           enableContentPanningGesture={true}
