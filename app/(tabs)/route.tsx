@@ -12,6 +12,9 @@ import {
   Animated,
   ActivityIndicator,
   LogBox,
+  Dimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent
 } from "react-native";
 import axios from "axios";
 import { WebView } from "react-native-webview";
@@ -20,6 +23,10 @@ import { Ionicons } from "@expo/vector-icons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import ReviewModal from "../reviewmodal";
 import ModalComponent from "../restaurantmodal";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import BottomSheet from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+
 
 const polyline = require("@mapbox/polyline");
 
@@ -98,7 +105,8 @@ export interface NearbySpot {
   description: string;
   latitude: number;
   longitude: number;
-  image_url?: string;
+  image_url?: string;  // Add image URL
+
 }
 
 export interface ApiResponse {
@@ -297,9 +305,9 @@ const getMapHTML = (
       polylineCoordinates = Array.isArray(roadPath[0])
         ? roadPath
         : (roadPath as LatLng[]).map((coord: LatLng) => [
-            coord.latitude,
-            coord.longitude,
-          ]);
+          coord.latitude,
+          coord.longitude,
+        ]);
     }
     polylinesJS += `var roadPolyline = L.polyline(${JSON.stringify(
       polylineCoordinates
@@ -420,11 +428,10 @@ const getMapHTML = (
           .bindPopup(\`
             <div style="max-width: 200px;">
               <b>${restaurant.name}</b>
-              ${
-                restaurant.cuisine
-                  ? `<p style="margin: 2px 0; color: #666;">Cuisine: ${restaurant.cuisine}</p>`
-                  : ""
-              }
+              ${restaurant.cuisine
+          ? `<p style="margin: 2px 0; color: #666;">Cuisine: ${restaurant.cuisine}</p>`
+          : ""
+        }
               \${${JSON.stringify(restaurant)}.image_url ? 
                 \`<img 
                   src="${restaurant.image_url}" 
@@ -442,6 +449,7 @@ const getMapHTML = (
       `;
     });
   }
+
 
   let polylineJS = "";
   if (
@@ -506,9 +514,8 @@ const getMapHTML = (
         <div id="map"></div>
         <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
         <script>
-          var map = L.map('map').setView([${region.latitude}, ${
-    region.longitude
-  }], 13);
+          var map = L.map('map').setView([${region.latitude}, ${region.longitude
+    }], 13);
           window.map = map;
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
@@ -614,6 +621,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
   }, [selectedSpot, isWebViewReady]);
 
+
   return (
     <View style={{ flex: 1 }}>
       <WebView
@@ -678,7 +686,7 @@ const SuggestionList: React.FC<{
     <ScrollView
       style={styles.suggestionList}
       keyboardShouldPersistTaps="handled"
-    >
+      nestedScrollEnabled>
       {suggestions.map((item, index) => (
         <TouchableWithoutFeedback
           key={`${item.name}-${index}`}
@@ -727,6 +735,58 @@ const RouteScreen: React.FC = () => {
   const [isOriginLoading, setIsOriginLoading] = useState(false);
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const snapPoints = ['25%', '60%', '90%'];
+  const [mapHeight, setMapHeight] = useState(Dimensions.get('window').height * 0.6); // initial map height
+  const screenHeight = Dimensions.get('window').height;
+  const animatedHeight = useRef(new Animated.Value(screenHeight * 0.7)).current;
+  const contentHeight = animatedHeight.interpolate({
+    inputRange: [screenHeight * 0.3, screenHeight * 0.7],
+    outputRange: [400, 200], // adjust these values as needed
+    extrapolate: 'clamp',
+  });
+
+
+
+  const handleSheetChanges = (index: number) => {
+    let newMapHeight = screenHeight * 0.7; // default
+
+    if (index === 0) {
+      newMapHeight = screenHeight * 0.7;
+    } else if (index === 1) {
+      newMapHeight = screenHeight * 0.5;
+    } else if (index === 2) {
+      newMapHeight = screenHeight * 0.3;
+    }
+
+    Animated.timing(animatedHeight, {
+      toValue: newMapHeight,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const handleScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { y } = event.nativeEvent.contentOffset;
+    const { height: layoutHeight } = event.nativeEvent.layoutMeasurement;
+    const contentHeight = event.nativeEvent.contentSize.height;
+    const tolerance = 500; // Increased tolerance
+
+    // Prevent snapping if content isn't scrollable
+    if (contentHeight <= layoutHeight + tolerance) {
+      return;
+    }
+
+    // Snap to top if near the top
+    if (y <= tolerance) {
+      bottomSheetRef.current?.snapToIndex(0);
+    }
+    // Snap to bottom if near the bottom
+    // else if (y + layoutHeight >= contentHeight - tolerance) {
+    //   bottomSheetRef.current?.snapToIndex(2);
+    // }
+  };
+
   const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
 
@@ -752,7 +812,8 @@ const RouteScreen: React.FC = () => {
   } | null>(null);
 
   const router = useRouter();
-  const animatedHeight = useRef(new Animated.Value(400)).current;
+  // const animatedHeight = useRef(new Animated.Value(400)).current;
+
   const [expandedSegments, setExpandedSegments] = useState<{
     [index: number]: boolean;
   }>({});
@@ -802,9 +863,9 @@ const RouteScreen: React.FC = () => {
             prev.length > 0
               ? [prev[0], { latitude: selected.lat, longitude: selected.lon }]
               : [
-                  { latitude: region.latitude, longitude: region.longitude },
-                  { latitude: selected.lat, longitude: selected.lon },
-                ]
+                { latitude: region.latitude, longitude: region.longitude },
+                { latitude: selected.lat, longitude: selected.lon },
+              ]
           );
           fetchRouteDetails(selected.lat, selected.lon);
         }
@@ -851,9 +912,8 @@ const RouteScreen: React.FC = () => {
       });
       const locAddr =
         addresses && addresses.length > 0
-          ? `${addresses[0].name ? addresses[0].name + ", " : ""}${
-              addresses[0].street ? addresses[0].street + ", " : ""
-            }${addresses[0].city}, ${addresses[0].region}`
+          ? `${addresses[0].name ? addresses[0].name + ", " : ""}${addresses[0].street ? addresses[0].street + ", " : ""
+          }${addresses[0].city}, ${addresses[0].region}`
           : "Unknown Location";
       setRegion((prev) => ({ ...prev, latitude, longitude }));
       if (!manualOrigin && !origin) {
@@ -1037,9 +1097,9 @@ const RouteScreen: React.FC = () => {
       prev.length > 0
         ? [prev[0], { latitude: item.lat, longitude: item.lon }]
         : [
-            { latitude: region.latitude, longitude: region.longitude },
-            { latitude: item.lat, longitude: item.lon },
-          ]
+          { latitude: region.latitude, longitude: region.longitude },
+          { latitude: item.lat, longitude: item.lon },
+        ]
     );
     await fetchRouteDetails(item.lat, item.lon);
     setMapResetKey(Date.now());
@@ -1062,6 +1122,8 @@ const RouteScreen: React.FC = () => {
         "https://comgu20-production.up.railway.app/api/routes/find",
         { params }
       );
+
+      // Update nearby spots only if new data contains them
       if (response.data.nearby_spots) {
         setNearbySpots(response.data.nearby_spots);
       }
@@ -1156,6 +1218,8 @@ const RouteScreen: React.FC = () => {
     }
   };
 
+
+
   const renderRouteOverview = () => {
     if (isRouteLoading) {
       return <ActivityIndicator size="small" color="#6366F1" />;
@@ -1227,34 +1291,34 @@ const RouteScreen: React.FC = () => {
                     {["jeep", "bus", "ejeep", "lrt", "mrt"].includes(
                       segType
                     ) && (
-                      <>
-                        <View style={styles.getOnOffContainer}>
-                          <Text style={[styles.onOffTitle, { color: "green" }]}>
-                            Get on
-                          </Text>
-                          <Text style={styles.onOffInstruction}>
-                            Ride a{" "}
-                            {segment.vehicle_type
-                              ? segment.vehicle_type.toLowerCase()
-                              : segType}{" "}
-                            from {segment.from_stop?.name} going towards{" "}
-                            {segment.to_stop?.name}.
-                          </Text>
-                          <Text
-                            style={[
-                              styles.onOffTitle,
-                              { color: "blue", marginTop: 8 },
-                            ]}
-                          >
-                            Get off
-                          </Text>
-                          <Text style={styles.onOffInstruction}>
-                            Arrive at {segment.to_stop?.name}, then get off at
-                            your stop.
-                          </Text>
-                        </View>
-                      </>
-                    )}
+                        <>
+                          <View style={styles.getOnOffContainer}>
+                            <Text style={[styles.onOffTitle, { color: "green" }]}>
+                              Get on
+                            </Text>
+                            <Text style={styles.onOffInstruction}>
+                              Ride a{" "}
+                              {segment.vehicle_type
+                                ? segment.vehicle_type.toLowerCase()
+                                : segType}{" "}
+                              from {segment.from_stop?.name} going towards{" "}
+                              {segment.to_stop?.name}.
+                            </Text>
+                            <Text
+                              style={[
+                                styles.onOffTitle,
+                                { color: "blue", marginTop: 8 },
+                              ]}
+                            >
+                              Get off
+                            </Text>
+                            <Text style={styles.onOffInstruction}>
+                              Arrive at {segment.to_stop?.name}, then get off at
+                              your stop.
+                            </Text>
+                          </View>
+                        </>
+                      )}
                     {segment.alternatives &&
                       segment.alternatives.length > 0 && (
                         <View style={styles.alternativesContainer}>
@@ -1452,9 +1516,9 @@ const RouteScreen: React.FC = () => {
                   route.length > 0
                     ? route[0]
                     : {
-                        latitude: region.latitude,
-                        longitude: region.longitude,
-                      };
+                      latitude: region.latitude,
+                      longitude: region.longitude,
+                    };
                 setRoute([currentOrigin, newDestination]);
                 fetchRouteDetails(
                   newDestination.latitude,
@@ -1490,11 +1554,11 @@ const RouteScreen: React.FC = () => {
   );
 
   // Render different layouts based on route length while updating MapComponent with new restaurant props
-  if (route.length >= 2) {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <View style={{ flex: 1 }}>
         <Animated.View
-          style={[styles.mapContainer, { height: animatedHeight }]}
+          style={[style.mapContainer, { height: animatedHeight }]}
         >
           <MapComponent
             initialRegion={region}
@@ -1523,73 +1587,58 @@ const RouteScreen: React.FC = () => {
             }}
           />
         </Animated.View>
-        <ScrollView
-          style={[styles.detailsContainer, { backgroundColor: "#FFFFFF" }]}
-          contentContainerStyle={styles.contentContainer}
+
+        <BottomSheet
+          ref={bottomSheetRef}
+          snapPoints={snapPoints}
+          index={0}
+          // if enableContentPanningGesture is true, magcoconflict sa scrollables like search results,
+          // but if false, scrollables will work but buttons like segments takes long to respond
+          enableContentPanningGesture={true}
+          enableHandlePanningGesture={true}
+          onChange={handleSheetChanges}
+          backgroundComponent={({ style }) => (
+            <View style={[style, { backgroundColor: '#FFFFFF', borderRadius: 20 }]} />
+          )}
+          handleComponent={CustomHandle}
         >
-          {detailsContent}
-        </ScrollView>
+          <BottomSheetScrollView
+            nestedScrollEnabled={true}
+            contentContainerStyle={[
+              styles.contentContainer,
+              { backgroundColor: '#FFFFFF', flexGrow: 1 }
+            ]}
+            showsVerticalScrollIndicator={false}
+            onScrollEndDrag={handleScrollEndDrag}
+            onMomentumScrollEnd={handleScrollEndDrag}
+          >
+            {detailsContent}
+          </BottomSheetScrollView>
+        </BottomSheet>
       </View>
-    );
-  } else {
-    return (
-      <ScrollView
-        style={[styles.maincontainer, { backgroundColor: "#FFFFFF" }]}
-        contentContainerStyle={styles.contentContainer}
-      >
-        <Animated.View
-          style={[styles.mapContainer, { height: animatedHeight }]}
-        >
-          <MapComponent
-            initialRegion={region}
-            route={route}
-            roadPath={roadPath}
-            mapResetKey={mapResetKey}
-            style={styles.map}
-            polylineColor={polylineColor}
-            webviewRef={webviewRef}
-            // ===== New Restaurant props =====
-            nearbyRestaurants={nearbyRestaurants}
-            onRestaurantClick={(name) => {
-              const restaurant = nearbyRestaurants.find((r) => r.name === name);
-              if (restaurant) {
-                setSelectedRestaurant(restaurant);
-                setRestaurantModalVisible(true);
-              }
-            }}
-            onSpotClick={(spotName) => {
-              // NEW: When a spot is clicked, set scrollToSpot and open the modal
-              setScrollToSpot(spotName);
-              setModalVisible(true);
-            }}
-          />
-        </Animated.View>
-        {detailsContent}
-        {/* ===== New: Render Restaurant Modal in case route is not >=2 */}
-        <ModalComponent
-          visible={restaurantModalVisible}
-          onClose={() => setRestaurantModalVisible(false)}
-          restaurants={nearbyRestaurants.map((r) => ({
-            name: r.name,
-            latitude: r.latitude,
-            longitude: r.longitude,
-            cuisine: r.cuisine,
-            amenity: r.amenity, // Add this line
-            address: r.address,
-            opening_hours: r.opening_hours,
-            phone: r.phone,
-            website: r.website,
-            image_url: r.image_url,
-          }))}
-        />
-      </ScrollView>
-    );
-  }
+    </GestureHandlerRootView>
+  );
+
+
 };
 
 export default RouteScreen;
 
+
+const CustomHandle = () => (
+  <View style={styles.customHandle}>
+    <View style={styles.handleIndicator} />
+  </View>
+);
+
+// -------------------------
+// Styles
+// -------------------------
 const styles = StyleSheet.create({
+  bottomSheetContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
   maincontainer: { width: "100%", backgroundColor: "#FFFFFF" },
   detailsContainer: { flex: 1, backgroundColor: "#FFFFFF" },
   contentContainer: { paddingBottom: 30 },
@@ -1770,5 +1819,17 @@ const styles = StyleSheet.create({
   restaurantMarker: {
     backgroundColor: "#fff",
     borderColor: "#dc3545",
+  },,
+  customHandle: {
+    alignItems: 'center',
+    paddingVertical: 16, // Increased vertical padding for a larger touch area
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
   },
+  handleIndicator: {
+    width: 60,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#ccc',
+  }
 });
