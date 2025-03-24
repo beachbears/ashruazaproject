@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import {
   View,
   Text,
@@ -746,7 +746,22 @@ const RouteScreen: React.FC = () => {
     extrapolate: 'clamp',
   });
 
+  const navigation = useNavigation();
 
+  useEffect(() => {
+    // Hide both tab bar and header when this screen is focused
+    navigation.setOptions({
+      tabBarStyle: { display: 'none' },
+      headerShown: false,
+    });
+
+    // Restore options when leaving this screen
+    return () =>
+      navigation.setOptions({
+        tabBarStyle: undefined,
+        headerShown: true,
+      });
+  }, [navigation]);
 
   const handleSheetChanges = (index: number) => {
     let newMapHeight = screenHeight * 0.7; // default
