@@ -317,9 +317,14 @@ const getMapHTML = (
   let fitBoundsJS = `
   if (window.segmentPolylines && window.segmentPolylines.length > 0) {
     var group = new L.featureGroup(window.segmentPolylines);
+    var bounds = group.getBounds();
+    // Fit bounds with padding that reserves space for the bottom sheet.
+    map.fitBounds(bounds, { padding: { top: 20, bottom: 200, left: 20, right: 20 } });
+    // Pan the map upward by 100 pixels so markers are higher up.
+    map.panBy([0, -100]);
   }
-  // Initial view set by the selectedSpot useEffect
 `;
+
   let messageListenerJS = `
     var highlightedIndices = [];
     
@@ -739,12 +744,7 @@ const RouteScreen: React.FC = () => {
   const snapPoints = ['25%', '60%', '90%'];
   const [mapHeight, setMapHeight] = useState(Dimensions.get('window').height * 0.6); // initial map height
   const screenHeight = Dimensions.get('window').height;
-  const animatedHeight = useRef(new Animated.Value(screenHeight * 0.7)).current;
-  const contentHeight = animatedHeight.interpolate({
-    inputRange: [screenHeight * 0.3, screenHeight * 0.7],
-    outputRange: [400, 200], // adjust these values as needed
-    extrapolate: 'clamp',
-  });
+  const fixedMapHeight = screenHeight * 0.6;
 
   const navigation = useNavigation();
 
@@ -762,24 +762,6 @@ const RouteScreen: React.FC = () => {
         headerShown: true,
       });
   }, [navigation]);
-
-  const handleSheetChanges = (index: number) => {
-    let newMapHeight = screenHeight * 0.7; // default
-
-    if (index === 0) {
-      newMapHeight = screenHeight * 0.7;
-    } else if (index === 1) {
-      newMapHeight = screenHeight * 0.5;
-    } else if (index === 2) {
-      newMapHeight = screenHeight * 0.3;
-    }
-
-    Animated.timing(animatedHeight, {
-      toValue: newMapHeight,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  };
 
   const handleScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { y } = event.nativeEvent.contentOffset;
@@ -827,7 +809,6 @@ const RouteScreen: React.FC = () => {
   } | null>(null);
 
   const router = useRouter();
-  // const animatedHeight = useRef(new Animated.Value(400)).current;
 
   const [expandedSegments, setExpandedSegments] = useState<{
     [index: number]: boolean;
@@ -941,14 +922,6 @@ const RouteScreen: React.FC = () => {
       }
     })();
   }, []);
-
-  useEffect(() => {
-    Animated.timing(animatedHeight, {
-      toValue: route.length >= 2 ? 400 : 200,
-      duration: 500,
-      useNativeDriver: false,
-    }).start();
-  }, [route, animatedHeight]);
 
   // ===== Updated: fetchRestaurants Function =====
 
@@ -1570,71 +1543,62 @@ const RouteScreen: React.FC = () => {
 
   // Render different layouts based on route length while updating MapComponent with new restaurant props
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-      <View style={{ flex: 1 }}>
-        <Animated.View
-          style={[styles.mapContainer, { height: animatedHeight }]}
-        >
-          <MapComponent
-            initialRegion={region}
-            route={route}
-            roadPath={roadPath}
-            mapResetKey={mapResetKey}
-            style={styles.map}
-            polylineColor={polylineColor}
-            webviewRef={webviewRef}
-            nearbySpots={nearbySpots}
-            selectedSpot={selectedSpot}
-            isLoading={isRouteLoading}
-            // ===== New Restaurant props =====
-            nearbyRestaurants={nearbyRestaurants}
-            onRestaurantClick={(name) => {
-              const restaurant = nearbyRestaurants.find((r) => r.name === name);
-              if (restaurant) {
-                setSelectedRestaurant(restaurant);
-                setRestaurantModalVisible(true);
-              }
-            }}
-            onSpotClick={(spotName) => {
-              // NEW: When a spot is clicked, set scrollToSpot and open the modal
-              setScrollToSpot(spotName);
-              setModalVisible(true);
-            }}
-          />
-        </Animated.View>
-
-        <BottomSheet
-          ref={bottomSheetRef}
-          snapPoints={snapPoints}
-          index={1}
-          // if enableContentPanningGesture is true, magcoconflict sa scrollables like search results,
-          // but if false, scrollables will work but buttons like segments takes long to respond
-          enableContentPanningGesture={true}
-          enableHandlePanningGesture={true}
-          onChange={handleSheetChanges}
-          backgroundComponent={({ style }) => (
-            <View style={[style, { backgroundColor: '#FFFFFF', borderRadius: 20 }]} />
-          )}
-          handleComponent={CustomHandle}
-        >
-          <BottomSheetScrollView
-            nestedScrollEnabled={true}
-            contentContainerStyle={[
-              styles.contentContainer,
-              { backgroundColor: '#FFFFFF', flexGrow: 1 }
-            ]}
-            showsVerticalScrollIndicator={false}
-            onScrollEndDrag={handleScrollEndDrag}
-            onMomentumScrollEnd={handleScrollEndDrag}
-          >
-            {detailsContent}
-          </BottomSheetScrollView>
-        </BottomSheet>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* Full-screen map as the background */}
+      <View style={styles.mapWrapper}>
+        <MapComponent
+          initialRegion={region}
+          route={route}
+          roadPath={roadPath}
+          mapResetKey={mapResetKey}
+          style={styles.map}
+          polylineColor={polylineColor}
+          webviewRef={webviewRef}
+          nearbySpots={nearbySpots}
+          selectedSpot={selectedSpot}
+          isLoading={isRouteLoading}
+          nearbyRestaurants={nearbyRestaurants}
+          onRestaurantClick={(name) => {
+            const restaurant = nearbyRestaurants.find((r) => r.name === name);
+            if (restaurant) {
+              setSelectedRestaurant(restaurant);
+              setRestaurantModalVisible(true);
+            }
+          }}
+          onSpotClick={(spotName) => {
+            setScrollToSpot(spotName);
+            setModalVisible(true);
+          }}
+        />
+        {isRouteLoading && (
+          <ActivityIndicator style={styles.loadingIndicator} size="large" color="#6366F1" />
+        )}
       </View>
+
+      {/* Bottom Sheet overlay */}
+      <BottomSheet
+        ref={bottomSheetRef}
+        snapPoints={snapPoints}
+        index={1}
+        enableContentPanningGesture={true}
+        enableHandlePanningGesture={true}
+        backgroundComponent={({ style }) => (
+          <View style={[style, { backgroundColor: "#FFFFFF", borderRadius: 20 }]} />
+        )}
+        handleComponent={CustomHandle} // Make sure CustomHandle is defined/imported
+      >
+        <BottomSheetScrollView
+          nestedScrollEnabled={true}
+          contentContainerStyle={[styles.contentContainer, { backgroundColor: "#FFFFFF", flexGrow: 1 }]}
+          showsVerticalScrollIndicator={false}
+          onScrollEndDrag={handleScrollEndDrag}
+          onMomentumScrollEnd={handleScrollEndDrag}
+        >
+          {detailsContent}
+        </BottomSheetScrollView>
+      </BottomSheet>
     </GestureHandlerRootView>
   );
-
-
 };
 
 export default RouteScreen;
@@ -1656,7 +1620,9 @@ const styles = StyleSheet.create({
   },
   maincontainer: { width: "100%", backgroundColor: "#FFFFFF" },
   detailsContainer: { flex: 1, backgroundColor: "#FFFFFF" },
-  contentContainer: { paddingBottom: 30 },
+  contentContainer: {
+    padding: 16,
+  },
   mapContainer: {
     borderWidth: 2,
     borderColor: "#FFFFFF",
@@ -1664,7 +1630,13 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 15,
   },
-  map: { height: "100%", width: "100%" },
+  mapWrapper: {
+    ...StyleSheet.absoluteFillObject, // Fill the screen
+    zIndex: 0,
+  },
+  map: {
+    flex: 1,
+  },
   text: { color: "#44457D", fontWeight: "500", fontSize: 16 },
   container: { padding: 15, marginBottom: 20 },
   label: { fontSize: 12, fontWeight: "500", color: "#6B7280", marginTop: 10 },
