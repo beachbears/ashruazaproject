@@ -4,7 +4,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
@@ -23,7 +23,7 @@ import { Ionicons } from "@expo/vector-icons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import ReviewModal from "../reviewmodal";
 import ModalComponent from "../restaurantmodal";
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, ScrollView, } from 'react-native-gesture-handler';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
@@ -317,14 +317,9 @@ const getMapHTML = (
   let fitBoundsJS = `
   if (window.segmentPolylines && window.segmentPolylines.length > 0) {
     var group = new L.featureGroup(window.segmentPolylines);
-    var bounds = group.getBounds();
-    // Fit bounds with padding that reserves space for the bottom sheet.
-    map.fitBounds(bounds, { padding: { top: 20, bottom: 200, left: 20, right: 20 } });
-    // Pan the map upward by 100 pixels so markers are higher up.
-    map.panBy([0, -100]);
   }
+  // Initial view set by the selectedSpot useEffect
 `;
-
   let messageListenerJS = `
     var highlightedIndices = [];
     
@@ -578,50 +573,57 @@ const MapComponent: React.FC<MapComponentProps> = ({
   useEffect(() => {
     if (isWebViewReady && selectedSpot) {
       const js = `
-      if (window.map) {
-        const targetLat = ${selectedSpot.latitude};
-        const targetLng = ${selectedSpot.longitude};
-        
-        // Reset all tourist spot markers to original color first
-        window.map.eachLayer(layer => {
-          if (layer instanceof L.Marker && layer.options.isTouristSpot) {
-            layer.setIcon(
-              L.divIcon({
-                html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #28a745; font-size: 16px;"></i></div>',
-                className: 'custom-icon',
-                iconSize: [32, 32],
-                iconAnchor: [16, 32]
-              })
-            );
-          }
-        });
-
-        // Smooth zoom animation
-        window.map.flyTo([targetLat, targetLng], 16, {
-          animate: true,
-          duration: 2
-        });
-
-        // Highlight new selected marker
-        window.map.eachLayer(layer => {
-          if (layer instanceof L.Marker && layer.options.isTouristSpot) {
-            const latLng = layer.getLatLng();
-            if (Math.abs(latLng.lat - targetLat) < 0.000001 && 
-                Math.abs(latLng.lng - targetLng) < 0.000001) {
-              layer.openPopup();
+        if (window.map) {
+          const targetLat = ${selectedSpot.latitude};
+          const targetLng = ${selectedSpot.longitude};
+          
+          // Reset all tourist spot markers to original style.
+          window.map.eachLayer(layer => {
+            if (layer instanceof L.Marker && layer.options.isTouristSpot) {
               layer.setIcon(
                 L.divIcon({
-                  html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #dc3545; font-size: 16px;"></i></div>',
-                  className: 'selected-icon',
+                  html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #28a745; font-size: 16px;"></i></div>',
+                  className: 'custom-icon',
                   iconSize: [32, 32],
                   iconAnchor: [16, 32]
                 })
               );
             }
-          }
-        });
-      }
-    `;
+          });
+          
+          // Fly to the target coordinates.
+          window.map.flyTo([targetLat, targetLng], 16, { animate: true, duration: 2 });
+          
+          // After a delay, adjust the center upward.
+          setTimeout(() => {
+            var markerLatLng = L.latLng(targetLat, targetLng);
+            var containerPoint = window.map.latLngToContainerPoint(markerLatLng);
+            // Shift upward by 100 pixels; adjust this value as needed.
+            var adjustedPoint = L.point(containerPoint.x, containerPoint.y - 500);
+            var adjustedCenter = window.map.containerPointToLatLng(adjustedPoint);
+            window.map.setView(adjustedCenter, window.map.getZoom(), { animate: true });
+          }, 500);
+          
+          // Highlight the selected marker.
+          window.map.eachLayer(layer => {
+            if (layer instanceof L.Marker && layer.options.isTouristSpot) {
+              const latLng = layer.getLatLng();
+              if (Math.abs(latLng.lat - targetLat) < 0.000001 &&
+                  Math.abs(latLng.lng - targetLng) < 0.000001) {
+                layer.openPopup();
+                layer.setIcon(
+                  L.divIcon({
+                    html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #dc3545; font-size: 16px;"></i></div>',
+                    className: 'selected-icon',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                  })
+                );
+              }
+            }
+          });
+        }
+      `;
       webviewRef?.current?.injectJavaScript(js);
     }
   }, [selectedSpot, isWebViewReady]);
@@ -681,7 +683,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
     </View>
   );
 };
-
 const SuggestionList: React.FC<{
   suggestions: any[];
   onSelect: (item: any) => void;
@@ -691,7 +692,8 @@ const SuggestionList: React.FC<{
     <ScrollView
       style={styles.suggestionList}
       keyboardShouldPersistTaps="handled"
-      nestedScrollEnabled>
+      nestedScrollEnabled
+    >
       {suggestions.map((item, index) => (
         <TouchableWithoutFeedback
           key={`${item.name}-${index}`}
@@ -1588,8 +1590,8 @@ const RouteScreen: React.FC = () => {
         handleComponent={CustomHandle} // Make sure CustomHandle is defined/imported
       >
         <BottomSheetScrollView
-          nestedScrollEnabled={true}
-          contentContainerStyle={[styles.contentContainer, { backgroundColor: "#FFFFFF", flexGrow: 1 }]}
+          nestedScrollEnabled
+          contentContainerStyle={{ flexGrow: 1, paddingVertical: 10 }}
           showsVerticalScrollIndicator={false}
           onScrollEndDrag={handleScrollEndDrag}
           onMomentumScrollEnd={handleScrollEndDrag}
@@ -1597,7 +1599,7 @@ const RouteScreen: React.FC = () => {
           {detailsContent}
         </BottomSheetScrollView>
       </BottomSheet>
-    </GestureHandlerRootView>
+    </GestureHandlerRootView >
   );
 };
 
@@ -1676,10 +1678,16 @@ const styles = StyleSheet.create({
     zIndex: 10,
     borderRadius: 8,
     elevation: 4,
-    maxHeight: 150,
+    maxHeight: 250
   },
-  suggestionItem: { padding: 10, borderBottomWidth: 1, borderColor: "#ddd" },
-  suggestionText: { color: "#444" },
+  suggestionItem: {
+    padding: 12, // Increased padding for better touch target.
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
+  },
+  suggestionText: {
+    color: "#444",
+  },
   topInfoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
