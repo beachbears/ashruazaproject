@@ -6,59 +6,68 @@ import {
   TouchableOpacity,
   Text,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import { AuthContext } from '../contexts/AuthContext'; // Adjust path as needed
+import DropDownPicker from 'react-native-dropdown-picker';
+import { AuthContext } from '../contexts/AuthContext';
 
 interface ModalComponentProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (reason: string, route_post_id: number) => void; // Ensure correct naming
-  route_post_id: number; // Pass post ID properly
+  onSubmit: (reason: string, route_post_id: number) => void;
+  route_post_id: number;
 }
 
 const ModalComponent: React.FC<ModalComponentProps> = ({
   visible,
   onClose,
   onSubmit,
-  route_post_id, // Ensure correct naming
+  route_post_id,
 }) => {
+  const [open, setOpen] = useState(false);
   const [selectedReason, setSelectedReason] = useState<string>('');
+  const [items, setItems] = useState([
+    { label: 'Spam', value: 'spam' },
+    { label: 'Inappropriate Content', value: 'inappropriate_content' },
+    { label: 'Incorrect Information', value: 'incorrect_information' },
+    { label: 'Harassment', value: 'harassment' },
+  ]);
 
-  const { isLoggedIn } = useContext(AuthContext); // Get user auth state
+  const [modalHeight, setModalHeight] = useState('30%');
+  useEffect(() => {
+    if (open) {
+      setModalHeight('60%'); // Taasan ang height kapag open ang dropdown
+    } else {
+      setModalHeight('30%'); // Balik sa original height
+    }
+  }, [open]);
+
+  const { isLoggedIn } = useContext(AuthContext);
 
   useEffect(() => {
-    if (!visible) {
-      setSelectedReason('');
-    }
+    if (!visible) setSelectedReason('');
   }, [visible]);
 
   const handleSubmit = () => {
-    if (!isLoggedIn) {
-      alert('Only logged-in users can report posts.');
-      return;
-    }
-
-    if (!selectedReason) {
-      alert('Please select a reason before submitting.');
-      return;
-    }
-
+    if (!isLoggedIn) return alert('Please login to report');
+    if (!selectedReason) return alert('Please select a reason');
+    
     onSubmit(selectedReason, route_post_id);
+    
     onClose();
   };
-
   return (
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.modalBackground}>
         <View style={styles.PostContainer}>
           <Text style={styles.modalText}>Select a reason to report this post:</Text>
-          <Picker selectedValue={selectedReason} onValueChange={(itemValue) => setSelectedReason(itemValue)}>
-            <Picker.Item label="Select a reason" value="" />
-            <Picker.Item label="Spam" value="spam" />
-            <Picker.Item label="Inappropriate Content" value="inappropriate_content" />
-            <Picker.Item label="Incorrect Information" value="incorrect_information" />
-            <Picker.Item label="Harassment" value="harassment" />
-          </Picker>
+          <DropDownPicker
+        open={open}
+        value={selectedReason}
+        items={items}
+        setOpen={setOpen}
+        setValue={setSelectedReason}
+        setItems={setItems}
+        placeholder="Select a report reason"
+      />
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
@@ -74,15 +83,13 @@ const ModalComponent: React.FC<ModalComponentProps> = ({
   );
 };
 
-export default ModalComponent;
-
-
 const styles = StyleSheet.create({
   modalBackground: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    
   },
   PostContainer: {
     paddingVertical: 16,
@@ -90,14 +97,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 20,
     width: '90%',
-    minHeight: '30%',
+    minHeight: '34%',
     maxHeight: '80%',
-    justifyContent: 'space-between',
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
+    marginTop: 20,
   },
   cancelButton: {
     borderRadius: 10,
@@ -126,9 +133,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modalText: {
-    fontSize: 11,
-    color: '#686A9C',
+    fontSize: 14,
+    color: '#44457D',
     fontWeight: '500',
-    paddingBottom: 6,
+    marginBottom: 30
+  },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: '#44457D',
+    borderRadius: 10,
+    backgroundColor: '#F5F5F5',
+    
+  },
+  dropdownContainer: {
+    borderColor: '#44457D',
+    backgroundColor: 'white',
+  },
+  text: {
+    fontSize: 16,
+    color: '#44457D',
   },
 });
+
+export default ModalComponent;

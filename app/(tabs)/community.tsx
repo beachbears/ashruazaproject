@@ -8,6 +8,7 @@ import { useRouteContext } from '../../contexts/RouteContext';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 import ModalComponent from '../reportmodal';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 
 const dropdownOptions = ['Popularity', 'Time'];
@@ -99,10 +100,7 @@ const destination = Array.isArray(params.destination)
     lon: Number(params.destination_lon) || 0
   };
   
-const openReportModal = (postId: number) => {
-    setSelectedPostId(postId);
-    setIsModalVisible(true);
-  };
+ 
   
   const closeReportModal = () => {
     setIsModalVisible(false);
@@ -368,6 +366,16 @@ useEffect(() => {
     }
     setModalVisible(true);
   };
+
+  const openReportModal = (postId: number) => {
+    const isLoggedIn = !!authToken;
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    setSelectedPostId(postId);
+    setIsModalVisible(true);
+  };
    
   return (
     <ScrollView style={styles.maincontainer}>
@@ -405,12 +413,15 @@ useEffect(() => {
                     <Text style={styles.suggestorusername}>{post.user?.email}</Text>
                   </View>
                 </View>
-                <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
-  <Text>Report</Text>
-</TouchableOpacity>
-                <Text style={styles.postTimestamp}>
-                  {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
-                </Text>
+                <View style={{flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
+              <Text style={styles.postTimestamp}>
+                {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+              </Text>
+               <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
+               <MaterialIcons name="report" size={20} color="#C52222" />
+              </TouchableOpacity>
+              
+              </View>
               </View>
               
            {/* In your post rendering section - Fixed syntax and logic */}
@@ -422,7 +433,7 @@ useEffect(() => {
 </Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
-                <Text style={styles.label}>Their experience</Text>
+                <Text style={styles.label}>Experiences</Text>
                 <Text style={styles.experience}>{post.content}</Text>
               </View>
               <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
@@ -536,9 +547,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   postTimestamp: {
+    marginTop: -8,
     fontSize: 10,
     color: '#999',
-    marginTop: 5,
     textAlign: 'right',
   },
   postContainer: {
@@ -569,12 +580,12 @@ const styles = StyleSheet.create({
   postLocation: {
     fontSize: 14,
     color: '#1F2937',
-    marginBottom: 2,
+    marginVertical: 14,
   },
   postDestination: {
     fontSize: 14,
     color: '#1F2937',
-    marginBottom: 2,
+    marginBottom: 16,
   },
   arrowup: {
     borderWidth: 1,

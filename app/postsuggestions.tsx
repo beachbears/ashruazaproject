@@ -7,6 +7,7 @@ import Entypo from '@expo/vector-icons/Entypo';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { Post } from '@/contexts/PostContext';
 import ModalComponent from './reportmodal';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 const dropdownOptions = ['Popularity', 'Time'];
 type VoteType = 'upvote' | 'downvote';
@@ -89,7 +90,14 @@ export default function PostSuggestions() {
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // Store post ID
      const [isModalVisible, setIsModalVisible] = useState(false);
   
-     const openReportModal = (postId: number) => {
+    
+
+    const openReportModal = (postId: number) => {
+      const isLoggedIn = !!authToken;
+      if (!isLoggedIn) {
+        router.push('/login');
+        return;
+      }
       setSelectedPostId(postId);
       setIsModalVisible(true);
     };
@@ -390,16 +398,19 @@ export default function PostSuggestions() {
                   <Text style={styles.suggestorusername}>{post.user?.email}</Text>
                 </View>
               </View>
-               <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
-                <Text>Report</Text>
-              </TouchableOpacity>
+              <View style={{flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
               <Text style={styles.postTimestamp}>
                 {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
               </Text>
+               <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
+               <MaterialIcons name="report" size={20} color="#C52222" />
+              </TouchableOpacity>
+              
+              </View>
             </View>
             
             <View style={{ flexDirection: 'column', gap: 8 }}>
-              <Text style={styles.label}>Your experiences</Text>
+              <Text style={styles.label}>Experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
@@ -523,49 +534,49 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#44457D',
   },
-  dropdowncontainer: {
-    justifyContent: 'flex-end',
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  dropdownButton: {
-    backgroundColor: '#F5F7FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    borderRadius: 8,
-    width: 125,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 6,
-  },
-  buttonText: {
-    color: '#44457D',
-    fontSize: 12,
-    fontWeight: '400',
-  },
-  dropdownList: {
-    position: 'absolute',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderRadius: 8,
-    borderColor: '#E5E7EB',
-    zIndex: 1000,
-    width: 125,
-    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-    elevation: 4,
-    top: 40,
-  },
-  option: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    padding: 4,
-    alignItems: 'center',
-  },
-  optionText: {
-    fontSize: 13,
-    color: '#44457D',
-  },
+    dropdowncontainer: {
+      justifyContent: 'flex-end',
+      flexDirection: 'row',
+      marginBottom: 10,
+    },
+    dropdownButton: {
+      backgroundColor: '#F5F7FF',
+      borderWidth: 1,
+      borderColor: '#C7D2FE',
+      borderRadius: 8,
+      width: 125,
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      padding: 6,
+    },
+    buttonText: {
+      color: '#44457D',
+      fontSize: 12,
+      fontWeight: '400',
+    },
+    dropdownList: {
+      position: 'absolute',
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderRadius: 8,
+      borderColor: '#E5E7EB',
+      zIndex: 1000,
+      width: 125,
+      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+      elevation: 4,
+      top: 40,
+    },
+    option: {
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E7EB',
+      padding: 4,
+      alignItems: 'center',
+    },
+    optionText: {
+      fontSize: 13,
+      color: '#44457D',
+    },
   profile: {
     width: 36,
     height: 36,
@@ -623,7 +634,8 @@ const styles = StyleSheet.create({
   postTimestamp: {
     fontSize: 10,
     color: '#999',
-    marginTop: 5,
+    marginTop: -8,
+    marginBottom: 2,
     textAlign: 'right',
   },
   arrowup: {
