@@ -1558,7 +1558,7 @@ const RouteScreen: React.FC = () => {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <View style={{ flex: 1 }}>
         <Animated.View
-          style={[style.mapContainer, { height: animatedHeight }]}
+          style={[styles.mapContainer, { height: animatedHeight }]}
         >
           <MapComponent
             initialRegion={region}
@@ -1819,7 +1819,7 @@ const styles = StyleSheet.create({
   restaurantMarker: {
     backgroundColor: "#fff",
     borderColor: "#dc3545",
-  },,
+  },
   customHandle: {
     alignItems: 'center',
     paddingVertical: 16, // Increased vertical padding for a larger touch area
