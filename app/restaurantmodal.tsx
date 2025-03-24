@@ -60,10 +60,9 @@ const ModalComponent: React.FC<ModalProps> = ({
   const [showCategories, setShowCategories] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // New state for sorting dropdown - default set to "Nearest"(dropdown ni ved)
+  // Replace sort dropdown state with selectedSortOption only.
   const [selectedSortOption, setSelectedSortOption] =
     useState<string>("Nearest");
-  const [showSortOptions, setShowSortOptions] = useState(false);
 
   // Function to open website URLs
   const handleWebsitePress = (url: string) => {
@@ -89,19 +88,10 @@ const ModalComponent: React.FC<ModalProps> = ({
     "Biergarten",
   ];
 
-  // List of sort options (sa dropdown ni ved)
-  const sortOptions = ["Nearest", "Furthest"];
-
   // Category selection handler
   const handleSelectCategory = (cat: string) => {
     setSelectedCategory(cat);
     setShowCategories(false);
-  };
-
-  // Sort selection handler
-  const handleSelectSortOption = (option: string) => {
-    setSelectedSortOption(option);
-    setShowSortOptions(false);
   };
 
   // Function to calculate distance between two coordinates using the haversine formula.
@@ -132,7 +122,7 @@ const ModalComponent: React.FC<ModalProps> = ({
       )
     : restaurants;
 
-  // Sort the filtered spots based on selected sort option if userLocation is provided.(logic ni ved sa nearest and furthest dipa ayus)
+  // Sort the filtered spots based on selected sort option if userLocation is provided.
   if (userLocation && selectedSortOption) {
     filteredSpots = filteredSpots.slice().sort((a, b) => {
       const distA = calculateDistance(
@@ -162,102 +152,96 @@ const ModalComponent: React.FC<ModalProps> = ({
         <View style={styles.modalContainer}>
           <Text style={styles.modalTitle}>Nearby Restaurant</Text>
 
-          {/* Category Dropdown Container */}
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => setShowCategories(!showCategories)}
-            >
-              <Ionicons
-                name={
-                  showCategories ? "chevron-up-outline" : "chevron-down-outline"
-                }
-                size={16}
-                color="#6366F1"
-                style={{ marginRight: 6 }}
-              />
-              <Text style={styles.dropdownButtonText}>
-                {selectedCategory ? selectedCategory : "Select Category"}
-              </Text>
-            </TouchableOpacity>
-            {showCategories && (
-              <View style={[styles.dropdownOverlay, { zIndex: 10001 }]}>
-                <ScrollView style={{ maxHeight: 160 }}>
-                  {categories.map((cat, index) => {
-                    const isSelected = selectedCategory === cat;
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.dropdownItem,
-                          isSelected && styles.dropdownItemSelected,
-                        ]}
-                        onPress={() => handleSelectCategory(cat)}
-                      >
-                        <Text
+          {/* Controls Container: Category dropdown and Sort toggle side by side */}
+          <View style={styles.controlsContainer}>
+            {/* Category Dropdown */}
+            <View style={styles.dropdownContainer}>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setShowCategories(!showCategories)}
+              >
+                <Ionicons
+                  name={
+                    showCategories
+                      ? "chevron-up-outline"
+                      : "chevron-down-outline"
+                  }
+                  size={16}
+                  color="#6366F1"
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.dropdownButtonText}>
+                  {selectedCategory ? selectedCategory : "Select Category"}
+                </Text>
+              </TouchableOpacity>
+              {showCategories && (
+                <View style={[styles.dropdownOverlay, { zIndex: 10001 }]}>
+                  <ScrollView style={{ maxHeight: 160 }}>
+                    {categories.map((cat, index) => {
+                      const isSelected = selectedCategory === cat;
+                      return (
+                        <TouchableOpacity
+                          key={index}
                           style={[
-                            styles.dropdownItemText,
-                            isSelected && styles.dropdownItemTextSelected,
+                            styles.dropdownItem,
+                            isSelected && styles.dropdownItemSelected,
                           ]}
+                          onPress={() => handleSelectCategory(cat)}
                         >
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
-          </View>
+                          <Text
+                            style={[
+                              styles.dropdownItemText,
+                              isSelected && styles.dropdownItemTextSelected,
+                            ]}
+                          >
+                            {cat}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
 
-          {/* Sort Dropdown Container */}
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => setShowSortOptions(!showSortOptions)}
-            >
-              <Ionicons
-                name={
-                  showSortOptions
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
-                size={16}
-                color="#6366F1"
-                style={{ marginRight: 6 }}
-              />
-              <Text style={styles.dropdownButtonText}>
-                {selectedSortOption ? selectedSortOption : "Sort by Distance"}
-              </Text>
-            </TouchableOpacity>
-            {showSortOptions && (
-              <View style={[styles.dropdownOverlay, { zIndex: 10002 }]}>
-                <ScrollView style={{ maxHeight: 100 }}>
-                  {sortOptions.map((option, index) => {
-                    const isSelected = selectedSortOption === option;
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.dropdownItem,
-                          isSelected && styles.dropdownItemSelected,
-                        ]}
-                        onPress={() => handleSelectSortOption(option)}
-                      >
-                        <Text
-                          style={[
-                            styles.dropdownItemText,
-                            isSelected && styles.dropdownItemTextSelected,
-                          ]}
-                        >
-                          {option}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
+            {/* Sort Toggle Container */}
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  selectedSortOption === "Nearest" && styles.toggleButtonActive,
+                ]}
+                onPress={() => setSelectedSortOption("Nearest")}
+              >
+                <Text
+                  style={[
+                    styles.toggleButtonText,
+                    selectedSortOption === "Nearest" &&
+                      styles.toggleButtonTextActive,
+                  ]}
+                >
+                  Nearest
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  selectedSortOption === "Furthest" &&
+                    styles.toggleButtonActive,
+                ]}
+                onPress={() => setSelectedSortOption("Furthest")}
+              >
+                <Text
+                  style={[
+                    styles.toggleButtonText,
+                    selectedSortOption === "Furthest" &&
+                      styles.toggleButtonTextActive,
+                  ]}
+                >
+                  Furthest
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Scrollable Restaurant List */}
@@ -428,12 +412,20 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 10,
   },
+  controlsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
 
   /********** DROPDOWN **********/
   dropdownContainer: {
     marginBottom: 10,
     alignSelf: "flex-start",
     position: "relative",
+    flex: 1,
+    marginRight: 8,
   },
   dropdownButton: {
     flexDirection: "row",
@@ -480,6 +472,30 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   dropdownItemTextSelected: {
+    color: "#fff",
+  },
+
+  /********** TOGGLE BUTTONS **********/
+  toggleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  toggleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    backgroundColor: "#E0E7FF",
+    marginHorizontal: 4,
+  },
+  toggleButtonActive: {
+    backgroundColor: "#6366F1",
+  },
+  toggleButtonText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#6366F1",
+  },
+  toggleButtonTextActive: {
     color: "#fff",
   },
 
