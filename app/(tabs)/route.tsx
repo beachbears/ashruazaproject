@@ -691,23 +691,21 @@ const SuggestionList: React.FC<{
   return (
     <ScrollView
       style={styles.suggestionList}
-      keyboardShouldPersistTaps="handled"
+      keyboardShouldPersistTaps="always"
       nestedScrollEnabled
     >
       {suggestions.map((item, index) => (
-        <TouchableWithoutFeedback
+        <TouchableOpacity
           key={`${item.name}-${index}`}
+          style={styles.suggestionItem}
           onPress={() => onSelect(item)}
         >
-          <View style={styles.suggestionItem}>
-            <Text style={styles.suggestionText}>{item.name}</Text>
-          </View>
-        </TouchableWithoutFeedback>
+          <Text style={styles.suggestionText}>{item.name}</Text>
+        </TouchableOpacity>
       ))}
     </ScrollView>
   );
 };
-
 const locationCacheRef = { current: {} as { [key: string]: any[] } };
 
 const RouteScreen: React.FC = () => {
@@ -1595,6 +1593,7 @@ const RouteScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           onScrollEndDrag={handleScrollEndDrag}
           onMomentumScrollEnd={handleScrollEndDrag}
+          keyboardShouldPersistTaps="always"
         >
           {detailsContent}
         </BottomSheetScrollView>
