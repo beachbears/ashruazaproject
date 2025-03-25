@@ -28,7 +28,7 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="myapp"/>
         <data android:scheme="com.gabooo.capstone"/>
-        <data android:scheme="exp+capstone"/>
+        <data android:scheme="exp+kommutsera"/>
       </intent-filter>
     </activity>
   </application>
