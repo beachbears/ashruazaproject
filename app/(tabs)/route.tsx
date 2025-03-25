@@ -338,8 +338,8 @@ const RouteScreen: React.FC = () => {
           params: {
             lat,
             lon,
-            radius: 3,
-            sort: "furthest",
+            radius: 5,
+            sort: "nearest",
             amenity:
               "cafe,restaurant,fast_food,pub,bar,ice_cream,food_court,biergarten",
             page: 1,
