@@ -353,11 +353,12 @@ const RouteScreen: React.FC = () => {
         params: {
           lat,
           lon,
-          radius: 5, // 5 kilometers
+          radius: 5,
           page: 1,
           per_page: limit,
         },
       });
+      console.log("API Response for Attractions:", response.data.results);
       const mapped = response.data.results.map((item: any) => ({
         name: item.tourist_spot || "Unnamed Attraction",
         latitude: item.latitude || 0,
@@ -366,6 +367,8 @@ const RouteScreen: React.FC = () => {
         address: item.address || "Address not available",
         distance: item.distance,
         image_url: item.image_url || "https://via.placeholder.com/150",
+        trivia: item.trivia || "No trivia available",
+        feedbacks: item.feedbacks || [],
       }));
       setNearbySpots(mapped);
     } catch (error) {
@@ -1081,6 +1084,9 @@ const RouteScreen: React.FC = () => {
                   <Text style={styles.attractionNamePreview} numberOfLines={1}>
                     {spot.name}
                   </Text>
+                  <Text style={styles.attractionDistance}>
+                    {spot.distance?.toFixed(2)} km
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -1220,6 +1226,11 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  attractionDistance: {
+    fontSize: 10,
+    color: "#6B7280",
+    marginTop: 4,
+  },
   bottomSheetContent: {
     padding: 16,
     paddingBottom: 32,

@@ -76,6 +76,7 @@ export interface NearbySpot {
   latitude: number;
   longitude: number;
   image_url?: string;
+  distance?: number;
 }
 
 export interface ApiResponse {
