@@ -151,6 +151,15 @@ const RouteScreen: React.FC = () => {
   }, [navigation]);
 
   useEffect(() => {
+    if (!route[1] && selectedLocationType === "destination") {
+      setSelectedLocationType(route[0] ? "origin" : null);
+    }
+    if (!route[0] && selectedLocationType === "origin") {
+      setSelectedLocationType(null);
+    }
+  }, [route, selectedLocationType]);
+
+  useEffect(() => {
     // Hide both tab bar and header when this screen is focused
     navigation.setOptions({
       tabBarStyle: { display: 'none' },
@@ -341,7 +350,7 @@ const RouteScreen: React.FC = () => {
             sort: "nearest",
             amenity: "cafe,restaurant,fast_food,pub,bar,ice_cream,food_court,biergarten",
             page: 1,
-            per_page: 100,
+            per_page: 20,
           },
         }
       );
@@ -442,12 +451,11 @@ const RouteScreen: React.FC = () => {
   const clearOrigin = () => {
     setOrigin("");
     setOriginSuggestions([]);
-    setDestination("");
-    setDestinationSuggestions([]);
-    setRoute([]);
+    setRoute((prev) => (prev.length > 1 ? [prev[1]] : [])); // Keep destination if exists
     setRouteDetails({ route: null });
     setRoadPath([]);
     setNearbySpots([]);
+    setSelectedLocationType(null);
   };
 
   const selectOriginSuggestion = async (item: any) => {
@@ -876,15 +884,15 @@ const RouteScreen: React.FC = () => {
           <Text style={styles.routeOverviewText}>Route Overview</Text>
           {renderRouteOverview()}
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.button} onPress={() => setActiveTab("Restaurants")}>
+            {/* <TouchableOpacity style={styles.button} onPress={() => setActiveTab("Restaurants")}>
               <Text style={styles.buttonText}>Nearby Dining Spots</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </TouchableOpacity> */}
+            {/* <TouchableOpacity
               style={styles.button}
               onPress={() => setModalVisible(true)}
             >
               <Text style={styles.buttonText}>Attractions</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity
               style={styles.button}
               onPress={() => {
