@@ -351,23 +351,35 @@ const RouteScreen: React.FC = () => {
             sort: "nearest",
             amenity: "cafe,restaurant,fast_food,pub,bar,ice_cream,food_court,biergarten",
             page: 1,
-            per_page: 20,
+            per_page: 100,
           },
         }
       );
       const mapped = response.data.results.map((item: any) => ({
-        name: item.name || "Unnamed Restaurant",
+        name: item.name || "Unnamed Dining Spot",
         latitude: item.coordinates?.lat || 0,
         longitude: item.coordinates?.lon || 0,
-        amenity: item.amenity || "Restaurant",
+        amenity: item.amenity || "Dining Spot",
         cuisine: item.metadata?.cuisine || "Various",
-        address: item.reverse_geocoded_address || "Address not available",
+        address: item.address?.full_address || "Address not available",
         opening_hours: item.metadata?.opening_hours || "Hours not specified",
         phone: item.contacts?.phone,
         website: item.contacts?.website,
-        image_url: "https://via.placeholder.com/150", // Use a placeholder since no image is provided
-        distance: item.distance, // Add distance from API (in km)
+        image_url: "https://via.placeholder.com/150",
+        distance: item.distance,
+        brand: item.brand?.brand,
+        takeaway: item.metadata?.takeaway,
+        delivery: item.metadata?.delivery,
+        payment: item.metadata?.payment,
+        wheelchair: item.metadata?.wheelchair,
+        facebook: item.contacts?.facebook,
+        email: item.contacts?.email,
       }));
+      console.log("Fetched restaurants:", mapped.length);
+      mapped.forEach((r: { name: any; distance: any; }, i: number) => {
+        console.log(`Restaurant ${i + 1}: ${r.name}, distance: ${r.distance} km`);
+      });
+      console.log("Total available spots:", response.data.meta.total);
       setNearbyRestaurants(mapped);
     } catch (error) {
       console.error("Error fetching restaurants:", error);

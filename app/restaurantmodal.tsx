@@ -25,14 +25,21 @@ interface Restaurant {
   name: string;
   latitude: number;
   longitude: number;
+  amenity?: string;
   cuisine?: string;
   address?: string;
   opening_hours?: string;
-  amenity?: string;
   phone?: string;
   website?: string;
   image_url?: string;
-  distance?: number; // Added distance in km from API
+  distance?: number;
+  brand?: string;
+  takeaway?: string;
+  delivery?: string;
+  payment?: string;
+  wheelchair?: string;
+  facebook?: string;
+  email?: string;
 }
 
 interface ModalProps {
@@ -148,8 +155,13 @@ const ModalComponent: React.FC<ModalProps> = ({
             {filteredSpots.length > 0 ? (
               filteredSpots.map((spot, idx) => (
                 <View key={idx} style={styles.spotCard}>
+                  {/* Header with Image, Name, Cuisine, Distance, and Buttons */}
                   {onView && (
                     <View style={styles.restaurantHeader}>
+                      <Image
+                        source={{ uri: spot.image_url || placeholderImage }}
+                        style={styles.restaurantImage}
+                      />
                       <View style={styles.restaurantInfo}>
                         <Text style={styles.restaurantName}>{spot.name}</Text>
                         <Text style={styles.restaurantCuisine}>
@@ -198,7 +210,9 @@ const ModalComponent: React.FC<ModalProps> = ({
                     )}
                     <View style={styles.amenityPill}>
                       <Text style={styles.amenityText}>
-                        {spot.amenity ? spot.amenity.charAt(0).toUpperCase() + spot.amenity.slice(1) : "Unknown"}
+                        {spot.amenity
+                          ? spot.amenity.charAt(0).toUpperCase() + spot.amenity.slice(1)
+                          : "Unknown"}
                       </Text>
                     </View>
                     {spot.address && (
@@ -210,7 +224,7 @@ const ModalComponent: React.FC<ModalProps> = ({
                     {spot.cuisine && (
                       <View style={styles.infoRow}>
                         <Ionicons name="restaurant-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>{spot.cuisine}</Text>
+                        <Text style={styles.sectionValue}>{formatCuisine(spot.cuisine)}</Text>
                       </View>
                     )}
                     {spot.opening_hours && (
@@ -223,23 +237,69 @@ const ModalComponent: React.FC<ModalProps> = ({
                         </Text>
                       </View>
                     )}
-                    {(spot.phone || spot.website) && (
+                    {/* New Fields */}
+                    {spot.brand && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="business-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>Brand: {spot.brand}</Text>
+                      </View>
+                    )}
+                    {spot.takeaway && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="bag-handle-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>Takeaway: {spot.takeaway}</Text>
+                      </View>
+                    )}
+                    {spot.delivery && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="bicycle-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>Delivery: {spot.delivery}</Text>
+                      </View>
+                    )}
+                    {spot.payment !== "{}" && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="card-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>Payment: {spot.payment}</Text>
+                      </View>
+                    )}
+                    {spot.wheelchair && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="accessibility-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>Wheelchair: {spot.wheelchair}</Text>
+                      </View>
+                    )}
+                    {/* Enhanced Contact Section */}
+                    {(spot.phone || spot.website || spot.facebook || spot.email) && (
                       <View style={styles.contactSection}>
                         <Text style={styles.sectionTitle}>
                           <Ionicons name="call-outline" size={16} color="#44457D" /> Contact
                         </Text>
                         {spot.phone && (
                           <TouchableOpacity
-                            onPress={() => spot.phone && handlePhonePress(spot.phone)} // Type guard ensures spot.phone is string
+                            onPress={() => spot.phone && handlePhonePress(spot.phone)}
                           >
                             <Text style={styles.websiteText}>{spot.phone}</Text>
                           </TouchableOpacity>
                         )}
                         {spot.website && (
                           <TouchableOpacity
-                            onPress={() => spot.website && handleWebsitePress(spot.website)} // Type guard ensures spot.website is string
+                            onPress={() => spot.website && handleWebsitePress(spot.website)}
                           >
                             <Text style={styles.websiteText}>Visit Website</Text>
+                          </TouchableOpacity>
+                        )}
+                        {spot.facebook && (
+                          <TouchableOpacity
+                            onPress={() => spot.facebook && handleWebsitePress(spot.facebook)}
+                          >
+                            <Text style={styles.websiteText}>Facebook</Text>
+                          </TouchableOpacity>
+                        )}
+                        {spot.email && (
+                          <TouchableOpacity
+                            onPress={() => Linking.openURL(`mailto:${spot.email}`)}
+                          >
+                            <Text style={styles.websiteText}>{spot.email}</Text>
                           </TouchableOpacity>
                         )}
                       </View>
