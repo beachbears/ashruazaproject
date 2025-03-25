@@ -108,9 +108,9 @@ const ModalComponent: React.FC<ModalProps> = ({
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(toRad(lat1)) *
-        Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c; // Distance in km
   };
@@ -118,8 +118,8 @@ const ModalComponent: React.FC<ModalProps> = ({
   // Filter spots based on selected category (if provided)
   let filteredSpots = selectedCategory
     ? restaurants.filter(
-        (spot) => spot.amenity?.toLowerCase() === selectedCategory.toLowerCase()
-      )
+      (spot) => spot.amenity?.toLowerCase() === selectedCategory.toLowerCase()
+    )
     : restaurants;
 
   // Sort the filtered spots based on selected sort option if userLocation is provided.
@@ -217,7 +217,7 @@ const ModalComponent: React.FC<ModalProps> = ({
                   style={[
                     styles.toggleButtonText,
                     selectedSortOption === "Nearest" &&
-                      styles.toggleButtonTextActive,
+                    styles.toggleButtonTextActive,
                   ]}
                 >
                   Nearest
@@ -227,7 +227,7 @@ const ModalComponent: React.FC<ModalProps> = ({
                 style={[
                   styles.toggleButton,
                   selectedSortOption === "Furthest" &&
-                    styles.toggleButtonActive,
+                  styles.toggleButtonActive,
                 ]}
                 onPress={() => setSelectedSortOption("Furthest")}
               >
@@ -235,7 +235,7 @@ const ModalComponent: React.FC<ModalProps> = ({
                   style={[
                     styles.toggleButtonText,
                     selectedSortOption === "Furthest" &&
-                      styles.toggleButtonTextActive,
+                    styles.toggleButtonTextActive,
                   ]}
                 >
                   Furthest

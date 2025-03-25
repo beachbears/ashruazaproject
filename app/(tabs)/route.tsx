@@ -872,7 +872,7 @@ const RouteScreen: React.FC = () => {
               style={styles.button}
               onPress={() => setModalVisible(true)}
             >
-              <Text style={styles.buttonText}>Nearby Attractions</Text>
+              <Text style={styles.buttonText}>Attractions</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.button}
@@ -890,7 +890,7 @@ const RouteScreen: React.FC = () => {
                 });
               }}
             >
-              <Text style={styles.buttonText}>Post Suggestions</Text>
+              <Text style={styles.buttonText}>Experiences</Text>
             </TouchableOpacity>
           </View>
         </View>
