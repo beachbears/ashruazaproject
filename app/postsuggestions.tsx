@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator,  LogBox, } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, LogBox, } from 'react-native';
 import PostModal from './postmodal';
 import { AuthContext, AuthContextType } from './../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -129,7 +129,7 @@ export default function PostSuggestions() {
       const response = await fetch(
         `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${origin_lat}&origin_lon=${origin_lon}&destination_lat=${destination_lat}&destination_lon=${destination_lon}`
       );
-      
+
       if (!response.ok) throw new Error('Failed to fetch posts');
 
       const postsData = await response.json();
@@ -155,7 +155,7 @@ export default function PostSuggestions() {
   };
 
   useEffect(() => {
-    fetchPosts(); 
+    fetchPosts();
   }, [location, destination,]);
 
   const handlePostSubmit = async (formData: Post) => {
@@ -173,7 +173,7 @@ export default function PostSuggestions() {
           dest_lon: destination_lon,
         },
       };
-  
+
       const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
         method: 'POST',
         headers: {
@@ -182,17 +182,17 @@ export default function PostSuggestions() {
         },
         body: JSON.stringify(requestBody),
       });
-  
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Server error: ${errorText}`);
       }
-  
+
       const responseData = await response.json();
-      
+
       // Debugging: Log the actual server response
       console.log('Server response:', responseData);
-  
+
       // Construct new post with proper fallbacks
       const newPost: Post = {
         id: responseData.id || Date.now(), // Temporary ID if missing
@@ -202,7 +202,7 @@ export default function PostSuggestions() {
         origin_lat: origin_lat,
         origin_lon: origin_lon,
         destination_lat,
-         destination_lon,
+        destination_lon,
         user: {
           id: responseData.user?.id || 0,
           username: responseData.user?.username || userHandle || "anonymous",
@@ -215,11 +215,11 @@ export default function PostSuggestions() {
         comments_count: responseData.comments_count || 0,
         created_at: responseData.created_at || new Date().toISOString(),
       };
-  
+
       // Update local state immediately
       setPosts(prevPosts => [newPost, ...prevPosts]);
       setModalVisible(false);
-  
+
     } catch (error) {
       console.error('Post submission error:', error);
       Alert.alert(
@@ -332,7 +332,7 @@ export default function PostSuggestions() {
         Alert.alert('Error', 'There was a problem registering your vote.');
       }
       return;
-    } 
+    }
     setSelectedVotes(prev => ({ ...prev, [id]: action }));
     updatePost({
       ...currentPost,
@@ -387,7 +387,7 @@ export default function PostSuggestions() {
     return `${Math.floor(diff / day)}d ago`;
   };
   const getStatusStyle = (status: string) => {
-    switch(status.toLowerCase()) {
+    switch (status.toLowerCase()) {
       case "pending review":
         return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
       case "community approved":
@@ -403,7 +403,7 @@ export default function PostSuggestions() {
 
   // Helper function for dynamic text colors based on status.
   const getStatusTextColor = (status: string) => {
-    switch(status.toLowerCase()) {
+    switch (status.toLowerCase()) {
       case "flagged":
         return { color: "#b31b1b" };
       case "admin approved":
@@ -416,7 +416,7 @@ export default function PostSuggestions() {
         return {};
     }
   };
-  
+
   return (
     <View style={styles.maincontainer}>
       <FlatList
@@ -426,33 +426,33 @@ export default function PostSuggestions() {
         removeClippedSubviews={true}
         data={sortedPosts}
         ListEmptyComponent={
-        
-            // Show loading indicator while fetching
-            <View style={{ padding: 20 }}>
-              <ActivityIndicator size="large" color="#6366F1" />
-              <Text style={{ textAlign: 'center', marginTop: 10 }}>
-                Loading posts...
-              </Text>
-            </View>
-        
+
+          // Show loading indicator while fetching
+          <View style={{ padding: 20 }}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={{ textAlign: 'center', marginTop: 10 }}>
+              Loading posts...
+            </Text>
+          </View>
+
         }
         keyExtractor={(post) => post.id ? post.id.toString() : ''}
         ListHeaderComponent={
           <>
-          <View style={{ zIndex: 1000,}}>
-            <Text style={styles.sectionTitle}>Discover Experiences</Text>
-            <View style={styles.sectionHeader}>
-             
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
-              <View style={{ zIndex: 1000 }}>
-                <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} />
+            <View style={{ zIndex: 1000, }}>
+              <Text style={styles.sectionTitle}>Discover Experiences</Text>
+              <View style={styles.sectionHeader}>
+
               </View>
-              <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-                <Text style={styles.postButtonText}>Post</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.detailsContainer}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+                <View style={{ zIndex: 1000 }}>
+                  <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} />
+                </View>
+                <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+                  <Text style={styles.postButtonText}>Post</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.detailsContainer}>
                 <Text style={styles.locationText}>
                   <Text style={styles.boldText}>From:</Text> {location}
                 </Text>
@@ -494,7 +494,7 @@ export default function PostSuggestions() {
                 </TouchableOpacity>
               </View>
             </View>
-  
+
             <View style={{ flexDirection: 'column', gap: 8 }}>
               <Text style={styles.label}>Experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
@@ -539,7 +539,7 @@ export default function PostSuggestions() {
         )}
         contentContainerStyle={{ paddingBottom: 200 }}
       />
-  
+
       {/* Modals outside FlatList */}
       <PostModal
         visible={modalVisible}
@@ -556,7 +556,7 @@ export default function PostSuggestions() {
         userPassword={''}
         isFromCommunity={false}
       />
-  
+
       {isModalVisible && selectedPostId !== null && (
         <ModalComponent
           visible={isModalVisible}
@@ -570,7 +570,7 @@ export default function PostSuggestions() {
 }
 
 const styles = StyleSheet.create({
-   emptyContainer: {
+  emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -646,49 +646,49 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#44457D',
   },
-    dropdowncontainer: {
-      justifyContent: 'flex-end',
-      flexDirection: 'row',
-      marginBottom: 10,
-    },
-    dropdownButton: {
-      backgroundColor: '#F5F7FF',
-      borderWidth: 1,
-      borderColor: '#C7D2FE',
-      borderRadius: 8,
-      width: 125,
-      alignItems: 'center',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      padding: 6,
-    },
-    buttonText: {
-      color: '#44457D',
-      fontSize: 12,
-      fontWeight: '400',
-    },
-    dropdownList: {
-      position: 'absolute',
-      backgroundColor: '#fff',
-      borderWidth: 1,
-      borderRadius: 8,
-      borderColor: '#E5E7EB',
-      zIndex: 1000,
-      width: 125,
-      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-      elevation: 4,
-      top: 40,
-    },
-    option: {
-      borderBottomWidth: 1,
-      borderBottomColor: '#E5E7EB',
-      padding: 4,
-      alignItems: 'center',
-    },
-    optionText: {
-      fontSize: 13,
-      color: '#44457D',
-    },
+  dropdowncontainer: {
+    justifyContent: 'flex-end',
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  dropdownButton: {
+    backgroundColor: '#F5F7FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 8,
+    width: 125,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 6,
+  },
+  buttonText: {
+    color: '#44457D',
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  dropdownList: {
+    position: 'absolute',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    zIndex: 1000,
+    width: 125,
+    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+    elevation: 4,
+    top: 40,
+  },
+  option: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    padding: 4,
+    alignItems: 'center',
+  },
+  optionText: {
+    fontSize: 13,
+    color: '#44457D',
+  },
   profile: {
     width: 36,
     height: 36,
