@@ -14,6 +14,7 @@ interface GetMapHTMLOptions {
     image_url?: string;
   }>;
   nearbyRestaurants?: Array<{
+    amenity: string;
     latitude: number;
     longitude: number;
     name: string;
@@ -33,6 +34,28 @@ export const getMapHTML = ({
   const fontAwesomeCSS =
     '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />';
   let markersJS = "";
+  function getIconUrl(amenity: any) {
+    switch (amenity) {
+      case "bar":
+        return "https://wiki.openstreetmap.org/w/images/9/94/Bar-16.svg";
+      case "cafe":
+        return "https://wiki.openstreetmap.org/w/images/d/da/Cafe-16.svg";
+      case "fast_food":
+        return "https://wiki.openstreetmap.org/w/images/1/1f/Fast-food-16.svg";
+      case "restaurant":
+        return "https://wiki.openstreetmap.org/w/images/b/bb/Restaurant-14.svg";
+      case "biergarten":
+        return "https://wiki.openstreetmap.org/w/images/e/e1/Biergarten-16.svg";
+      case "food_court":
+        return "https://wiki.openstreetmap.org/w/images/b/bb/Restaurant-14.svg";
+      case "ice_cream":
+        return "https://wiki.openstreetmap.org/w/images/0/0f/Ice-cream-14.svg";
+      case "pub":
+        return "https://wiki.openstreetmap.org/w/images/5/5d/Pub-16.svg";
+      default:
+        return "https://wiki.openstreetmap.org/w/images/b/bb/Restaurant-14.svg"; // Default icon
+    }
+  }
 
   // Current location marker and destination
   if (route && route.length > 0) {
@@ -217,7 +240,7 @@ export const getMapHTML = ({
     nearbyRestaurants.forEach((restaurant) => {
       markersJS += `
         var restaurantIcon = L.divIcon({
-          html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-utensils" style="color: #dc3545; font-size: 16px;"></i></div>',
+          html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><img src="${getIconUrl(restaurant.amenity)}" style="width: 16px; height: 16px;" /></div>',
           className: 'restaurant-icon',
           iconSize: [32, 32],
           iconAnchor: [16, 32]
@@ -231,13 +254,10 @@ export const getMapHTML = ({
           .bindPopup(\`
             <div style="max-width: 200px;">
               <b>${restaurant.name}</b>
-              ${restaurant.cuisine
-          ? `<p style="margin: 2px 0; color: #666;">Cuisine: ${restaurant.cuisine}</p>`
-          : ""
-        }
+              ${restaurant.cuisine ? `<p style="margin: 2px 0; color: #666;">Cuisine: ${restaurant.cuisine}</p>` : ""}
               \${${JSON.stringify(restaurant)}.image_url ? 
                 \`<img 
-                  src="${restaurant.image_url}" 
+                  src="\${${JSON.stringify(restaurant)}.image_url}" 
                   style="width: 100%; height: auto; margin-top: 5px; border-radius: 4px; cursor: pointer;"
                   onerror="this.onerror=null;this.src='https://via.placeholder.com/100x75.png?text=Image+Not+Available';"
                   onclick="window.ReactNativeWebView.postMessage(JSON.stringify({ 

@@ -113,6 +113,7 @@ export interface MapComponentProps {
   webviewRef?: React.RefObject<WebView>;
   onSpotClick?: (spotName: string) => void;
   nearbyRestaurants?: Array<{
+    amenity: string;
     latitude: number;
     longitude: number;
     name: string;
