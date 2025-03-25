@@ -240,10 +240,10 @@ export const getMapHTML = ({
     nearbyRestaurants.forEach((restaurant) => {
       markersJS += `
         var restaurantIcon = L.divIcon({
-          html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><img src="${getIconUrl(restaurant.amenity)}" style="width: 16px; height: 16px;" /></div>',
+          html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;"><img src="${getIconUrl(restaurant.amenity)}" style="width: 12px; height: 12px;" /></div>',
           className: 'restaurant-icon',
-          iconSize: [32, 32],
-          iconAnchor: [16, 32]
+          iconSize: [28, 28],
+          iconAnchor: [14, 28]
         });
         
         L.marker([${restaurant.latitude}, ${restaurant.longitude}], { 
