@@ -116,7 +116,7 @@ const Home = () => {
       const locationObj = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = locationObj.coords;
       const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
-      const address = geocode && geocode.length > 0 
+      const address = geocode && geocode.length > 0
         ? `${geocode[0].name ? geocode[0].name + ', ' : ''}${geocode[0].street ? geocode[0].street + ', ' : ''}${geocode[0].city}, ${geocode[0].region}`
         : 'Unknown Location';
       setCurrentLocation({ latitude, longitude, address });
@@ -147,7 +147,7 @@ const Home = () => {
   const handleAttractionPress = (attraction: Attraction) => {
     router.push({
       pathname: '/(tabs)/route',
-      params: { 
+      params: {
         attraction: encodeURIComponent(JSON.stringify(attraction)),
         from: currentLocation ? encodeURIComponent(JSON.stringify(currentLocation)) : ''
       }
@@ -198,8 +198,8 @@ const Home = () => {
     if (location.trim() !== '') {
       router.replace({
         pathname: '/(tabs)/route',
-        params: { 
-          destination: location, 
+        params: {
+          destination: location,
           from: currentLocation ? encodeURIComponent(JSON.stringify(currentLocation)) : '',
           timestamp: new Date().getTime()
         }
@@ -212,7 +212,7 @@ const Home = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'android' ? 'padding' : 'height'}
-      style={{ flex: 1,}}
+      style={{ flex: 1, }}
     >
       <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
         <ScrollView
@@ -287,31 +287,46 @@ const Home = () => {
 
           <View style={styles.attractionsContainer}>
             <Text style={styles.attractionsTitle}>Cities Tourist Attractions</Text>
-            <View style={{padding: 10, borderRadius: 18, borderColor: '#C7D2FE', borderWidth: 2, width: 700, marginTop: 18, marginBottom: 100}}> 
-             <ScrollView horizontal showsHorizontalScrollIndicator={false}> 
-              {filteredAttractions.length === 0 ? (
-                <Text style={styles.noResultsText}>No results found</Text>
-              ) : (
-                filteredAttractions.map((attraction) => (
-                  <TouchableOpacity
-                    key={attraction.id}
-                    style={styles.attractionItem}
-                    onPress={() => handleAttractionPress(attraction)}
-                  >
-                    <ImageBackground source={attraction.image} style={styles.attractionImage}>
-                      <View style={styles.attractionText}>
-                        <Text style={styles.attractionTitle}>
-                          {attraction.name}
-                        </Text>
-                        <Text style={styles.attractionCity}>
-                          {attraction.city}
-                        </Text>
-                      </View>
-                    </ImageBackground>
-                  </TouchableOpacity>
-                ))
-              )}
-            </ScrollView>
+            <View style={{
+              padding: 10,
+              borderRadius: 18,
+              borderColor: '#C7D2FE',
+              borderWidth: 2,
+              width: '100%',  // Changed from fixed 700
+              marginTop: 18,
+              marginBottom: 100,
+              height: width * 0.7 // Add fixed height
+            }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  alignItems: 'center' // Vertically center items
+                }}
+              >
+                {filteredAttractions.length === 0 ? (
+                  <Text style={styles.noResultsText}>No results found</Text>
+                ) : (
+                  filteredAttractions.map((attraction) => (
+                    <TouchableOpacity
+                      key={attraction.id}
+                      style={styles.attractionItem}
+                      onPress={() => handleAttractionPress(attraction)}
+                    >
+                      <ImageBackground source={attraction.image} style={styles.attractionImage}>
+                        <View style={styles.attractionText}>
+                          <Text style={styles.attractionTitle}>
+                            {attraction.name}
+                          </Text>
+                          <Text style={styles.attractionCity}>
+                            {attraction.city}
+                          </Text>
+                        </View>
+                      </ImageBackground>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
             </View>
           </View>
         </ScrollView>
@@ -436,13 +451,18 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#404163',
   },
-  
+
   attractionItem: {
-    width: width * 0.9,
-    height: width * 0.6,
+    width: width * 0.7, // Reduced from 0.9
+    height: width * 0.6, // Reduced height for better proportion
     borderRadius: 16,
     overflow: 'hidden',
-    marginRight: 15,
+    marginRight: 20, // Increased spacing between items
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5, // For Android
   },
   attractionImage: {
     flex: 1,
@@ -452,16 +472,17 @@ const styles = StyleSheet.create({
   attractionText: {
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
   },
   attractionTitle: {
     color: '#fff',
-    fontSize: width * 0.05,
+    fontSize: 16, // Fixed size instead of width-based
     fontWeight: '700',
+    marginBottom: 4,
   },
   attractionCity: {
     color: '#fff',
-    fontSize: width * 0.04,
+    fontSize: 16, // Fixed size instead of width-based
   },
   noResultsText: {
     textAlign: 'center',
