@@ -31,6 +31,7 @@ import { Region, LatLng, MapComponentProps, Route, SegmentPath, RouteDetails, Ro
 import { sleep, formatDuration, shortenAddress, getSegmentLabel } from "../../src/utils/helpers";
 import { getMapHTML } from "../../src/utils/getMapHTML";
 import MapComponent from "@/src/components/MapComponent";
+import { locationCacheRef } from "@/src/utils/locationsCache";
 
 const polyline = require("@mapbox/polyline");
 
@@ -59,7 +60,6 @@ const SuggestionList: React.FC<{
     </ScrollView>
   );
 };
-const locationCacheRef = { current: {} as { [key: string]: any[] } };
 
 const RouteScreen: React.FC = () => {
   const { destination: destParam, attraction } = useLocalSearchParams();
