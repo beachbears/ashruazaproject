@@ -16,6 +16,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   Platform,
+  FlatList,
 } from "react-native";
 import axios from "axios";
 import { WebView } from "react-native-webview";
@@ -127,6 +128,7 @@ const RouteScreen: React.FC = () => {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(', ');
   };
+  const [spotLimit, setSpotLimit] = useState(20); // Default to 10 spots
 
   useEffect(() => {
     if (selectedLocationType === "origin" && route[0]) {
@@ -305,22 +307,19 @@ const RouteScreen: React.FC = () => {
     })();
   }, []);
 
-  const fetchRestaurants = async (lat: number, lon: number) => {
+  const fetchRestaurants = async (lat: number, lon: number, limit: number) => {
     try {
-      const response = await axios.get(
-        "https://comgu20-production.up.railway.app/api/sustenance",
-        {
-          params: {
-            lat,
-            lon,
-            radius: 5,
-            sort: "nearest",
-            amenity: "cafe,restaurant,fast_food,pub,bar,ice_cream,food_court,biergarten",
-            page: 1,
-            per_page: 20,
-          },
-        }
-      );
+      const response = await axios.get("https://comgu20-production.up.railway.app/api/sustenance", {
+        params: {
+          lat,
+          lon,
+          radius: 5,
+          sort: "nearest",
+          amenity: "cafe,restaurant,fast_food,pub,bar,ice_cream,food_court,biergarten",
+          page: 1,
+          per_page: limit,
+        },
+      });
       const mapped = response.data.results.map((item: any) => ({
         name: item.name || "Unnamed Dining Spot",
         latitude: item.coordinates?.lat || 0,
@@ -341,11 +340,6 @@ const RouteScreen: React.FC = () => {
         facebook: item.contacts?.facebook,
         email: item.contacts?.email,
       }));
-      console.log("Fetched restaurants:", mapped.length);
-      mapped.forEach((r: { name: any; distance: any; }, i: number) => {
-        console.log(`Restaurant ${i + 1}: ${r.name}, distance: ${r.distance} km`);
-      });
-      console.log("Total available spots:", response.data.meta.total);
       setNearbyRestaurants(mapped);
     } catch (error) {
       console.error("Error fetching restaurants:", error);
@@ -353,12 +347,45 @@ const RouteScreen: React.FC = () => {
     }
   };
 
+  const fetchAttractions = async (lat: number, lon: number, limit: number) => {
+    try {
+      const response = await axios.get("https://comgu20-production.up.railway.app/api/tourist_spots", {
+        params: {
+          lat,
+          lon,
+          radius: 5, // 5 kilometers
+          page: 1,
+          per_page: limit,
+        },
+      });
+      const mapped = response.data.results.map((item: any) => ({
+        name: item.tourist_spot || "Unnamed Attraction",
+        latitude: item.latitude || 0,
+        longitude: item.longitude || 0,
+        description: item.description || "No description available",
+        address: item.address || "Address not available",
+        distance: item.distance,
+        image_url: item.image_url || "https://via.placeholder.com/150",
+      }));
+      setNearbySpots(mapped);
+    } catch (error) {
+      console.error("Error fetching attractions:", error);
+      setNearbySpots([]);
+    }
+  };
+
   useEffect(() => {
     if (selectedLocationCoords) {
       console.log("Fetching restaurants for:", selectedLocationType, selectedLocationCoords);
-      fetchRestaurants(selectedLocationCoords.latitude, selectedLocationCoords.longitude);
+      fetchRestaurants(selectedLocationCoords.latitude, selectedLocationCoords.longitude, spotLimit);
     }
   }, [selectedLocationCoords]);
+
+  useEffect(() => {
+    if (activeTab === "Attractions" && selectedLocationCoords) {
+      fetchAttractions(selectedLocationCoords.latitude, selectedLocationCoords.longitude, spotLimit);
+    }
+  }, [activeTab, selectedLocationCoords, spotLimit]);
 
   async function geocodeAddress(address: string) {
     if (locationCacheRef.current[address])
@@ -893,6 +920,20 @@ const RouteScreen: React.FC = () => {
   const renderRestaurantsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Dining Spots</Text>
+      <View style={styles.spotLimitContainer}>
+        <Text style={styles.spotLimitLabel}>Show:</Text>
+        {[10, 20, 50].map((limit) => (
+          <TouchableOpacity
+            key={limit}
+            style={[styles.spotLimitButton, spotLimit === limit && styles.activeSpotLimitButton]}
+            onPress={() => setSpotLimit(limit)}
+          >
+            <Text style={[styles.spotLimitButtonText, spotLimit === limit && styles.activeSpotLimitButtonText]}>
+              {limit}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       {(route[0] || route[1]) && (
         <View style={styles.locationTypeContainer}>
           <Text style={styles.locationTypeLabel}>Show dining spots near:</Text>
@@ -940,10 +981,6 @@ const RouteScreen: React.FC = () => {
                   style={styles.restaurantCard}
                   onPress={() => setRestaurantModalVisible(true)}
                 >
-                  {/* <Image
-                    source={{ uri: restaurant.image_url || "https://via.placeholder.com/150" }}
-                    style={{ width: 156, height: 90, borderRadius: 8, marginBottom: 8 }}
-                  /> */}
                   <Text style={styles.restaurantName} numberOfLines={1}>
                     {restaurant.name}
                   </Text>
@@ -973,27 +1010,110 @@ const RouteScreen: React.FC = () => {
   const renderAttractionsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Attractions</Text>
-      {nearbySpots.length > 0 ? (
-        <AttractionsList
-          nearbySpots={nearbySpots}
-          onSpotSelect={(spot) => {
-            setDestination(spot.name);
-            const newDestination = { latitude: spot.latitude, longitude: spot.longitude };
-            setRoadPath([]);
-            const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
-            setRoute([currentOrigin, newDestination]);
-            fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
-            setActiveTab("Route"); // Switch back to Route tab
-          }}
-          onSpotView={(spot) => {
-            setSelectedSpot({ latitude: spot.latitude, longitude: spot.longitude });
-          }}
-        />
+      <View style={styles.spotLimitContainer}>
+        <Text style={styles.spotLimitLabel}>Show:</Text>
+        {[10, 20, 50].map((limit) => (
+          <TouchableOpacity
+            key={limit}
+            style={[styles.spotLimitButton, spotLimit === limit && styles.activeSpotLimitButton]}
+            onPress={() => setSpotLimit(limit)}
+          >
+            <Text style={[styles.spotLimitButtonText, spotLimit === limit && styles.activeSpotLimitButtonText]}>
+              {limit}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {(route[0] || route[1]) && (
+        <View style={styles.locationTypeContainer}>
+          <Text style={styles.locationTypeLabel}>Show attractions near:</Text>
+          <View style={styles.segmentedControl}>
+            <TouchableOpacity
+              style={[styles.segmentButton, selectedLocationType === "origin" && styles.activeSegment]}
+              onPress={() => setSelectedLocationType("origin")}
+              disabled={!route[0]}
+            >
+              <Text
+                style={[
+                  styles.segmentText,
+                  selectedLocationType === "origin" && styles.activeSegmentText,
+                  !route[0] && styles.disabledSegmentText,
+                ]}
+              >
+                Origin
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segmentButton, selectedLocationType === "destination" && styles.activeSegment]}
+              onPress={() => setSelectedLocationType("destination")}
+              disabled={!route[1]}
+            >
+              <Text
+                style={[
+                  styles.segmentText,
+                  selectedLocationType === "destination" && styles.activeSegmentText,
+                  !route[1] && styles.disabledSegmentText,
+                ]}
+              >
+                Destination
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {selectedLocationCoords ? (
+        nearbySpots.length > 0 ? (
+          <FlatList
+            data={nearbySpots}
+            keyExtractor={(item, index) => item.name + index}
+            renderItem={({ item }) => (
+              <View style={styles.attractionCard}>
+                <Image
+                  source={{ uri: item.image_url || "https://via.placeholder.com/300x200.png?text=No+Image" }}
+                  style={styles.attractionImage}
+                  defaultSource={{ uri: "https://via.placeholder.com/300x200.png?text=Loading..." }}
+                />
+                <Text style={styles.attractionName}>{item.name}</Text>
+                <Text style={styles.attractionDescription}>
+                  {item.description || "No description available."}
+                </Text>
+                <View style={styles.actionButtonsContainer}>
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => setSelectedSpot({ latitude: item.latitude, longitude: item.longitude })}
+                  >
+                    <Text style={styles.viewText}>View</Text>
+                    <Ionicons name="eye-outline" size={16} color="#3B82F6" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.goHereButton}
+                    onPress={() => {
+                      setDestination(item.name);
+                      const newDestination = { latitude: item.latitude, longitude: item.longitude };
+                      setRoadPath([]);
+                      const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
+                      setRoute([currentOrigin, newDestination]);
+                      fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
+                      setActiveTab("Route");
+                    }}
+                  >
+                    <Text style={styles.goHereText}>Go here</Text>
+                    <Ionicons name="navigate" size={18} color="#3B82F6" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            contentContainerStyle={styles.scrollContent}
+          />
+        ) : (
+          <Text style={styles.promptText}>No attractions found near {selectedLocationType}</Text>
+        )
       ) : (
-        <Text style={styles.promptText}>No nearby attractions found.</Text>
+        <Text style={styles.promptText}>Enter an origin/destination to view nearby attractions</Text>
       )}
     </View>
   );
+
   const detailsContent = (
     <View style={styles.container}>
       <View style={styles.tabContainer}>
@@ -1019,10 +1139,10 @@ const RouteScreen: React.FC = () => {
           style={styles.map}
           polylineColor={polylineColor}
           webviewRef={webviewRef}
-          nearbySpots={nearbySpots}
+          nearbySpots={activeTab === "Attractions" ? nearbySpots : []} // Only show attractions when tab is active
           selectedSpot={selectedSpot}
           isLoading={isRouteLoading}
-          nearbyRestaurants={activeTab === "Dining" ? nearbyRestaurants : []} // Conditional rendering
+          nearbyRestaurants={activeTab === "Dining" ? nearbyRestaurants : []}
           onRestaurantClick={(name) => {
             const restaurant = nearbyRestaurants.find((r) => r.name === name);
             if (restaurant) {
@@ -1484,4 +1604,20 @@ const styles = StyleSheet.create({
   tabText: { color: "#6B7280", fontWeight: "500" },
   activeTabText: { color: "#FFFFFF" },
   tabContent: { paddingHorizontal: 16 },
+  spotLimitContainer: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  spotLimitLabel: { fontSize: 12, color: "#6B7280", marginRight: 8 },
+  spotLimitButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: "#F3F4F6", marginRight: 8 },
+  activeSpotLimitButton: { backgroundColor: "#6366F1" },
+  spotLimitButtonText: { fontSize: 12, color: "#6B7280" },
+  activeSpotLimitButtonText: { color: "#FFFFFF" },
+  attractionCard: { marginBottom: 20, borderWidth: 1, borderColor: "#C7D2FE", borderRadius: 8, padding: 10, backgroundColor: "#FBFCFF" },
+  attractionImage: { height: 200, width: "100%", borderRadius: 10, marginBottom: 10 },
+  attractionName: { fontSize: 18, fontWeight: "bold", color: "#44457D", marginBottom: 5 },
+  attractionDescription: { fontSize: 12, color: "#686A9C", marginBottom: 10 },
+  actionButtonsContainer: { flexDirection: "row", gap: 8, marginVertical: 8, justifyContent: "space-between" },
+  viewButton: { flexDirection: "row", alignItems: "center", gap: 6, padding: 12, backgroundColor: "#EFF6FF", borderRadius: 8, flex: 1 },
+  viewText: { color: "#3B82F6", fontWeight: "500" },
+  goHereButton: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, backgroundColor: "#EFF6FF", borderRadius: 8, flex: 1 },
+  goHereText: { color: "#3B82F6", fontWeight: "500" },
+  scrollContent: { paddingBottom: 20 },
 });
