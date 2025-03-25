@@ -32,34 +32,11 @@ import { sleep, formatDuration, shortenAddress, getSegmentLabel } from "../../sr
 import { getMapHTML } from "../../src/utils/getMapHTML";
 import MapComponent from "@/src/components/MapComponent";
 import { locationCacheRef } from "@/src/utils/locationsCache";
+import SuggestionList from "@/src/components/SuggestionList";
 
 const polyline = require("@mapbox/polyline");
 
 LogBox.ignoreLogs(["textShadow*", "shadow*"]);
-
-const SuggestionList: React.FC<{
-  suggestions: any[];
-  onSelect: (item: any) => void;
-}> = ({ suggestions, onSelect }) => {
-  if (!suggestions.length) return null;
-  return (
-    <ScrollView
-      style={styles.suggestionList}
-      keyboardShouldPersistTaps="always"
-      nestedScrollEnabled
-    >
-      {suggestions.map((item, index) => (
-        <TouchableOpacity
-          key={`${item.name}-${index}`}
-          style={styles.suggestionItem}
-          onPress={() => onSelect(item)}
-        >
-          <Text style={styles.suggestionText}>{item.name}</Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
-};
 
 const RouteScreen: React.FC = () => {
   const { destination: destParam, attraction } = useLocalSearchParams();
