@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 48,
     borderRadius: 16,
-    color: '#FFFFFF',
+    color: '#404163',
     textAlignVertical: 'center',
   },
   clearButton: {

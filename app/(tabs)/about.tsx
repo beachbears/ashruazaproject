@@ -324,8 +324,8 @@ const styles = StyleSheet.create({
     marginBottom: 15
   },
   footer: {
-    backgroundColor: "#F9FAFB",
-    paddingVertical: 40,
+    backgroundColor: "#C7D2FE",
+    paddingVertical: 16,
   },
   footerGrid: {
     flexDirection: "column",
