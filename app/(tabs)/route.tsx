@@ -33,6 +33,7 @@ import { getMapHTML } from "../../src/utils/getMapHTML";
 import MapComponent from "@/src/components/MapComponent";
 import { locationCacheRef } from "@/src/utils/locationsCache";
 import SuggestionList from "@/src/components/SuggestionList";
+import AttractionsList from "@/src/components/AttractionsList";
 
 const polyline = require("@mapbox/polyline");
 interface TabButtonProps {
@@ -867,8 +868,11 @@ const RouteScreen: React.FC = () => {
             <TouchableOpacity style={styles.button} onPress={() => setActiveTab("Restaurants")}>
               <Text style={styles.buttonText}>Restaurants</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={() => setActiveTab("Attractions")}>
-              <Text style={styles.buttonText}>Attractions</Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => setModalVisible(true)}
+            >
+              <Text style={styles.buttonText}>Nearby Attractions</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.button}
@@ -976,11 +980,27 @@ const RouteScreen: React.FC = () => {
   const renderAttractionsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Attractions</Text>
-      <Text style={styles.promptText}>Attractions content will be implemented here.</Text>
-      {/* Add similar logic to restaurants here when implementing attractions */}
+      {nearbySpots.length > 0 ? (
+        <AttractionsList
+          nearbySpots={nearbySpots}
+          onSpotSelect={(spot) => {
+            setDestination(spot.name);
+            const newDestination = { latitude: spot.latitude, longitude: spot.longitude };
+            setRoadPath([]);
+            const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
+            setRoute([currentOrigin, newDestination]);
+            fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
+            setActiveTab("Route"); // Switch back to Route tab
+          }}
+          onSpotView={(spot) => {
+            setSelectedSpot({ latitude: spot.latitude, longitude: spot.longitude });
+          }}
+        />
+      ) : (
+        <Text style={styles.promptText}>No nearby attractions found.</Text>
+      )}
     </View>
   );
-
   const detailsContent = (
     <View style={styles.container}>
       <View style={styles.tabContainer}>
