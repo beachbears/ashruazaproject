@@ -380,7 +380,7 @@ useEffect(() => {
   return (
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3, marginBottom: 12 }}>
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
@@ -426,10 +426,10 @@ useEffect(() => {
               
            {/* In your post rendering section - Fixed syntax and logic */}
 <Text style={styles.postLocation}>
-  From: {post.location || (params.location ? decodeURIComponent(params.location as string) : 'Unknown Location')}
+ <Text style={styles.boldText}>From:</Text> {post.location || (params.location ? decodeURIComponent(params.location as string) : 'Unknown Location')}
 </Text>
 <Text style={styles.postDestination}>
-  To: {post.destination || (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination')}
+<Text style={styles.boldText}>To:</Text> {post.destination || (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination')}
 </Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
@@ -442,6 +442,7 @@ useEffect(() => {
                                     <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
                                   </View>
                 </View>
+               
                 <View style={styles.arrowcontainer}>
                   <TouchableOpacity
                     style={[
@@ -470,7 +471,9 @@ useEffect(() => {
                       color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
                     />
                   </TouchableOpacity>
-                </View>
+
+              </View>
+
               </View>
             </View>
           ))}
@@ -520,15 +523,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#44457D',
+    marginTop: 8
+  },
+  boldText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#44457D',
   },
   experience: {
     fontSize: 12,
     color: '#6B7280',
-    fontWeight: '400',
+    fontWeight: '500',
   },
-  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 18, textAlign: 'center' },
+  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 20, textAlign: 'center', marginBottom: 20 },
   postbutton: { backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  postButtonText: { color: 'white', fontSize: 12, },
+  postButtonText: { color: 'white', fontSize: 12, fontWeight: 600 },
   loadingIndicator: {
     marginVertical: 20,
   },
@@ -578,14 +587,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   postLocation: {
-    fontSize: 14,
-    color: '#1F2937',
-    marginVertical: 14,
+    fontSize: 12,
+    color: '#44457D',
+    marginTop: 14,
+    marginBottom: 6,
+    fontWeight: 400
   },
   postDestination: {
-    fontSize: 14,
-    color: '#1F2937',
+    fontSize: 12,
+    color: '#44457D',
     marginBottom: 16,
+    fontWeight: 400
   },
   arrowup: {
     borderWidth: 1,

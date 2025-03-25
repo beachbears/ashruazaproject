@@ -182,8 +182,8 @@ const styles = StyleSheet.create({
     gap: 100,
   },
   logo: {
-    width: 30,
-    height: 30,
+    width: 36,
+    height: 36,
   },
   headerTitle: {
     fontSize: 16,
@@ -215,8 +215,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   account: {
-    width: 30,
-    height: 30,
+    width: 31,
+    height: 31,
     borderRadius: 15,
     backgroundColor: '#6366F1',
     justifyContent: 'center',

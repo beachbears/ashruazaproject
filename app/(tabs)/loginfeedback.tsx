@@ -193,14 +193,7 @@ const Feedback: React.FC = () => {
     );
   };
 
-  if (loadingFeedback) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6366F1" />
-        <Text>Loading feedback...</Text>
-      </View>
-    );
-  }
+ 
 
   return (
     <ScrollView style={styles.maincontainer}>

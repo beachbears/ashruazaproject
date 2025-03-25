@@ -238,7 +238,7 @@ const RegisterScreen = () => {
 
             <View style={styles.formContainer}>
               <Image source={require('../assets/images/logo.png')} style={styles.logo} />
-              <Text style={[styles.formTitle, { fontSize: width * 0.06 }]}>Register to Kommutsera!</Text>
+              <Text style={[styles.formTitle, ]}>Register to Kommutsera!</Text>
               <Text style={styles.subtitle}>Please enter your credentials</Text>
 
               {/* Display general error message if exists */}
@@ -253,9 +253,11 @@ const RegisterScreen = () => {
                 const key = field as keyof SignupForm;
                 return (
                   <View key={field} style={styles.inputContainer}>
+                    
                     <Text style={styles.inputLabel}>
-                      {field.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
-                    </Text>
+  {field.replace(/([A-Z])/g, ' $1').trim().replace(/\b\w/g, (char) => char.toUpperCase())}
+</Text>
+
 
                     <TextInput
                       style={[styles.input, errors[key] ? styles.inputError : null]}
@@ -269,7 +271,7 @@ const RegisterScreen = () => {
                               : key === 'passwordConfirmation'
                                 ? 'Confirm your password'
                                 : key === 'email'
-                                  ? 'youremail@example.com'
+                                  ? 'E.g johndoe123@example.com'
                                   : key === 'username'
                                     ? 'E.g johndoe12'
                                     : ''
@@ -296,14 +298,14 @@ const RegisterScreen = () => {
                 disabled={isLoading}
               >
                 <Text style={styles.submitButtonText}>
-                  {isLoading ? 'Registering...' : 'Register'}
+                  {isLoading ? 'Creating account...' : 'Create account'}
                 </Text>
               </TouchableOpacity>
 
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Already have an account?</Text>
                 <TouchableOpacity onPress={() => router.push("/login")}>
-                  <Text style={styles.linkText}>Login</Text>
+                  <Text style={styles.linkText}>Login here</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -328,18 +330,21 @@ const getStyles = (width: number) =>
       elevation: 5,
       width: '100%',
       maxWidth: 800,
-      marginBottom: 50,
+      marginBottom: 30,
     },
     headerImageContainer: {
       height: 260,
       position: 'relative',
+      borderRadius: 8
       
     },
     headerImage: {
       width: '100%',
       height: '100%',
       resizeMode: 'cover',
-    },
+      borderTopLeftRadius: 8,
+      borderTopRightRadius: 8
+    },    
     textOverlay: {
       position: 'absolute',
       bottom: 10,
@@ -366,19 +371,20 @@ const getStyles = (width: number) =>
       width: 80,
       height: 80,
       alignSelf: 'center',
-      marginBottom: 20,
+      marginBottom: 10,
       borderRadius: 8
     },
     formTitle: {
       fontWeight: 'bold',
       color: '#2D3436',
       textAlign: 'center',
-      marginBottom: 8,
+      marginBottom: 2,
+      fontSize: 23
     },
     subtitle: {
       color: '#636E72',
       textAlign: 'center',
-      marginBottom: 15,
+      marginBottom: 40,
     },
     generalErrorContainer: {
       flexDirection: 'row',
@@ -396,14 +402,13 @@ const getStyles = (width: number) =>
       textAlign: 'center',
     },
     inputContainer: {
-      marginBottom: 25,
+      marginBottom: 16,
     },
     inputLabel: {
-      fontSize: 12,
-      color: '#2D3436',
-      marginBottom: 8,
-      fontWeight: '600',
-      marginLeft: 15,
+      marginLeft: 20,
+      marginBottom: 6,
+      color: '#44457D',
+      fontSize: 15,
     },
     input: {
       backgroundColor: '#F5F7FF',
@@ -436,10 +441,11 @@ const getStyles = (width: number) =>
     submitButton: {
       backgroundColor: '#6266f0',
       borderRadius: 10,
-      paddingVertical: 12,
-      marginTop: 30,
-      width: '70%',
+      paddingVertical: 8,
+      marginTop: 26,
+      width: '90%',
       alignSelf: 'center',
+      marginBottom: 2
     },
     disabledButton: {
       opacity: 0.7,
@@ -457,11 +463,13 @@ const getStyles = (width: number) =>
     },
     footerText: {
       color: '#4A5568',
+      fontSize: 15
     },
     linkText: {
       color: '#4B7BEC',
-      fontWeight: 'bold',
       marginLeft: 4,
+      fontSize: 14,
+      textDecorationLine: 'underline',
     },
   });
 

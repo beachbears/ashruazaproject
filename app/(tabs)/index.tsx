@@ -236,7 +236,7 @@ const Home = () => {
                 Simply Travel with <Text style={styles.highlight}>kommutsera</Text>
               </Text>
               <Text style={styles.description}>
-                Conquer the Metro with ease! <Text style={styles.boldText}>Kommutsera: </Text> your companion for hassle-free commuting, offering clear routes and navigation.
+                Conquer the Metro with ease! <Text style={styles.boldText}>Kommutsera: Gabay ko, Byahe mo!!! </Text> your companion for hassle-free commuting, offering clear routes and navigation.
               </Text>
 
               {/* Capture layout position ng search container */}
@@ -281,13 +281,13 @@ const Home = () => {
                 </ScrollView>
               )}
 
-              <Image source={require('../../assets/images/homelogo.png')} style={styles.conquerImage} />
+              <Image source={require('../../assets/images/image 90.png')} style={styles.conquerImage} />
             </View>
           </View>
 
           <View style={styles.attractionsContainer}>
             <Text style={styles.attractionsTitle}>Cities Tourist Attractions</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollableBox}>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollableBox}> 
               {filteredAttractions.length === 0 ? (
                 <Text style={styles.noResultsText}>No results found</Text>
               ) : (
@@ -311,6 +311,7 @@ const Home = () => {
                 ))
               )}
             </ScrollView>
+          
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
@@ -339,6 +340,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 9999,
     marginBottom: 16,
+    marginTop: 20
   },
   badgeText: {
     color: '#4F46E5',
@@ -366,7 +368,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: width * 0.5,
     resizeMode: 'contain',
-    marginTop: 16,
+    marginTop: 30,
+    marginBottom: 20,
   },
   searchContainer: {
     width: '100%',
@@ -426,9 +429,9 @@ const styles = StyleSheet.create({
   },
   attractionsTitle: {
     textAlign: 'left',
-    marginBottom: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     fontSize: width * 0.05,
+    color: '#404163',
   },
   scrollableBox: {
     marginTop: 20,

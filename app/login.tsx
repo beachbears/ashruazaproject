@@ -135,18 +135,18 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
             <Image source={require('../assets/images/reg.png')} style={styles.headerImage} />
             <View style={styles.textOverlay}>
               <Text style={[styles.heading, { fontSize: width * 0.08 }]}>Kommutsera</Text>
-              <Text style={[styles.description, { fontSize: width * 0.04 }]}>
-                Kommutsera is the perfect guide for exploring Metro Manila. With easy-to-follow routes, it helps you navigate the city's cultural, historic, and modern attractions effortlessly.
-              </Text>
+               <Text style={[styles.description, { fontSize: width * 0.03 }]}>
+                             Kommutsera is the perfect guide for exploring Metro Manila. With easy-to-follow routes, it helps you navigate the city’s cultural, historic, and modern attractions effortlessly. Whether you’re a tourist or a local, Kommutsera ensures a smooth, enjoyable, and efficient travel experience throughout Metro Manila.</Text>
             </View>
+
           </View>
 
           <View style={styles.formContainer}>
             <Image source={require('../assets/images/logo.png')} style={styles.logo} />
             <Text style={[styles.formTitle, { fontSize: width * 0.06 }]}>Welcome to Kommutsera!</Text>
-            <Text style={[styles.subtitle, { fontSize: width * 0.05 }]}>Please enter your credentials</Text>
+            <Text style={[styles.subtitle, ]}>Please enter your credentials</Text>
 
-            <Text style={[styles.inputnameEmail, { fontSize: width * 0.04 }]}>Email</Text>
+            <Text style={[styles.inputnameEmail, ]}>Email</Text>
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
                 <Ionicons name="mail-outline" size={20} color="#6366F1" style={styles.icon} />
@@ -161,7 +161,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
-            <Text style={[styles.inputnamePassword, { fontSize: width * 0.04 }]}>Password</Text>
+            <Text style={[styles.inputnamePassword,  ]}>Password</Text>
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
                 <Ionicons name="lock-closed-outline" size={20} color="#6366F1" style={styles.icon} />
@@ -183,7 +183,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                 <View style={[styles.checkbox, rememberMe && styles.checkedBox]}>
                   {rememberMe && <Text style={styles.checkmark}>✓</Text>}
                 </View>
-                <Text style={[styles.checkboxLabel, { fontSize: width * 0.04 }]}>Remember me?</Text>
+                <Text style={[styles.checkboxLabel, ]}>Remember me?</Text>
               </TouchableOpacity>
             
             </View>
@@ -197,9 +197,9 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
             </TouchableOpacity>
 
             <View style={styles.footer}>
-              <Text style={[styles.footerText, { fontSize: width * 0.04 }]}>Don't have an account?</Text>
+              <Text style={[styles.footerText]}>Don't have an account?</Text>
               <TouchableOpacity onPress={() => router.push("/signup")}>
-                <Text style={[styles.linkText, { fontSize: width * 0.04 }]}>Create account</Text>
+                <Text style={[styles.linkText]}>Create account</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -210,6 +210,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
 };
 
 const styles = StyleSheet.create({
+  
   container: {
     flexGrow: 1,
     backgroundColor: '#F9FAFB',
@@ -220,20 +221,26 @@ const styles = StyleSheet.create({
   mainContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.25)',
+    boxShadow: '0 5px 7px rgba(9, 8, 8, 0.25)',
     elevation: 5,
     width: '100%',
     maxWidth: 800,
+    marginBottom: 20
   },
   headerImageContainer: {
     position: 'relative',
-    height: 200,
+    width: '100%',
+    height: 200, // Adjust as needed
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    overflow: 'hidden', // Ensures the border radius is applied properly
   },
   headerImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+  
   textOverlay: {
     position: 'absolute',
     bottom: 10,
@@ -253,19 +260,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 75,
-    height: 75,
-    marginBottom: 16,
-    marginTop: 50,
+    width: 80,
+    height: 80,
+    marginBottom: 10,
+    marginTop: 20,
   },
   formTitle: {
     fontWeight: 'bold',
     color: '#424368',
-    marginBottom: 10,
+    marginBottom: 2,
   },
   subtitle: {
-    color: '#44457De',
-    marginBottom: 50,
+    color: '#636E72',
+    marginBottom: 40,
+    fontSize: 15
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -279,7 +287,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     padding: 10,
-    fontSize: 14,
+    fontSize: 13,
     color: '#2D3748',
     
   },
@@ -300,13 +308,14 @@ const styles = StyleSheet.create({
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 23,
   },
   checkbox: {
     width: 18,
     height: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginRight: 8,
+    marginRight: 12,
     borderRadius: 4,
   },
   checkedBox: {
@@ -320,18 +329,22 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     color: '#4A5568',
+    fontSize: 16
   },
   linkText: {
-    color: '#3182CE',
+    color: '#4B7BEC',
     textDecorationLine: 'underline',
+    fontSize: 15
   },
   submitButton: {
     backgroundColor: '#6266f0',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 100,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 36,
+    marginTop: 20,
+    width: '90%',
   },
   submitButtonText: {
     fontSize: 16,
@@ -344,6 +357,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#4A5568',
+    fontSize: 15
   },
   inputContainer: {
     width: '100%',
@@ -363,15 +377,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#A0AEC0',
   },
   inputnameEmail: {
-    marginRight: 210,
+    marginRight: 260,
     marginBottom: 10,
     color: '#44457D',
+    fontSize: 15,
   },
   inputnamePassword: {
-    marginRight: 210,
+    marginRight: 230,
     marginBottom: 10,
     color: '#44457D',
+    fontSize: 15,
   },
+  
 });
 
 export default LoginScreen;
