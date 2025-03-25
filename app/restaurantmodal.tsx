@@ -59,6 +59,24 @@ const ModalComponent: React.FC<ModalProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [showCategories, setShowCategories] = useState(false);
+  // Payment processing helper
+  const getAcceptedPaymentMethods = (paymentData: string): string => {
+    try {
+      // Parse the JSON string into an object
+      const paymentObj = JSON.parse(paymentData);
+      // Extract methods where the value is "yes" or "only"
+      const accepted = Object.entries(paymentObj)
+        .filter(([key, value]) =>
+          value && ["yes", "only"].includes(value.toString().toLowerCase())
+        )
+        .map(([key]) => key.replace(/^payment:/, "")); // Remove the "payment:" prefix
+      return accepted.join(", ");
+    } catch (error) {
+      console.error("Error parsing payment data:", error);
+      return "";
+    }
+  };
+
 
   // Handle website and phone linking
   const handleWebsitePress = (url: string) => {
@@ -244,10 +262,12 @@ const ModalComponent: React.FC<ModalProps> = ({
                         <Text style={styles.sectionValue}>Brand: {spot.brand}</Text>
                       </View>
                     )}
-                    {spot.takeaway && (
+                    {spot.takeaway !== null && spot.takeaway !== undefined && (
                       <View style={styles.infoRow}>
                         <Ionicons name="bag-handle-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>Takeaway: {spot.takeaway}</Text>
+                        <Text style={styles.sectionValue}>
+                          Takeaway: {spot.takeaway ? "Yes" : "No"}
+                        </Text>
                       </View>
                     )}
                     {spot.delivery && (
@@ -256,10 +276,12 @@ const ModalComponent: React.FC<ModalProps> = ({
                         <Text style={styles.sectionValue}>Delivery: {spot.delivery}</Text>
                       </View>
                     )}
-                    {spot.payment !== "{}" && (
+                    {spot.payment && spot.payment !== "{}" && (
                       <View style={styles.infoRow}>
                         <Ionicons name="card-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>Payment: {spot.payment}</Text>
+                        <Text style={styles.sectionValue}>
+                          Payment: {getAcceptedPaymentMethods(spot.payment) || "Not specified"}
+                        </Text>
                       </View>
                     )}
                     {spot.wheelchair && (
