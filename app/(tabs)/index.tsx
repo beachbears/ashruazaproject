@@ -212,7 +212,7 @@ const Home = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'android' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
+      style={{ flex: 1,}}
     >
       <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
         <ScrollView
@@ -287,7 +287,8 @@ const Home = () => {
 
           <View style={styles.attractionsContainer}>
             <Text style={styles.attractionsTitle}>Cities Tourist Attractions</Text>
-             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollableBox}> 
+            <View style={{padding: 10, borderRadius: 18, borderColor: '#C7D2FE', borderWidth: 2, width: 700, marginTop: 18, marginBottom: 100}}> 
+             <ScrollView horizontal showsHorizontalScrollIndicator={false}> 
               {filteredAttractions.length === 0 ? (
                 <Text style={styles.noResultsText}>No results found</Text>
               ) : (
@@ -311,7 +312,7 @@ const Home = () => {
                 ))
               )}
             </ScrollView>
-          
+            </View>
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
@@ -347,19 +348,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   title: {
-    fontSize: width * 0.08,
+    fontSize: 40,
     fontWeight: '700',
     textAlign: 'left',
     marginBottom: 16,
   },
   highlight: {
-    color: '#4F46E5',
+    color: '#6366F1',
   },
   description: {
-    fontSize: width * 0.04,
+    fontSize: 16,
     maxWidth: 500,
     textAlign: 'left',
     marginBottom: 16,
+    color: '#404163'
   },
   boldText: {
     fontWeight: 'bold',
@@ -378,32 +380,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderColor: '#ebebf1',
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: 16,
-    paddingVertical: 5,
-    paddingHorizontal: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 1,
   },
   input: {
     flex: 1,
     paddingHorizontal: 16,
     height: 48,
     borderRadius: 16,
-    color: '#333',
+    color: '#FFFFFF',
     textAlignVertical: 'center',
   },
   clearButton: {
     marginRight: 8,
   },
   button: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#6366F1',
     paddingHorizontal: 25,
-    paddingVertical: 15,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
     marginRight: 5,
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: 700
   },
   suggestionList: {
     backgroundColor: '#fff',
@@ -425,18 +428,15 @@ const styles = StyleSheet.create({
   },
   attractionsContainer: {
     width: '100%',
-    marginTop: 32,
+    marginTop: 36,
   },
   attractionsTitle: {
     textAlign: 'left',
     fontWeight: '500',
-    fontSize: width * 0.05,
+    fontSize: 20,
     color: '#404163',
   },
-  scrollableBox: {
-    marginTop: 20,
-    marginBottom: 100,
-  },
+  
   attractionItem: {
     width: width * 0.9,
     height: width * 0.6,

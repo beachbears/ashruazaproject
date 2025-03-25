@@ -361,8 +361,8 @@ export default function PostSuggestions() {
       <View style={styles.sectionHeader}>
        
         <View style={styles.detailsContainer}>
-          <Text style={styles.locationText}>From: {location}</Text>
-          <Text style={styles.locationText}>To: {destination}</Text>
+          <Text style={styles.locationText}><Text style={styles.boldText}>From:</Text> {location}</Text>
+          <Text style={styles.locationText}><Text style={styles.boldText}>To:</Text> {destination}</Text>
         </View>
       </View>
       <View style={{ flexDirection:'row', justifyContent:'space-between', marginBottom: 10, alignItems: 'center' }}>
@@ -487,6 +487,11 @@ const styles = StyleSheet.create({
   loadingIndicator: {
     marginVertical: 20,
   },
+  boldText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#44457D',
+  },
   maincontainer: {
     flexDirection: 'column',
     backgroundColor: '#F9FAFB',
@@ -514,9 +519,10 @@ const styles = StyleSheet.create({
   postButtonText: {
     color: 'white',
     fontSize: 12,
+    fontWeight: 700
   },
   detailsContainer: {
-    marginBottom: 10,
+    marginBottom: 16,
     flexDirection: 'column',
     paddingHorizontal: 10,
     width: '100%',
@@ -524,10 +530,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   locationText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '400',
     color: '#44457D',
     width: '100%',
+    marginTop: -6
   },
   label: {
     fontSize: 14,
@@ -680,7 +687,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#44457D',
     fontWeight: '500',
-    fontSize: 18,
+    fontSize: 23,
     textAlign: 'center'
   },
   cert: {

@@ -124,7 +124,7 @@ export default function PostModal({
       <View style={styles.modalContainer}>
         <View style={styles.postContainer}>
           <ScrollView>
-            {/* Location Section */}
+            {/* Location Section */} 
             <Text style={styles.label}>From:</Text>
             {isFromCommunity ? (
               <>
@@ -283,13 +283,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#44457D',
-    marginTop: 14,
   },
   exp:   {
     fontSize: 14,
     fontWeight: '500',
     color: '#44457D',
     marginTop: 20,
+    marginBottom: 8
   },
   input: {
     backgroundColor: '#F5F7FF',

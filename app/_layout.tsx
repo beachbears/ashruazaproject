@@ -44,8 +44,7 @@ export default function RootLayout() {
                  <Stack.Screen
                 name="postsuggestions"
                 options={{
-                  headerShown: false,
-                  title: 'Suggestions'
+                  title: ' '
                 }}
               />
               <Stack.Screen

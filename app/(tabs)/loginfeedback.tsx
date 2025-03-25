@@ -159,13 +159,19 @@ const Feedback: React.FC = () => {
   const FeedbackCard: React.FC<{ feedback: FeedbackItem }> = ({ feedback }) => {
     const displayName = feedback.user?.username || 'User';
     const displayEmail = feedback.user?.email || 'user@gmail.com';
-    const initials = feedback.user?.initials || displayName.slice(0, 2).toUpperCase();
-
+    const getInitials = (firstname: string | undefined, lastname: string | undefined) => {
+      const firstInitial = firstname ? firstname.charAt(0).toUpperCase() : '';
+      const lastInitials = lastname ? lastname.substring(0, 1).toUpperCase() : '';
+      return firstInitial + lastInitials;
+    };
+    
     return (
       <View style={styles.feedbackcontainer}>
         <View style={styles.suggestordetails}>
           <View style={styles.profile}>
-            <Text style={styles.initial}>{initials}</Text>
+          <Text style={styles.initial}>
+            {getInitials(feedback.user?.firstname, feedback.user?.lastname)}
+          </Text>
           </View>
           <View style={styles.suggestor}>
             <Text style={styles.suggestorname}>{displayName}</Text>
@@ -176,7 +182,7 @@ const Feedback: React.FC = () => {
           <Text style={styles.deletedMessage}>Feedback deleted by admin.</Text>
         ) : (
           <>
-            <View style={{ flexDirection: 'row', marginLeft: 48, marginVertical: 3 }}>
+            <View style={{ flexDirection: 'row', marginLeft: 48, marginVertical: 10 }}>
               {[1, 2, 3, 4, 5].map(star => (
                 <AntDesign
                   key={star}
@@ -199,7 +205,7 @@ const Feedback: React.FC = () => {
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.headerText}>Feedback</Text>
       <Text style={styles.descriptionText}>
-        We appreciate your thoughts! Please submit your feedback below.
+      We value your input on Kommutsera. Your feedback will help us to improve. Please share your thoughts and suggestions to make  Kommutsera even better!
       </Text>
       <View style={styles.ButtonContainer}>
         <TouchableOpacity style={styles.Button} onPress={handleFeedbackPress}>
@@ -287,28 +293,28 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   headerText: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '600',
     color: '#44457D',
     textAlign: 'center',
-    marginTop: -20,
+    marginTop: -10,
   },
   descriptionText: {
     color: '#44457D',
     textAlign: 'center',
     fontSize: 13,
-    marginBottom: 10,
+    marginBottom: 16,
   },
   ButtonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   Button: {
     width: 120,
-    height: 25,
-    borderRadius: 5,
+    height: 30,
+    borderRadius: 8,
     backgroundColor: '#22C55E',
     alignItems: 'center',
     justifyContent: 'center',

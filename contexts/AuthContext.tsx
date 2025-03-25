@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export interface AuthContextType {
   isLoggedIn: boolean;
   authToken: string;
-  userName: string;
+  userName: string; 
   userHandle: string;
   userInitials: string;
   login: (name: string, token: string) => void; // ✅ Accepts both name and token
@@ -20,7 +20,7 @@ const defaultAuthContext: AuthContextType = {
   authToken: "",
   userName: "",
   userHandle: "",
-  userInitials: "",
+  userInitials: "", 
   login: () => {},
   logout: () => {},
 };
@@ -33,7 +33,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authToken, setAuthToken] = useState("");
   const [userName, setUserName] = useState("");
   const [userHandle, setUserHandle] = useState("");
-  const [userInitials, setUserInitials] = useState("");
+  const [userInitials, setUserInitials] = useState(""); 
+
 
   const login = async (name: string, token: string) => {
     setIsLoggedIn(true);
@@ -49,7 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUserName("");
     setAuthToken("");
     setUserHandle("");
-    setUserInitials("");
+    setUserInitials(""); 
   
     await AsyncStorage.removeItem("authToken");
     await AsyncStorage.removeItem("userName"); // ✅ Remove userName as well
