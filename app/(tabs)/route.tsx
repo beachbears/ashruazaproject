@@ -894,7 +894,7 @@ const RouteScreen: React.FC = () => {
                 { latitude: selected.lat, longitude: selected.lon },
               ]
           );
-          fetchRouteDetails(selected.lat, selected.lon);
+          fetchRouteDetails(selected.lat, selected.lon, selectedAlgorithm);
         }
       });
     }
@@ -914,7 +914,8 @@ const RouteScreen: React.FC = () => {
         ]);
         fetchRouteDetails(
           parsedAttraction.latitude,
-          parsedAttraction.longitude
+          parsedAttraction.longitude,
+          selectedAlgorithm
         );
         setMapResetKey(Date.now());
       } catch (error) {
@@ -1105,7 +1106,7 @@ const RouteScreen: React.FC = () => {
     setManualOrigin(true);
     setMapResetKey(Date.now());
     if (newRoute.length >= 2) {
-      await fetchRouteDetails(newRoute[1].latitude, newRoute[1].longitude);
+      await fetchRouteDetails(newRoute[1].latitude, newRoute[1].longitude, selectedAlgorithm);
     }
   };
 
@@ -1144,14 +1145,14 @@ const RouteScreen: React.FC = () => {
           { latitude: item.lat, longitude: item.lon },
         ]
     );
-    await fetchRouteDetails(item.lat, item.lon);
+    await fetchRouteDetails(item.lat, item.lon, selectedAlgorithm);
     setMapResetKey(Date.now());
   };
 
   const fetchRouteDetails = async (
     destLat: number,
     destLon: number,
-    algorithm = "best"
+    algorithm: string
   ) => {
     setIsRouteLoading(true);
     setNearbySpots([]);
@@ -1394,6 +1395,70 @@ const RouteScreen: React.FC = () => {
   const detailsContent = (
     <View style={styles.container}>
       <Text style={styles.text}>Details</Text>
+
+      <View style={styles.dropdownContainer}>
+        <TouchableOpacity
+          style={styles.algorithmDropdownButton}
+          onPress={() => setShowAlgorithmDropdown(!showAlgorithmDropdown)}
+        >
+          <Ionicons
+            name={
+              showAlgorithmDropdown
+                ? "chevron-up-outline"
+                : "chevron-down-outline"
+            }
+            size={16}
+            color="#6366F1"
+            style={{ marginRight: 6 }}
+          />
+          <Text style={styles.algorithmDropdownButtonText}>
+            {algorithmOptions.find((opt) => opt.value === selectedAlgorithm)
+              ?.label || "Select Algorithm"}
+          </Text>
+        </TouchableOpacity>
+        {showAlgorithmDropdown && (
+          <View style={[styles.algorithmDropdownOverlay, { zIndex: 10001 }]}>
+            <ScrollView style={{ maxHeight: 160 }}>
+              {algorithmOptions.map((option, index) => {
+                const isSelected = selectedAlgorithm === option.value;
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.algorithmDropdownItem,
+                      isSelected && styles.algorithmDropdownItemSelected,
+                    ]}
+                    onPress={() => {
+                      setSelectedAlgorithm(option.value);
+                      setShowAlgorithmDropdown(false);
+                      // Re-fetch route if destination exists
+                      if (route.length >= 2) {
+                        const dest = route[1];
+                        fetchRouteDetails(
+                          dest.latitude,
+                          dest.longitude,
+                          option.value
+                        );
+                      }
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.algorithmDropdownItemText,
+                        isSelected &&
+                        styles.algorithmDropdownItemTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+
       <Text style={styles.label}>From</Text>
       <View style={styles.searchContainer}>
         <View style={styles.inputContainer}>
@@ -1464,70 +1529,6 @@ const RouteScreen: React.FC = () => {
           onSelect={selectDestinationSuggestion}
         />
       </View>
-      {/* --- NEW: Algorithm Dropdown --- */}
-      {route.length >= 2 && (
-        <View style={styles.dropdownContainer}>
-          <TouchableOpacity
-            style={styles.algorithmDropdownButton}
-            onPress={() => setShowAlgorithmDropdown(!showAlgorithmDropdown)}
-          >
-            <Ionicons
-              name={
-                showAlgorithmDropdown
-                  ? "chevron-up-outline"
-                  : "chevron-down-outline"
-              }
-              size={16}
-              color="#6366F1"
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.algorithmDropdownButtonText}>
-              {algorithmOptions.find((opt) => opt.value === selectedAlgorithm)
-                ?.label || "Select Algorithm"}
-            </Text>
-          </TouchableOpacity>
-          {showAlgorithmDropdown && (
-            <View style={[styles.algorithmDropdownOverlay, { zIndex: 10001 }]}>
-              <ScrollView style={{ maxHeight: 160 }}>
-                {algorithmOptions.map((option, index) => {
-                  const isSelected = selectedAlgorithm === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.algorithmDropdownItem,
-                        isSelected && styles.algorithmDropdownItemSelected,
-                      ]}
-                      onPress={() => {
-                        setSelectedAlgorithm(option.value);
-                        setShowAlgorithmDropdown(false);
-                        if (route.length >= 2) {
-                          const dest = route[1];
-                          fetchRouteDetails(
-                            dest.latitude,
-                            dest.longitude,
-                            option.value
-                          );
-                        }
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.algorithmDropdownItemText,
-                          isSelected &&
-                          styles.algorithmDropdownItemTextSelected,
-                        ]}
-                      >
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      )}
       {route.length >= 2 && routeMetrics && (
         <View style={styles.topInfoRow}>
           <View style={styles.infoBox}>
@@ -1621,7 +1622,8 @@ const RouteScreen: React.FC = () => {
               setRoute([currentOrigin, newDestination]);
               fetchRouteDetails(
                 newDestination.latitude,
-                newDestination.longitude
+                newDestination.longitude,
+                selectedAlgorithm
               );
               setRestaurantModalVisible(false);
             }}
@@ -1653,7 +1655,8 @@ const RouteScreen: React.FC = () => {
                 setRoute([currentOrigin, newDestination]);
                 fetchRouteDetails(
                   newDestination.latitude,
-                  newDestination.longitude
+                  newDestination.longitude,
+                  selectedAlgorithm
                 );
                 setModalVisible(false);
                 setSelectedSpot(newDestination);
