@@ -925,31 +925,60 @@ const RouteScreen: React.FC = () => {
 
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      const servicesEnabled = await Location.hasServicesEnabledAsync();
-      if (status !== "granted" || !servicesEnabled) {
-        console.log("Location permission not granted or services disabled.");
-        return;
-      }
-      const { coords } = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = coords;
-      const addresses = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-      const locAddr =
-        addresses && addresses.length > 0
-          ? `${addresses[0].name ? addresses[0].name + ", " : ""}${addresses[0].street ? addresses[0].street + ", " : ""
-          }${addresses[0].city}, ${addresses[0].region}`
-          : "Unknown Location";
-      setRegion((prev) => ({ ...prev, latitude, longitude }));
-      if (!manualOrigin && !origin) {
-        setOrigin(locAddr);
-        setRoute((prev) =>
-          prev.length > 0
-            ? [{ latitude, longitude }, ...prev.slice(1)]
-            : [{ latitude, longitude }]
-        );
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        const servicesEnabled = await Location.hasServicesEnabledAsync();
+        if (status !== "granted" || !servicesEnabled) {
+          console.log("Location permission not granted or services disabled.");
+          setIsOriginLoading(false);
+          return;
+        }
+
+        setIsOriginLoading(true); // Start loading indicator
+
+        const { coords } = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = coords;
+        setRegion(prev => ({ ...prev, latitude, longitude }));
+
+        // Reverse geocoding with timeout
+        const reverseGeocode = async (lat: number, lon: number) => {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+
+            const response = await fetch(
+              `https://nominatim-production-05c9.up.railway.app/reverse?format=json&lat=${lat}&lon=${lon}`,
+              { signal: controller.signal }
+            );
+            clearTimeout(timeoutId);
+
+            const data = await response.json();
+            return data.address;
+          } catch (error) {
+            console.error("Reverse geocoding error:", error);
+            return null;
+          }
+        };
+
+        const address = await reverseGeocode(latitude, longitude);
+        const locAddr = address ?
+          [address.road, address.neighbourhood, address.suburb, address.city_district, address.city, address.state]
+            .filter(Boolean)
+            .join(", ") :
+          "Current Location";
+
+        if (!manualOrigin && !origin) {
+          setOrigin(locAddr);
+          setRoute(prev => prev.length > 0 ?
+            [{ latitude, longitude }, ...prev.slice(1)] :
+            [{ latitude, longitude }]
+          );
+        }
+      } catch (error) {
+        console.error("Geolocation error:", error);
+        if (!origin) setOrigin("Current Location");
+      } finally {
+        setIsOriginLoading(false); // Stop loading indicator
       }
     })();
   }, []);
