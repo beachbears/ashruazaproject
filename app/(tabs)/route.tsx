@@ -108,7 +108,7 @@ const RouteScreen: React.FC = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<string>("best");
   const [showAlgorithmDropdown, setShowAlgorithmDropdown] = useState<boolean>(false);
   const algorithmOptions = [
-    { label: "Best", value: "best" },
+    { label: "Balanced", value: "best" },
     { label: "Fewest Transfers", value: "fewest-transfers" },
     { label: "Minimal Walking", value: "minimal-walking" },
     { label: "Fastest", value: "fastest" },
