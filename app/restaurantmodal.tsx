@@ -12,40 +12,42 @@ import {
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-// A placeholder image if restaurant.image_url is not provided.
+// Placeholder image
 const placeholderImage = "https://via.placeholder.com/150";
-
+const formatCuisine = (cuisine: string | undefined) => {
+  if (!cuisine) return "Not specified";
+  return cuisine
+    .split(/[_;]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(', ');
+};
 interface Restaurant {
   name: string;
   latitude: number;
   longitude: number;
+  amenity?: string;
   cuisine?: string;
   address?: string;
   opening_hours?: string;
-  amenity?: string;
   phone?: string;
   website?: string;
   image_url?: string;
-}
-
-interface UserLocation {
-  latitude: number;
-  longitude: number;
+  distance?: number;
+  brand?: string;
+  takeaway?: string;
+  delivery?: string;
+  payment?: string;
+  wheelchair?: string;
+  facebook?: string;
+  email?: string;
 }
 
 interface ModalProps {
   visible: boolean;
   onClose: () => void;
   restaurants: Restaurant[];
-  onView?: (restaurant: {
-    latitude: number;
-    longitude: number;
-    name: string;
-  }) => void;
-  // New prop added here
+  onView?: (restaurant: { latitude: number; longitude: number; name: string }) => void;
   onGoHere?: (restaurant: Restaurant) => void;
-  // Optional user location for distance calculation
-  userLocation?: UserLocation;
 }
 
 const ModalComponent: React.FC<ModalProps> = ({
@@ -54,31 +56,63 @@ const ModalComponent: React.FC<ModalProps> = ({
   restaurants,
   onView,
   onGoHere,
-  userLocation,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category>("All");
   const [showCategories, setShowCategories] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Payment processing helper
+  const getAcceptedPaymentMethods = (paymentData: string): string => {
+    try {
+      // Parse the JSON string into an object
+      const paymentObj = JSON.parse(paymentData);
+      // Extract methods where the value is "yes" or "only"
+      const accepted = Object.entries(paymentObj)
+        .filter(([key, value]) =>
+          value && ["yes", "only"].includes(value.toString().toLowerCase())
+        )
+        .map(([key]) => key.replace(/^payment:/, "")); // Remove the "payment:" prefix
+      return accepted.join(", ");
+    } catch (error) {
+      console.error("Error parsing payment data:", error);
+      return "";
+    }
+  };
 
-  // New state for sorting dropdown - default set to "Nearest"(dropdown ni ved)
-  const [selectedSortOption, setSelectedSortOption] =
-    useState<string>("Nearest");
-  const [showSortOptions, setShowSortOptions] = useState(false);
 
-  // Function to open website URLs
+  // Handle website and phone linking
   const handleWebsitePress = (url: string) => {
     Linking.canOpenURL(url).then((supported) => {
       if (supported) Linking.openURL(url);
     });
   };
 
-  // Function to handle phone number press
   const handlePhonePress = (phone: string) => {
     Linking.openURL(`tel:${phone}`);
   };
+  type Category =
+    | "All"
+    | "Restaurant"
+    | "Cafe"
+    | "Fast Food"
+    | "Pub"
+    | "Bar"
+    | "Ice Cream"
+    | "Food Court"
+    | "Biergarten";
 
-  // List of categories
-  const categories = [
+  const categoryMapping: Record<Category, string> = {
+    "All": "all",
+    "Restaurant": "restaurant",
+    "Cafe": "cafe",
+    "Fast Food": "fast_food",
+    "Pub": "pub",
+    "Bar": "bar",
+    "Ice Cream": "ice_cream",
+    "Food Court": "food_court",
+    "Biergarten": "biergarten"
+  };
+
+  const categories: Category[] = [
+    "All",
     "Restaurant",
     "Cafe",
     "Fast Food",
@@ -89,68 +123,17 @@ const ModalComponent: React.FC<ModalProps> = ({
     "Biergarten",
   ];
 
-  // List of sort options (sa dropdown ni ved)
-  const sortOptions = ["Nearest", "Furthest"];
 
-  // Category selection handler
-  const handleSelectCategory = (cat: string) => {
+  const handleSelectCategory = (cat: Category) => {
     setSelectedCategory(cat);
     setShowCategories(false);
   };
 
-  // Sort selection handler
-  const handleSelectSortOption = (option: string) => {
-    setSelectedSortOption(option);
-    setShowSortOptions(false);
-  };
-
-  // Function to calculate distance between two coordinates using the haversine formula.
-  const calculateDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ) => {
-    const toRad = (value: number) => (value * Math.PI) / 180;
-    const R = 6371; // Earth's radius in km
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) *
-        Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
-  };
-
-  // Filter spots based on selected category (if provided)
-  let filteredSpots = selectedCategory
-    ? restaurants.filter(
-        (spot) => spot.amenity?.toLowerCase() === selectedCategory.toLowerCase()
-      )
-    : restaurants;
-
-  // Sort the filtered spots based on selected sort option if userLocation is provided.(logic ni ved sa nearest and furthest dipa ayus)
-  if (userLocation && selectedSortOption) {
-    filteredSpots = filteredSpots.slice().sort((a, b) => {
-      const distA = calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        a.latitude,
-        a.longitude
-      );
-      const distB = calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        b.latitude,
-        b.longitude
-      );
-      return selectedSortOption === "Nearest" ? distA - distB : distB - distA;
-    });
-  }
-
+  const filteredSpots = selectedCategory === "All"
+    ? restaurants // Return all items if "All" is selected
+    : restaurants.filter(
+      (spot) => spot.amenity?.toLowerCase() === categoryMapping[selectedCategory].toLowerCase()
+    );
   return (
     <Modal
       animationType="slide"
@@ -160,128 +143,75 @@ const ModalComponent: React.FC<ModalProps> = ({
     >
       <View style={styles.modalBackground}>
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Nearby Restaurant</Text>
+          <Text style={styles.modalTitle}>Nearby Dining Spots</Text>
 
-          {/* Category Dropdown Container */}
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => setShowCategories(!showCategories)}
-            >
-              <Ionicons
-                name={
-                  showCategories ? "chevron-up-outline" : "chevron-down-outline"
-                }
-                size={16}
-                color="#6366F1"
-                style={{ marginRight: 6 }}
-              />
-              <Text style={styles.dropdownButtonText}>
-                {selectedCategory ? selectedCategory : "Select Category"}
-              </Text>
-            </TouchableOpacity>
-            {showCategories && (
-              <View style={[styles.dropdownOverlay, { zIndex: 10001 }]}>
-                <ScrollView style={{ maxHeight: 160 }}>
-                  {categories.map((cat, index) => {
-                    const isSelected = selectedCategory === cat;
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.dropdownItem,
-                          isSelected && styles.dropdownItemSelected,
-                        ]}
-                        onPress={() => handleSelectCategory(cat)}
-                      >
-                        <Text
-                          style={[
-                            styles.dropdownItemText,
-                            isSelected && styles.dropdownItemTextSelected,
-                          ]}
+          {/* Category Dropdown */}
+          <View style={styles.controlsContainer}>
+            <View style={styles.dropdownContainer}>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setShowCategories(!showCategories)}
+              >
+                <Ionicons
+                  name={showCategories ? "chevron-up-outline" : "chevron-down-outline"}
+                  size={16}
+                  color="#6366F1"
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.dropdownButtonText}>
+                  {selectedCategory}
+                </Text>
+              </TouchableOpacity>
+              {showCategories && (
+                <View style={[styles.dropdownOverlay, { zIndex: 10001 }]}>
+                  <ScrollView style={{ maxHeight: 160 }}>
+                    {categories.map((cat, index) => {
+                      const isSelected = selectedCategory === cat;
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]}
+                          onPress={() => handleSelectCategory(cat)}
                         >
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
+                          <Text
+                            style={[
+                              styles.dropdownItemText,
+                              isSelected && styles.dropdownItemTextSelected,
+                            ]}
+                          >
+                            {cat}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Sort Dropdown Container */}
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => setShowSortOptions(!showSortOptions)}
-            >
-              <Ionicons
-                name={
-                  showSortOptions
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
-                size={16}
-                color="#6366F1"
-                style={{ marginRight: 6 }}
-              />
-              <Text style={styles.dropdownButtonText}>
-                {selectedSortOption ? selectedSortOption : "Sort by Distance"}
-              </Text>
-            </TouchableOpacity>
-            {showSortOptions && (
-              <View style={[styles.dropdownOverlay, { zIndex: 10002 }]}>
-                <ScrollView style={{ maxHeight: 100 }}>
-                  {sortOptions.map((option, index) => {
-                    const isSelected = selectedSortOption === option;
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.dropdownItem,
-                          isSelected && styles.dropdownItemSelected,
-                        ]}
-                        onPress={() => handleSelectSortOption(option)}
-                      >
-                        <Text
-                          style={[
-                            styles.dropdownItemText,
-                            isSelected && styles.dropdownItemTextSelected,
-                          ]}
-                        >
-                          {option}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
-          {/* Scrollable Restaurant List */}
-          <ScrollView
-            contentContainerStyle={{ paddingBottom: 20 }}
-            style={[styles.scrollArea, { maxHeight: 300 }]}
-          >
-            {error ? (
-              <Text style={{ color: "red", marginTop: 20 }}>{error}</Text>
-            ) : (
+          {/* Restaurant List */}
+          <ScrollView contentContainerStyle={{ paddingBottom: 20 }} style={styles.scrollArea}>
+            {filteredSpots.length > 0 ? (
               filteredSpots.map((spot, idx) => (
                 <View key={idx} style={styles.spotCard}>
-                  {/* New header section when onView prop is provided */}
+                  {/* Header with Image, Name, Cuisine, Distance, and Buttons */}
                   {onView && (
-                    <View style={styles.restaurantItem}>
-                      <Image
+                    <View style={styles.restaurantHeader}>
+                      {/* <Image
                         source={{ uri: spot.image_url || placeholderImage }}
                         style={styles.restaurantImage}
-                      />
+                      /> */}
                       <View style={styles.restaurantInfo}>
                         <Text style={styles.restaurantName}>{spot.name}</Text>
                         <Text style={styles.restaurantCuisine}>
-                          {spot.cuisine || "Not specified"}
+                          {formatCuisine(spot.cuisine)}
                         </Text>
+                        {spot.distance !== undefined && (
+                          <Text style={styles.distanceText}>
+                            {spot.distance.toFixed(2)} km away
+                          </Text>
+                        )}
                       </View>
                       <View style={styles.buttonGroup}>
                         <TouchableOpacity
@@ -296,7 +226,6 @@ const ModalComponent: React.FC<ModalProps> = ({
                         >
                           <Text style={styles.viewButtonText}>View</Text>
                         </TouchableOpacity>
-                        {/* Add Go Here button */}
                         <TouchableOpacity
                           style={styles.goHereButton}
                           onPress={() => onGoHere?.(spot)}
@@ -307,86 +236,123 @@ const ModalComponent: React.FC<ModalProps> = ({
                     </View>
                   )}
 
-                  {/* Original Details */}
-                  <View style={styles.topRow}>
-                    <View style={{ flex: 1 }}>
-                      {!onView && (
+                  {/* Detailed Information */}
+                  <View style={styles.detailsContainer}>
+                    {!onView && (
+                      <>
                         <Text style={styles.spotName}>{spot.name}</Text>
-                      )}
-                    </View>
+                        {spot.distance !== undefined && (
+                          <Text style={styles.distanceText}>
+                            {spot.distance.toFixed(2)} km away
+                          </Text>
+                        )}
+                      </>
+                    )}
                     <View style={styles.amenityPill}>
                       <Text style={styles.amenityText}>
-                        {spot.amenity || "Restaurant"}
+                        {spot.amenity
+                          ? spot.amenity.charAt(0).toUpperCase() + spot.amenity.slice(1)
+                          : "Unknown"}
                       </Text>
                     </View>
-                  </View>
-
-                  {spot.address && (
-                    <>
-                      <Text style={styles.sectionTitle}>
-                        <Ionicons
-                          name="location-outline"
-                          size={16}
-                          color="#44457D"
-                        />{" "}
-                        Address
-                      </Text>
-                      <Text style={styles.sectionValue}>{spot.address}</Text>
-                    </>
-                  )}
-
-                  <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
-                    <Ionicons
-                      name="restaurant-outline"
-                      size={16}
-                      color="#44457D"
-                    />{" "}
-                    Cuisine
-                  </Text>
-                  <Text style={styles.sectionValue}>
-                    {spot.cuisine || "Not specified"}
-                  </Text>
-
-                  <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
-                    <Ionicons name="call-outline" size={16} color="#44457D" />{" "}
-                    Contact
-                  </Text>
-                  <Text style={styles.sectionValue}>
-                    Phone:{" "}
-                    {spot.phone ? (
-                      <TouchableOpacity
-                        onPress={() =>
-                          spot.phone && handlePhonePress(spot.phone)
-                        }
-                      >
-                        <Text style={styles.websiteText}>{spot.phone}</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      "Not available"
+                    {spot.address && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="location-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>{spot.address}</Text>
+                      </View>
                     )}
-                  </Text>
-                  {spot.website && (
-                    <TouchableOpacity
-                      onPress={() =>
-                        spot.website && handleWebsitePress(spot.website)
-                      }
-                      style={{ marginTop: 4 }}
-                    >
-                      <Text style={styles.websiteText}>Visit Website</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
-                    <Ionicons name="time-outline" size={16} color="#44457D" />{" "}
-                    Hours
-                  </Text>
-                  <Text style={styles.sectionValue}>
-                    {spot.opening_hours === "Hours not specified"
-                      ? "Opening hours not available"
-                      : spot.opening_hours}
-                  </Text>
+                    {spot.cuisine && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="restaurant-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>{formatCuisine(spot.cuisine)}</Text>
+                      </View>
+                    )}
+                    {spot.opening_hours && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="time-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>
+                          {spot.opening_hours === "Hours not specified"
+                            ? "Not available"
+                            : spot.opening_hours}
+                        </Text>
+                      </View>
+                    )}
+                    {/* New Fields */}
+                    {spot.brand && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="business-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>Brand: {spot.brand}</Text>
+                      </View>
+                    )}
+                    {spot.takeaway !== null && spot.takeaway !== undefined && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="bag-handle-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>
+                          Takeaway: {spot.takeaway ? "Yes" : "No"}
+                        </Text>
+                      </View>
+                    )}
+                    {spot.delivery && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="bicycle-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>Delivery: {spot.delivery}</Text>
+                      </View>
+                    )}
+                    {spot.payment && spot.payment !== "{}" && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="card-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>
+                          Payment: {getAcceptedPaymentMethods(spot.payment) || "Not specified"}
+                        </Text>
+                      </View>
+                    )}
+                    {spot.wheelchair && (
+                      <View style={styles.infoRow}>
+                        <Ionicons name="accessibility-outline" size={16} color="#44457D" />
+                        <Text style={styles.sectionValue}>Wheelchair: {spot.wheelchair}</Text>
+                      </View>
+                    )}
+                    {/* Enhanced Contact Section */}
+                    {(spot.phone || spot.website || spot.facebook || spot.email) && (
+                      <View style={styles.contactSection}>
+                        <Text style={styles.sectionTitle}>
+                          <Ionicons name="call-outline" size={16} color="#44457D" /> Contact
+                        </Text>
+                        {spot.phone && (
+                          <TouchableOpacity
+                            onPress={() => spot.phone && handlePhonePress(spot.phone)}
+                          >
+                            <Text style={styles.websiteText}>{spot.phone}</Text>
+                          </TouchableOpacity>
+                        )}
+                        {spot.website && (
+                          <TouchableOpacity
+                            onPress={() => spot.website && handleWebsitePress(spot.website)}
+                          >
+                            <Text style={styles.websiteText}>Visit Website</Text>
+                          </TouchableOpacity>
+                        )}
+                        {spot.facebook && (
+                          <TouchableOpacity
+                            onPress={() => spot.facebook && handleWebsitePress(spot.facebook)}
+                          >
+                            <Text style={styles.websiteText}>Facebook</Text>
+                          </TouchableOpacity>
+                        )}
+                        {spot.email && (
+                          <TouchableOpacity
+                            onPress={() => Linking.openURL(`mailto:${spot.email}`)}
+                          >
+                            <Text style={styles.websiteText}>{spot.email}</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    )}
+                  </View>
                 </View>
               ))
+            ) : (
+              <Text style={styles.noResultsText}>No dining spots found.</Text>
             )}
           </ScrollView>
 
@@ -405,33 +371,30 @@ const ModalComponent: React.FC<ModalProps> = ({
 export default ModalComponent;
 
 const styles = StyleSheet.create({
-  /********** BACKDROP **********/
   modalBackground: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
-
-  /********** CONTAINER **********/
   modalContainer: {
     width: "95%",
     minHeight: 500,
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 15,
-    overflow: "visible",
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
     alignSelf: "center",
     marginBottom: 10,
+    color: "#1F2937",
   },
-
-  /********** DROPDOWN **********/
-  dropdownContainer: {
+  controlsContainer: {
     marginBottom: 10,
+  },
+  dropdownContainer: {
     alignSelf: "flex-start",
     position: "relative",
   },
@@ -447,7 +410,6 @@ const styles = StyleSheet.create({
     color: "#6366F1",
     fontSize: 12,
     fontWeight: "bold",
-    flexShrink: 1,
   },
   dropdownOverlay: {
     position: "absolute",
@@ -460,35 +422,27 @@ const styles = StyleSheet.create({
     width: 200,
     maxHeight: 200,
     paddingVertical: 5,
-    ...Platform.select({
-      android: { elevation: 10000 },
-    }),
+    ...Platform.select({ android: { elevation: 10000 } }),
   },
   dropdownItem: {
     paddingVertical: 8,
     paddingHorizontal: 10,
-    borderBottomColor: "#ccc",
     borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
   },
   dropdownItemSelected: {
     backgroundColor: "#6366F1",
-    borderBottomColor: "#6366F1",
   },
   dropdownItemText: {
     fontSize: 12,
     color: "#374151",
-    flexWrap: "wrap",
   },
   dropdownItemTextSelected: {
     color: "#fff",
   },
-
-  /********** SCROLL AREA **********/
   scrollArea: {
-    zIndex: 0,
+    maxHeight: 400,
   },
-
-  /********** SPOT CARD **********/
   spotCard: {
     backgroundColor: "#fff",
     borderColor: "#ddd",
@@ -497,71 +451,10 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
   },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  spotName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1F2937",
-  },
-  amenityPill: {
-    backgroundColor: "#E0E7FF",
-    borderRadius: 16,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    alignSelf: "center",
-  },
-  amenityText: {
-    fontSize: 11,
-    color: "#44457D",
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#44457D",
-    marginBottom: 4,
-  },
-  sectionValue: {
-    fontSize: 12,
-    color: "#374151",
-    marginBottom: 2,
-    lineHeight: 18,
-    minHeight: 18,
-  },
-  websiteText: {
-    color: "#6366F1",
-    textDecorationLine: "underline",
-    fontSize: 12,
-  },
-
-  /********** FOOTER **********/
-  modalFooter: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 10,
-  },
-  closeButton: {
-    backgroundColor: "#E0E7FF",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  closeButtonText: {
-    color: "#6366F1",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-
-  /********** UPDATED STYLES FOR VIEW MODE **********/
-  restaurantItem: {
+  restaurantHeader: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
+    marginBottom: 10,
   },
   restaurantImage: {
     width: 50,
@@ -573,18 +466,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   restaurantName: {
-    fontWeight: "500",
-    color: "#333",
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1F2937",
   },
   restaurantCuisine: {
-    color: "#666",
     fontSize: 12,
+    color: "#6B7280",
+  },
+  distanceText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
   },
   buttonGroup: {
     flexDirection: "row",
     gap: 8,
-    marginLeft: "auto",
-    alignItems: "center",
   },
   viewButton: {
     backgroundColor: "#6366F1",
@@ -607,5 +504,74 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 12,
     fontWeight: "500",
+  },
+  detailsContainer: {
+    marginTop: 8,
+  },
+  spotName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1F2937",
+    marginBottom: 4,
+  },
+  amenityPill: {
+    backgroundColor: "#E0E7FF",
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  },
+  amenityText: {
+    fontSize: 11,
+    color: "#44457D",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#44457D",
+    marginBottom: 4,
+  },
+  sectionValue: {
+    fontSize: 12,
+    color: "#374151",
+    marginLeft: 8,
+    flex: 1,
+  },
+  contactSection: {
+    marginTop: 8,
+  },
+  websiteText: {
+    color: "#6366F1",
+    textDecorationLine: "underline",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  noResultsText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 10,
+  },
+  closeButton: {
+    backgroundColor: "#E0E7FF",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  closeButtonText: {
+    color: "#6366F1",
+    fontSize: 12,
+    fontWeight: "bold",
   },
 });

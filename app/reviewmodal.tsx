@@ -30,6 +30,7 @@ export interface NearbySpot {
   image_url?: string;
   link?: string;
   feedbacks?: string | string[];
+  distance?: number;
 }
 
 interface ReviewModalProps {
@@ -53,6 +54,7 @@ interface RouteData {
   feedbacks?: string[];
   latitude: number;
   longitude: number;
+  distance?: number;
 }
 
 const ReviewModal: React.FC<ReviewModalProps> = ({
@@ -87,10 +89,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         feedbacks: Array.isArray(spot.feedbacks)
           ? spot.feedbacks
           : typeof spot.feedbacks === "string"
-          ? spot.feedbacks.split(";")
-          : [],
+            ? spot.feedbacks.split(";")
+            : [],
         latitude: spot.latitude,
         longitude: spot.longitude,
+        distance: spot.distance, // Add this
       }));
       setRouteData(formattedData);
     }
@@ -148,8 +151,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               typeof spot.feedbacks === "string"
                 ? [spot.feedbacks]
                 : Array.isArray(spot.feedbacks)
-                ? spot.feedbacks
-                : [],
+                  ? spot.feedbacks
+                  : [],
             latitude: spot.latitude,
             longitude: spot.longitude,
           })
@@ -179,6 +182,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         }}
       />
       <Text style={styles.attractionName}>{item.name}</Text>
+      <Text style={styles.attractionDistance}>
+        Distance: {item.distance?.toFixed(2)} km
+      </Text>
       <Text style={styles.attractionDescription}>
         {item.description || "No description available."}
       </Text>
@@ -298,6 +304,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  attractionDistance: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
   modalOverlay: {
     flex: 1,
     justifyContent: "center",

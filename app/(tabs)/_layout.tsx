@@ -1,12 +1,11 @@
-import { LogBox } from 'react-native';
-import React, { useState, useContext } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
+import { LogBox, StyleSheet, View, Text, TouchableOpacity, Image, Linking, AppState } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
+import * as Location from 'expo-location';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import { StyleSheet, View, Image, Text, TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
-import { Ionicons } from '@expo/vector-icons';
 import { APP_NAME } from '@/constants';
 import { AuthContext } from '../../contexts/AuthContext'; // adjust path as necessary
 
@@ -20,22 +19,68 @@ LogBox.ignoreLogs([
 export default function TabLayout() {
   const { isLoggedIn, userName, logout } = useContext(AuthContext);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [locationEnabled, setLocationEnabled] = useState<boolean | null>(null);
   const router = useRouter();
 
   const userInitial = userName ? userName.charAt(0).toUpperCase() : '';
 
-  const handleLogout = () => {
-    logout();
-    setShowDropdown(false);
+  // Function to check location permissions and services
+  const checkLocationPermission = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    const servicesEnabled = await Location.hasServicesEnabledAsync();
+    if (status !== 'granted' || !servicesEnabled) {
+      setLocationEnabled(false);
+    } else {
+      setLocationEnabled(true);
+    }
   };
 
-  const handleLogin = () => {
-    router.push('/login');
-  };
+  // Initial check on mount
+  useEffect(() => {
+    checkLocationPermission();
+  }, []);
 
-  const handleSignup = () => {
-    router.push('/signup');
-  };
+  // Re-check permissions when the app comes into focus
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        checkLocationPermission();
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  if (locationEnabled === null) {
+    return (
+      <View style={styles.centered}>
+        <Text>Checking location permission...</Text>
+      </View>
+    );
+  }
+
+  if (!locationEnabled) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>
+          Location services are disabled or permission was not granted.
+        </Text>
+        <Text style={styles.errorText}>
+          Please enable your device’s location services to continue.
+        </Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => {
+            Linking.openSettings().catch(() => {
+              alert('Unable to open settings. Please enable location services manually.');
+            });
+          }}
+        >
+          <Text style={styles.buttonText}>Enable Location</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <Tabs
@@ -62,7 +107,7 @@ export default function TabLayout() {
                   </TouchableOpacity>
                   {showDropdown && (
                     <View style={styles.dropdown}>
-                      <TouchableOpacity onPress={handleLogout} style={styles.dropdown}>
+                      <TouchableOpacity onPress={logout} style={styles.dropdown}>
                         <Ionicons
                           name="log-out-outline"
                           size={18}
@@ -76,10 +121,10 @@ export default function TabLayout() {
                 </View>
               ) : (
                 <View style={styles.authButtonsContainer}>
-                  <TouchableOpacity onPress={handleLogin} style={styles.authButton}>
+                  <TouchableOpacity onPress={() => router.push('/login')} style={styles.authButton}>
                     <Text style={styles.authButtonText}>Login</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={handleSignup} style={styles.authButton}>
+                  <TouchableOpacity onPress={() => router.push('/signup')} style={styles.authButton}>
                     <Text style={styles.authButtonText}>Sign Up</Text>
                   </TouchableOpacity>
                 </View>
@@ -88,7 +133,12 @@ export default function TabLayout() {
           </View>
         ),
         tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '500', color: '#44457D', marginTop: 6 },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+          color: '#44457D',
+          marginTop: 6,
+        },
       }}
     >
       <Tabs.Screen
@@ -161,6 +211,29 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: 'red',
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  button: {
+    backgroundColor: '#6366F1',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 20,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
   headerStyle: {
     backgroundColor: '#F9FAFB',
     position: 'absolute',
