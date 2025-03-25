@@ -158,10 +158,10 @@ const ModalComponent: React.FC<ModalProps> = ({
                   {/* Header with Image, Name, Cuisine, Distance, and Buttons */}
                   {onView && (
                     <View style={styles.restaurantHeader}>
-                      <Image
+                      {/* <Image
                         source={{ uri: spot.image_url || placeholderImage }}
                         style={styles.restaurantImage}
-                      />
+                      /> */}
                       <View style={styles.restaurantInfo}>
                         <Text style={styles.restaurantName}>{spot.name}</Text>
                         <Text style={styles.restaurantCuisine}>

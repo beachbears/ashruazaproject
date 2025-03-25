@@ -975,10 +975,10 @@ const RouteScreen: React.FC = () => {
                   style={styles.restaurantCard}
                   onPress={() => setRestaurantModalVisible(true)}
                 >
-                  <Image
+                  {/* <Image
                     source={{ uri: restaurant.image_url || "https://via.placeholder.com/150" }}
                     style={{ width: 156, height: 90, borderRadius: 8, marginBottom: 8 }}
-                  />
+                  /> */}
                   <Text style={styles.restaurantName} numberOfLines={1}>
                     {restaurant.name}
                   </Text>
