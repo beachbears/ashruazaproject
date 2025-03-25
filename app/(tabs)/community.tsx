@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -10,27 +11,21 @@ import Entypo from '@expo/vector-icons/Entypo';
 import ModalComponent from '../reportmodal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-
 const dropdownOptions = ['Popularity', 'Time'];
-
 interface DropdownProps {
   options: string[];
   onSelect?: (option: string) => void;
   defaultValue?: string;
 }
-
 const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
-
   const toggleDropdown = () => setIsOpen(!isOpen);
-
   const selectOption = (option: string) => {
     setSelectedOption(option);
     setIsOpen(false);
     if (onSelect) onSelect(option);
   };
-
 
   return (
     <View style={styles.dropdowncontainer}>
@@ -57,8 +52,6 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 
 type VoteType = 'upvote' | 'downvote';
 export default function CommunityPage() {
-   
-
   const { posts: contextPosts, addPost,  setPosts,
     handleUpvote,
     handleDownvote,
@@ -74,49 +67,28 @@ export default function CommunityPage() {
   const [isSubmitting, setIsSubmitting] = useState(false); 
   const router = useRouter();
   const params = useLocalSearchParams();
-
-   
-
-const location = Array.isArray(params.location) 
-? decodeURIComponent(params.location[0])
-: params.location 
-  ? decodeURIComponent(params.location)
-  : '';
-
-const destination = Array.isArray(params.destination)
-? decodeURIComponent(params.destination[0])
-: params.destination
-  ? decodeURIComponent(params.destination)
-  : '';
-
-  
-  const originCoords = {
-    lat: Number(params.origin_lat) || 0,
-    lon: Number(params.origin_lon) || 0
-  };
-  
-  const destinationCoords = {
-    lat: Number(params.destination_lat) || 0,
-    lon: Number(params.destination_lon) || 0
-  };
-  
- 
-  
+  const location = Array.isArray(params.location) 
+    ? decodeURIComponent(params.location[0])
+    : params.location 
+    ? decodeURIComponent(params.location)
+    : '';
+  const destination = Array.isArray(params.destination)
+    ? decodeURIComponent(params.destination[0])
+    : params.destination
+    ? decodeURIComponent(params.destination)
+    : '';
   const closeReportModal = () => {
     setIsModalVisible(false);
     setSelectedPostId(null); // Reset after closing
+  };
+  const handleOptionSelect = (option: string) => {
+    setSelectedOption(option);
   };
 
   if (!authContext) return null; // Prevents errors if context is null
   const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
   const [selectedOption, setSelectedOption] = useState<string>('Time'); // dropdown
-
-  const handleOptionSelect = (option: string) => {
-    setSelectedOption(option);
-  };
-
-  // Use routeDetails if available; otherwise, try URL params or fall back to default names.
-  const origin_address =
+   const origin_address =
     routeDetails?.location ||
     (params.origin_address ? decodeURIComponent(params.origin_address as string) : 'Unknown Origin');
   const destination_address =
@@ -128,9 +100,7 @@ const destination = Array.isArray(params.destination)
     routeDetails?.destination_lat ?? (params.destination_lat ? Number(params.destination_lat) : 0);
   const destination_lon =
     routeDetails?.destination_lon ?? (params.destination_lon ? Number(params.destination_lon) : 0);
-
-  // Fetch old posts from the API when the component mounts.
- // Modify fetchOldPosts to properly sync with context:
+    
  const fetchOldPosts = async () => {
   try {
     const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
@@ -156,11 +126,11 @@ const destination = Array.isArray(params.destination)
   }
 };
 
-// Add polling effect
 useEffect(() => {
-  const interval = setInterval(fetchOldPosts, 5000); // Every 5 seconds
+  const interval = setInterval(fetchOldPosts, 3000); // Poll every 3 seconds instead of 5
   return () => clearInterval(interval);
 }, []);
+
  
  const handlePostSubmit = async (formData: Post) => {
     if (isSubmitting) return;
@@ -210,27 +180,35 @@ useEffect(() => {
   
     const previousVote = selectedVotes[id];
     const previousVotesCount = contextPosts.find(p => p.id === id)?.votes || 0;
+
+    setSelectedVotes(prev => ({ ...prev, [id]: action }));
+  const postToUpdate = contextPosts.find(p => p.id === id);
+  if (postToUpdate) {
+    updatePost({ ...postToUpdate, votes: previousVotesCount + (action === 'upvote' ? 1 : -1) });
+  }
   
     try {
       // API call
       const success = await sendVoteRequest(id.toString(), action);
       
       if (!success) {
-        // Revert if failed
+        // 3. Revert if the API call fails
         setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
-        updatePost({
-          id,
-          votes: previousVotesCount,
-        } as Post);
+        const postToUpdate = contextPosts.find(p => p.id === id);
+        if (postToUpdate) {
+          updatePost({ ...postToUpdate, votes: previousVotesCount });
+        }
       }
+
     } catch (error) {
-      setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
-      updatePost({
-        id,
-        votes: previousVotesCount,
-      } as Post);
+    // Revert changes if there's an error
+    setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
+    const postToUpdate = contextPosts.find(p => p.id === id);
+    if (postToUpdate) {
+      updatePost({ ...postToUpdate, votes: previousVotesCount });
     }
-  };
+  }
+};
   
   // Modify sendVoteRequest to remove the fetchOldPosts call:
   const sendVoteRequest = async (postId: string, action: VoteType) => {
@@ -420,7 +398,6 @@ useEffect(() => {
                <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
                <MaterialIcons name="report" size={20} color="#C52222" />
               </TouchableOpacity>
-              
               </View>
               </View>
               

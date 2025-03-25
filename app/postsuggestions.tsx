@@ -8,28 +8,25 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import { Post } from '@/contexts/PostContext';
 import ModalComponent from './reportmodal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import io from 'socket.io-client';
+import { FlatList } from 'react-native';
 
 const dropdownOptions = ['Popularity', 'Time'];
 type VoteType = 'upvote' | 'downvote';
-
 interface DropdownProps {
   options: string[];
   onSelect?: (option: string) => void;
   defaultValue?: string;
 }
-
 const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
-
   const toggleDropdown = () => setIsOpen(!isOpen);
-
   const selectOption = (option: string) => {
     setSelectedOption(option);
     setIsOpen(false);
     if (onSelect) onSelect(option);
   };
-
   return (
     <View style={styles.dropdowncontainer}>
       <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
@@ -53,7 +50,6 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   );
 };
 
-
 export default function PostSuggestions() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Time');
@@ -66,17 +62,17 @@ export default function PostSuggestions() {
       setModalVisible(true);
     }
   }, [params.source]);
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const authContext = useContext(AuthContext) as AuthContextType | null;
-  
+
   if (!authContext) return null;
   const { isLoggedIn, userName, userHandle, userInitials } = authContext;
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
-   const location = decodeURIComponent(params.location as string);
+  const location = decodeURIComponent(params.location as string);
   const destination = decodeURIComponent(params.destination as string);
   const origin_lat = Number(params.origin_lat);
   const origin_lon = Number(params.origin_lon);
@@ -87,32 +83,53 @@ export default function PostSuggestions() {
     setSelectedOption(option);
   };
 
-  const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // Store post ID
-     const [isModalVisible, setIsModalVisible] = useState(false);
-  
-    
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
-    const openReportModal = (postId: number) => {
-      const isLoggedIn = !!authToken;
-      if (!isLoggedIn) {
-        router.push('/login');
-        return;
-      }
-      setSelectedPostId(postId);
-      setIsModalVisible(true);
+  const openReportModal = (postId: number) => {
+    const isLoggedIn = !!authToken;
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    setSelectedPostId(postId);
+    setIsModalVisible(true);
+  };
+
+  const closeReportModal = () => {
+    setIsModalVisible(false);
+    setSelectedPostId(null);
+  };
+
+  useEffect(() => {
+    const socket = io('https://comgu20-production.up.railway.app', {
+      query: { token: authToken },
+    });
+
+    // Listen for new post updates from the server
+    socket.on('newPost', (newPost: Post) => {
+      setPosts(prev => [newPost, ...prev]);
+    });
+
+    // Listen for vote updates
+    socket.on('voteUpdate', (updatedPost: Post) => {
+      setPosts(prev =>
+        prev.map(post => (post.id === updatedPost.id ? updatedPost : post))
+      );
+    });
+
+    // Clean up on unmount
+    return () => {
+      socket.disconnect();
     };
-    
-    const closeReportModal = () => {
-      setIsModalVisible(false);
-      setSelectedPostId(null); // Reset after closing
-    };
-  
+  }, [authToken]);
 
   const fetchPosts = async () => {
-     try {
+    try {
       const response = await fetch(
         `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${origin_lat}&origin_lon=${origin_lon}&destination_lat=${destination_lat}&destination_lon=${destination_lon}`
       );
+      
       if (!response.ok) throw new Error('Failed to fetch posts');
 
       const postsData = await response.json();
@@ -134,15 +151,13 @@ export default function PostSuggestions() {
       setPosts(transformedPosts);
     } catch (error) {
       console.error('Error loading posts:', error);
-    }  
+    }
   };
 
   useEffect(() => {
-    fetchPosts(); // Add initial fetch
-    const interval = setInterval(fetchPosts, 5000);
-    return () => clearInterval(interval);
-  }, [location, destination, selectedOption]); // Add selectedOption to dependencies
-   
+    fetchPosts(); 
+  }, [location, destination,]);
+
   const handlePostSubmit = async (formData: Post) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -158,6 +173,7 @@ export default function PostSuggestions() {
           dest_lon: destination_lon,
         },
       };
+  
       const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
         method: 'POST',
         headers: {
@@ -166,18 +182,50 @@ export default function PostSuggestions() {
         },
         body: JSON.stringify(requestBody),
       });
-
+  
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Server Error Response:", errorData);
-        throw new Error(errorData.error || 'Failed to create post');
+        const errorText = await response.text();
+        throw new Error(`Server error: ${errorText}`);
       }
-
-      await response.json();
-      fetchPosts();
+  
+      const responseData = await response.json();
+      
+      // Debugging: Log the actual server response
+      console.log('Server response:', responseData);
+  
+      // Construct new post with proper fallbacks
+      const newPost: Post = {
+        id: responseData.id || Date.now(), // Temporary ID if missing
+        content: responseData.content || formData.content,
+        location: location,
+        destination: destination,
+        origin_lat: origin_lat,
+        origin_lon: origin_lon,
+        destination_lat,
+         destination_lon,
+        user: {
+          id: responseData.user?.id || 0,
+          username: responseData.user?.username || userHandle || "anonymous",
+          firstname: responseData.user?.firstname || "",
+          lastname: responseData.user?.lastname || "",
+          email: responseData.user?.email || "",
+        },
+        votes: responseData.votes || 0,
+        status: responseData.status || "pending review",
+        comments_count: responseData.comments_count || 0,
+        created_at: responseData.created_at || new Date().toISOString(),
+      };
+  
+      // Update local state immediately
+      setPosts(prevPosts => [newPost, ...prevPosts]);
       setModalVisible(false);
+  
     } catch (error) {
       console.error('Post submission error:', error);
+      Alert.alert(
+        'Submission Error',
+        error instanceof Error ? error.message : 'Failed to create post. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -202,108 +250,105 @@ export default function PostSuggestions() {
       }
 
       await response.json();
-      fetchPosts();
-    
       return true;
     } catch (error) {
       console.error('Vote error:', error);
-     
       return false;
     }
   };
 
-  
-    const handleReportSubmit = async (reason: string) => {
-      if (!isLoggedIn || !selectedPostId) {
-        Alert.alert("Error", "You must be logged in to report a post.");
-        return;
-      }
-    
-      const API_URL = "https://comgu20-production.up.railway.app/api/reports";  
-      console.log("Submitting report to:", API_URL); // ✅ Debugging API URL
-    
-      try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`,
+  const handleReportSubmit = async (reason: string) => {
+    if (!isLoggedIn || !selectedPostId) {
+      Alert.alert("Error", "You must be logged in to report a post.");
+      return;
+    }
+
+    const API_URL = "https://comgu20-production.up.railway.app/api/reports";
+    console.log("Submitting report to:", API_URL);
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          report: {
+            reason: reason,
+            route_post_id: selectedPostId,
           },
-          body: JSON.stringify({
-            report: {
-              reason: reason,
-              route_post_id: selectedPostId,
-            },
-          }),
-        });
-    
-        console.log("Raw response status:", response.status); // ✅ Check response status
-    
-        if (!response.ok) {
-          const errorText = await response.text(); // Read error message
-          console.error("API Error Response:", errorText);
-          throw new Error(`API Error: ${response.status} - ${errorText}`);
-        }
-    
-        const text = await response.text();
-        console.log("Raw response:", text); // ✅ Debugging server response
-    
-        const data = JSON.parse(text); // Convert response to JSON
-        console.log("Report submitted:", data);
-    
-        Alert.alert("Success", data.message);
-        closeReportModal();
-      } catch (error) {
-        console.error("Error submitting report:", error);
-        Alert.alert("Error", "Failed to submit report. Please try again.");
-      }
-    };
-    
-  
+        }),
+      });
 
-  const sortedPosts = useMemo(() => {
-    return [...posts].sort((a, b) => {
-      switch (selectedOption) {
-        case 'Time':
-          return (new Date(b.created_at ?? 0).getTime() || 0) - (new Date(a.created_at ?? 0).getTime() || 0);
-        case 'Popularity':
-          return (b.votes ?? 0) - (a.votes ?? 0);
-        default:
-          return 0;
-      }
-    });
-  }, [posts, selectedOption]);
+      console.log("Raw response status:", response.status);
 
-  const timeAgo = (timestamp: number): string => {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const minute = 60 * 1000;
-    const hour = 60 * minute;
-    const day = 24 * hour;
-    if (diff < minute) return 'Just now';
-    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
-    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
-    return `${Math.floor(diff / day)}d ago`;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
+      }
+
+      const text = await response.text();
+      console.log("Raw response:", text);
+      const data = JSON.parse(text);
+      console.log("Report submitted:", data);
+
+      Alert.alert("Success", data.message);
+      closeReportModal();
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      Alert.alert("Error", "Failed to submit report. Please try again.");
+    }
   };
 
+  // Helper function to update a single post in the posts array
+  const updatePost = (updatedPost: Post) => {
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === updatedPost.id ? updatedPost : post
+      )
+    );
+  };
+
+  // New handleVote function with optimistic update
   const handleVote = async (id: number, action: VoteType) => {
     if (!authToken) {
       router.push('/login');
       return;
     }
+
+    const currentPost = posts.find(p => p.id === id);
+    if (!currentPost) return;
+
+    // Ensure votes is a number
+    const previousVotes = currentPost.votes ?? 0;
+    const previousVote = selectedVotes[id];
+
+    // If the same vote is already selected, send the API without UI change
     if (selectedVotes[id] === action) {
       const success = await sendVoteRequest(id.toString(), action);
-      if (success) {
-        // Maintain current vote highlight.
+      if (!success) {
+        Alert.alert('Error', 'There was a problem registering your vote.');
       }
-    } else {
-      const success = await sendVoteRequest(id.toString(), action);
-      if (success) {
-        setSelectedVotes(prev => ({ ...prev, [id]: action }));
-      }
+      return;
+    } 
+    setSelectedVotes(prev => ({ ...prev, [id]: action }));
+    updatePost({
+      ...currentPost,
+      votes: previousVotes + (action === 'upvote' ? 1 : -1),
+    });
+    const success = await sendVoteRequest(id.toString(), action);
+    if (!success) {
+      setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
+      updatePost({
+        ...currentPost,
+        votes: previousVotes,
+      });
+      Alert.alert('Error', 'There was a problem registering your vote.');
     }
   };
- 
+
   const handlePostButtonPress = () => {
     const isLoggedIn = !!authToken;
     if (!isLoggedIn) {
@@ -318,11 +363,29 @@ export default function PostSuggestions() {
       router.push('/login');
       return;
     }
-
     handleVote(postId, action);
   };
 
-  // Helper function for dynamic background and border colors based on status.
+  const sortedPosts = useMemo(() => {
+    return posts.slice().sort((a, b) => { // Use slice instead of spread
+      // Move date parsing out of sort
+      const aDate = new Date(a.created_at || 0).getTime();
+      const bDate = new Date(b.created_at || 0).getTime();
+      return selectedOption === 'Time' ? bDate - aDate : (b.votes ?? 0) - (a.votes ?? 0);
+    });
+  }, [posts, selectedOption]);
+
+  const timeAgo = (timestamp: number): string => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (diff < minute) return 'Just now';
+    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+    return `${Math.floor(diff / day)}d ago`;
+  };
   const getStatusStyle = (status: string) => {
     switch(status.toLowerCase()) {
       case "pending review":
@@ -353,33 +416,57 @@ export default function PostSuggestions() {
         return {};
     }
   };
-
+  
   return (
-    <ScrollView style={styles.maincontainer}>
-      
-      <Text style={styles.sectionTitle}>Discover Experiences</Text>
-      <View style={styles.sectionHeader}>
-       
-        <View style={styles.detailsContainer}>
-          <Text style={styles.locationText}><Text style={styles.boldText}>From:</Text> {location}</Text>
-          <Text style={styles.locationText}><Text style={styles.boldText}>To:</Text> {destination}</Text>
-        </View>
-      </View>
-      <View style={{ flexDirection:'row', justifyContent:'space-between', marginBottom: 10, alignItems: 'center' }}>
-        <View style={{ zIndex: 1000 }}>
-          <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
-        </View>
-        <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-          <Text style={styles.postButtonText}>Post</Text>
-        </TouchableOpacity>
-      </View>
-      
-      {isLoading && (
-        <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
-      )}
-      <View style={{ marginBottom: 200 }}>
-        {sortedPosts.map((post) => (
-          <View key={post.id} style={styles.containerpost}>
+    <View style={styles.maincontainer}>
+      <FlatList
+        initialNumToRender={10}
+        maxToRenderPerBatch={5}
+        windowSize={21} // ~7 screens
+        removeClippedSubviews={true}
+        data={sortedPosts}
+        ListEmptyComponent={
+        
+            // Show loading indicator while fetching
+            <View style={{ padding: 20 }}>
+              <ActivityIndicator size="large" color="#6366F1" />
+              <Text style={{ textAlign: 'center', marginTop: 10 }}>
+                Loading posts...
+              </Text>
+            </View>
+        
+        }
+        keyExtractor={(post) => post.id ? post.id.toString() : ''}
+        ListHeaderComponent={
+          <>
+          <View style={{ zIndex: 1000,}}>
+            <Text style={styles.sectionTitle}>Discover Experiences</Text>
+            <View style={styles.sectionHeader}>
+             
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+              <View style={{ zIndex: 1000 }}>
+                <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} />
+              </View>
+              <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+                <Text style={styles.postButtonText}>Post</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.detailsContainer}>
+                <Text style={styles.locationText}>
+                  <Text style={styles.boldText}>From:</Text> {location}
+                </Text>
+                <Text style={styles.locationText}>
+                  <Text style={styles.boldText}>To:</Text> {destination}
+                </Text>
+              </View>
+            </View>
+          </>
+        }
+
+
+        renderItem={({ item: post }) => (
+          <View style={styles.containerpost}>
             <View style={styles.suggestordetails}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                 <View style={styles.profile}>
@@ -398,17 +485,16 @@ export default function PostSuggestions() {
                   <Text style={styles.suggestorusername}>{post.user?.email}</Text>
                 </View>
               </View>
-              <View style={{flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
-              <Text style={styles.postTimestamp}>
-                {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
-              </Text>
-               <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
-               <MaterialIcons name="report" size={20} color="#C52222" />
-              </TouchableOpacity>
-              
+              <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={styles.postTimestamp}>
+                  {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+                </Text>
+                <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
+                  <MaterialIcons name="report" size={20} color="#C52222" />
+                </TouchableOpacity>
               </View>
             </View>
-            
+  
             <View style={{ flexDirection: 'column', gap: 8 }}>
               <Text style={styles.label}>Experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
@@ -420,40 +506,41 @@ export default function PostSuggestions() {
                 </View>
               </View>
               <View style={styles.arrowcontainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.arrowup,
-                      post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
-                    ]}
-                    onPress={() => post.id && handlePostPress(post.id, 'upvote')}
-                  >
-                    <AntDesign
-                      name="arrowup"
-                      size={13}
-                      color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
-                    />
-                  </TouchableOpacity>
-                  <Text style={styles.arrowupnum}>{post.votes}</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.arrowdown,
-                      post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
-                    ]}
-                    onPress={() => post.id && handlePostPress(post.id, 'downvote')}
-                  >
-                    <AntDesign
-                      name="arrowdown"
-                      size={13}
-                      color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
-                    />
-                  </TouchableOpacity>
-
+                <TouchableOpacity
+                  style={[
+                    styles.arrowup,
+                    post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
+                  ]}
+                  onPress={() => post.id && handlePostPress(post.id, 'upvote')}
+                >
+                  <AntDesign
+                    name="arrowup"
+                    size={13}
+                    color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.arrowupnum}>{post.votes}</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.arrowdown,
+                    post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
+                  ]}
+                  onPress={() => post.id && handlePostPress(post.id, 'downvote')}
+                >
+                  <AntDesign
+                    name="arrowdown"
+                    size={13}
+                    color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
+                  />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
-        ))}
-      </View>
-       
+        )}
+        contentContainerStyle={{ paddingBottom: 200 }}
+      />
+  
+      {/* Modals outside FlatList */}
       <PostModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -467,23 +554,40 @@ export default function PostSuggestions() {
         authToken={authToken}
         userEmail={''}
         userPassword={''}
-        
-        isFromCommunity={false} 
+        isFromCommunity={false}
       />
-
-{isModalVisible && selectedPostId !== null && (
-  <ModalComponent
-    visible={isModalVisible}
-    onClose={closeReportModal}
-    onSubmit={handleReportSubmit}
-    route_post_id={selectedPostId} // ✅ Now properly set
-  />
-)}
-    </ScrollView>
+  
+      {isModalVisible && selectedPostId !== null && (
+        <ModalComponent
+          visible={isModalVisible}
+          onClose={closeReportModal}
+          onSubmit={handleReportSubmit}
+          route_post_id={selectedPostId}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+   emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#44457D',
+    marginVertical: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   loadingIndicator: {
     marginVertical: 20,
   },
@@ -497,6 +601,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     width: '100%',
     padding: 15,
+    height: '100%'
   },
   content: {
     flexDirection: 'row',

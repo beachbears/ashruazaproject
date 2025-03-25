@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   headerImageContainer: {
     position: 'relative',
     width: '100%',
-    height: 200, // Adjust as needed
+    height: 260, // Adjust as needed
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
     overflow: 'hidden', // Ensures the border radius is applied properly
