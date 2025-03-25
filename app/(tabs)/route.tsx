@@ -630,7 +630,7 @@ const RouteScreen: React.FC = () => {
                   <Text style={styles.segmentLabel}>
                     {segment.type === "walking"
                       ? `Walk from ${shortenAddress(segment.from_stop?.name || "Origin")} to ${shortenAddress(segment.to_stop?.name || "Destination")}`
-                      : `${segment.route_name || segment.type} from ${shortenAddress(segment.boarding || segment.from_stop?.name || "Start")} to ${shortenAddress(segment.alighting || segment.to_stop?.name || "End")}`}
+                      : `${segment.type} - ${segment.route_name}`}
                   </Text>
                   <Ionicons
                     name={isExpanded ? "chevron-down" : "chevron-forward"}
