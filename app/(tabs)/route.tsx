@@ -174,39 +174,6 @@ const RouteScreen: React.FC = () => {
       });
   }, [navigation]);
 
-  const handleScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { y } = event.nativeEvent.contentOffset;
-    const { height: layoutHeight } = event.nativeEvent.layoutMeasurement;
-    const contentHeight = event.nativeEvent.contentSize.height;
-    const tolerance = 500; // Increased tolerance
-
-    // Prevent snapping if content isn't scrollable
-    if (contentHeight <= layoutHeight + tolerance) {
-      return;
-    }
-
-    // Snap to top if near the top
-    if (y <= tolerance) {
-      bottomSheetRef.current?.snapToIndex(0);
-    }
-    // Snap to bottom if near the bottom
-    // else if (y + layoutHeight >= contentHeight - tolerance) {
-    //   bottomSheetRef.current?.snapToIndex(2);
-    // }
-  };
-
-  // --- NEW: Fix for "View" error in Restaurant Modal ---
-  const handleViewRestaurant = (lat: number, lng: number) => {
-    if (webviewRef.current) {
-      const js = `
-        if (window.map) {
-          window.map.flyTo([${lat}, ${lng}], 16, { animate: true, duration: 2 });
-        }
-      `;
-      webviewRef.current.injectJavaScript(js);
-    }
-  };
-
   useEffect(() => {
     if (modalVisible && scrollToSpot) {
       setTimeout(() => {
