@@ -1033,11 +1033,11 @@ const RouteScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.tabContainer}>
         <TabButton title="Route" isActive={activeTab === "Route"} onPress={() => setActiveTab("Route")} />
-        <TabButton title="Dining Spots" isActive={activeTab === "Dining Spots"} onPress={() => setActiveTab("Dining Spots")} />
+        <TabButton title="Dining" isActive={activeTab === "Dining"} onPress={() => setActiveTab("Dining")} />
         <TabButton title="Attractions" isActive={activeTab === "Attractions"} onPress={() => setActiveTab("Attractions")} />
       </View>
       {activeTab === "Route" && renderRouteTab()}
-      {activeTab === "Dining Spots" && renderRestaurantsTab()}
+      {activeTab === "Dining" && renderRestaurantsTab()}
       {activeTab === "Attractions" && renderAttractionsTab()}
     </View>
   );
