@@ -88,6 +88,7 @@ const RouteScreen: React.FC = () => {
   const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
   const [nearbyRestaurants, setNearbyRestaurants] = useState<
     Array<{
+      distance: number;
       name: string;
       latitude: number;
       longitude: number;
@@ -119,6 +120,14 @@ const RouteScreen: React.FC = () => {
   const originTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const destinationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [activeTab, setActiveTab] = useState("Route");
+  const formatCuisine = (cuisine: string | undefined) => {
+    if (!cuisine) return "Not specified";
+    return cuisine
+      .split(/[_;]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(', ');
+  };
+
   useEffect(() => {
     if (selectedLocationType === 'origin' && route[0]) {
       setSelectedLocationCoords(route[0]);
@@ -340,8 +349,7 @@ const RouteScreen: React.FC = () => {
             lon,
             radius: 5,
             sort: "nearest",
-            amenity:
-              "cafe,restaurant,fast_food,pub,bar,ice_cream,food_court,biergarten",
+            amenity: "cafe,restaurant,fast_food,pub,bar,ice_cream,food_court,biergarten",
             page: 1,
             per_page: 20,
           },
@@ -353,11 +361,12 @@ const RouteScreen: React.FC = () => {
         longitude: item.coordinates?.lon || 0,
         amenity: item.amenity || "Restaurant",
         cuisine: item.metadata?.cuisine || "Various",
-        address: item.address?.full_address || "Address not available",
+        address: item.reverse_geocoded_address || "Address not available",
         opening_hours: item.metadata?.opening_hours || "Hours not specified",
-        phone: item.metadata?.contact?.phone,
-        website: item.metadata?.contact?.website,
-        image_url: item.metadata?.contact?.website,
+        phone: item.contacts?.phone,
+        website: item.contacts?.website,
+        image_url: "https://via.placeholder.com/150", // Use a placeholder since no image is provided
+        distance: item.distance, // Add distance from API (in km)
       }));
       setNearbyRestaurants(mapped);
     } catch (error) {
@@ -866,7 +875,7 @@ const RouteScreen: React.FC = () => {
           {renderRouteOverview()}
           <View style={styles.buttonRow}>
             <TouchableOpacity style={styles.button} onPress={() => setActiveTab("Restaurants")}>
-              <Text style={styles.buttonText}>Restaurants</Text>
+              <Text style={styles.buttonText}>Nearby Dining Spots</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.button}
@@ -906,10 +915,10 @@ const RouteScreen: React.FC = () => {
 
   const renderRestaurantsTab = () => (
     <View style={styles.tabContent}>
-      <Text style={styles.text}>Nearby Restaurants</Text>
+      <Text style={styles.text}>Nearby Dining Spots</Text>
       {(route[0] || route[1]) && (
         <View style={styles.locationTypeContainer}>
-          <Text style={styles.locationTypeLabel}>Show restaurants near:</Text>
+          <Text style={styles.locationTypeLabel}>Show dining spots near:</Text>
           <View style={styles.segmentedControl}>
             <TouchableOpacity
               style={[styles.segmentButton, selectedLocationType === "origin" && styles.activeSegment]}
@@ -954,25 +963,32 @@ const RouteScreen: React.FC = () => {
                   style={styles.restaurantCard}
                   onPress={() => setRestaurantModalVisible(true)}
                 >
+                  <Image
+                    source={{ uri: restaurant.image_url || "https://via.placeholder.com/150" }}
+                    style={{ width: 156, height: 90, borderRadius: 8, marginBottom: 8 }}
+                  />
                   <Text style={styles.restaurantName} numberOfLines={1}>
                     {restaurant.name}
                   </Text>
                   <Text style={styles.restaurantCuisine} numberOfLines={1}>
-                    {restaurant.cuisine}
+                    {formatCuisine(restaurant.cuisine)}
+                  </Text>
+                  <Text style={styles.restaurantDistance}>
+                    {restaurant.distance?.toFixed(2)} km
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
           ) : (
-            <Text style={styles.noResultsText}>No restaurants found near {selectedLocationType}</Text>
+            <Text style={styles.noResultsText}>No dining spots found near {selectedLocationType}</Text>
           )}
           <TouchableOpacity style={styles.seeAllButton} onPress={() => setRestaurantModalVisible(true)}>
-            <Text style={styles.seeAllText}>See All Restaurants</Text>
+            <Text style={styles.seeAllText}>See All Dining Spots</Text>
             <Ionicons name="chevron-forward" size={16} color="#6366F1" />
           </TouchableOpacity>
         </View>
       ) : (
-        <Text style={styles.promptText}>Enter an origin/destination to view nearby restaurants</Text>
+        <Text style={styles.promptText}>Enter an origin/destination to view nearby dining spots</Text>
       )}
     </View>
   );
@@ -1005,11 +1021,11 @@ const RouteScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.tabContainer}>
         <TabButton title="Route" isActive={activeTab === "Route"} onPress={() => setActiveTab("Route")} />
-        <TabButton title="Restaurants" isActive={activeTab === "Restaurants"} onPress={() => setActiveTab("Restaurants")} />
+        <TabButton title="Dining Spots" isActive={activeTab === "Dining Spots"} onPress={() => setActiveTab("Dining Spots")} />
         <TabButton title="Attractions" isActive={activeTab === "Attractions"} onPress={() => setActiveTab("Attractions")} />
       </View>
       {activeTab === "Route" && renderRouteTab()}
-      {activeTab === "Restaurants" && renderRestaurantsTab()}
+      {activeTab === "Dining Spots" && renderRestaurantsTab()}
       {activeTab === "Attractions" && renderAttractionsTab()}
     </View>
   );
@@ -1434,13 +1450,23 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   restaurantCard: {
-    width: 160,
+    width: 180, // Slightly wider for better layout
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
-    marginRight: 8,
+    marginRight: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  restaurantDistance: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 4,
   },
   restaurantName: {
     fontSize: 12,
