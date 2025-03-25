@@ -81,7 +81,7 @@ const RouteScreen: React.FC = () => {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = ["25%", "60%", "90%"];
-  const [selectedLocationType, setSelectedLocationType] = useState<"origin" | "destination">("origin");
+  const [selectedLocationType, setSelectedLocationType] = useState<"origin" | "destination" | null>(null);
   const [selectedLocationCoords, setSelectedLocationCoords] = useState<LatLng | null>(null);
   const navigation = useNavigation();
   const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
@@ -127,16 +127,6 @@ const RouteScreen: React.FC = () => {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(', ');
   };
-
-  useEffect(() => {
-    if (selectedLocationType === 'origin' && route[0]) {
-      setSelectedLocationCoords(route[0]);
-    } else if (selectedLocationType === 'destination' && route[1]) {
-      setSelectedLocationCoords(route[1]);
-    } else {
-      setSelectedLocationCoords(null);
-    }
-  }, [selectedLocationType, route]);
 
   useEffect(() => {
     if (selectedLocationType === "origin" && route[0]) {
@@ -1057,7 +1047,7 @@ const RouteScreen: React.FC = () => {
           nearbySpots={nearbySpots}
           selectedSpot={selectedSpot}
           isLoading={isRouteLoading}
-          nearbyRestaurants={nearbyRestaurants}
+          nearbyRestaurants={activeTab === "Dining" ? nearbyRestaurants : []} // Conditional rendering
           onRestaurantClick={(name) => {
             const restaurant = nearbyRestaurants.find((r) => r.name === name);
             if (restaurant) {
