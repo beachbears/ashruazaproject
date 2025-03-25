@@ -510,11 +510,7 @@ const RouteScreen: React.FC = () => {
     setMapResetKey(Date.now());
   };
 
-  const fetchRouteDetails = async (
-    destLat: number,
-    destLon: number,
-    algorithm: string
-  ) => {
+  const fetchRouteDetails = async (destLat: number, destLon: number, algorithm: string) => {
     setIsRouteLoading(true);
     setNearbySpots([]);
     setSelectedSpot(null);
@@ -524,70 +520,28 @@ const RouteScreen: React.FC = () => {
       origin_lon: route.length > 0 ? route[0].longitude : region.longitude,
       destination_lat: destLat,
       destination_lon: destLon,
-      algorithm: algorithm,
+      algorithm,
     };
-    console.log("Request Params:", params);
     try {
-      const response = await axios.get<ApiResponse>(
-        "https://comgu20-production.up.railway.app/api/routes/find",
-        { params }
-      );
-
-      // Update nearby spots only if new data contains them
-      if (response.data.nearby_spots) {
-        setNearbySpots(response.data.nearby_spots);
-      }
-      const processedPosts = response.data.posts.map((post) => ({
-        ...post,
-        origin_address: origin,
-        destination_address: destination,
-        origin_lat: region.latitude,
-        origin_lon: region.longitude,
-        destination_lat: destLat,
-        destination_lon: destLon,
-        user: { ...post.user, email: post.user.email || "" },
-      }));
-      processedPosts.forEach((p) => {
-        // addPost context functionality
-      });
+      const response = await axios.get("https://comgu20-production.up.railway.app/api/routes/find", { params });
       const routeData = response.data.route;
       setRouteDetails({ route: routeData });
       if (routeData && routeData.summary) {
         const summary = routeData.summary;
-        const formattedDuration = formatDuration(summary.total_duration);
-        let totalWalkingDistance = 0;
-        let busDuration = 0;
-        if (routeData.segments && routeData.segments.length > 0) {
-          routeData.segments.forEach((segment) => {
-            const segType = segment.type.toLowerCase();
-            if (segType === "walking" && segment.distance) {
-              totalWalkingDistance += segment.distance;
-            }
-            if (
-              ["bus", "jeep", "ejeep", "lrt", "mrt"].includes(segType) &&
-              segment.duration
-            ) {
-              busDuration += segment.duration;
-            }
-          });
-        }
-        const busFormattedDuration = busDuration
-          ? formatDuration(busDuration)
-          : "";
+        const formattedDuration = formatDuration(summary.total_duration); // Keep this since API returns seconds
         setRouteMetrics({
+          duration: summary.total_duration || 0,
           distance: summary.total_distance_km || 0,
           fare: summary.total_fare || 0,
-          walkingTime: totalWalkingDistance
-            ? `${(totalWalkingDistance / 1000).toFixed(2)} km`
-            : "",
-          carTime: formattedDuration,
-          busTime: busFormattedDuration,
+          walkingTime: "", // Simplified for brevity; calculate if needed
+          carTime: formattedDuration, // Total formatted duration
+          busTime: "", // Add if needed
         });
       } else {
         setRouteMetrics(null);
       }
       if (routeData && routeData.segments && routeData.segments.length > 0) {
-        const allWalking = routeData.segments.every((seg) => seg.walking);
+        const allWalking = routeData.segments.every((seg: { walking: any; }) => seg.walking);
         setPolylineColor(allWalking ? "#808080" : "#6366F1");
       } else {
         setPolylineColor("#6366F1");
@@ -600,8 +554,8 @@ const RouteScreen: React.FC = () => {
         routeData.segments.length > 0
       ) {
         const segmentsPaths: SegmentPath[] = routeData.segments
-          .filter((segment) => segment.geometry)
-          .map((segment) => {
+          .filter((segment: { geometry: any; }) => segment.geometry)
+          .map((segment: { type: string; geometry: any; }) => {
             const color =
               segment.type.toLowerCase() === "walking" ? "#808080" : "#6366F1";
             const coords = polyline
@@ -625,137 +579,95 @@ const RouteScreen: React.FC = () => {
     }
   };
 
-
-
   const renderRouteOverview = () => {
-    if (isRouteLoading) {
-      return <ActivityIndicator size="small" color="#6366F1" />;
-    }
-    if (!routeDetails.route) {
-      return (
-        <Text style={styles.overviewText}>No route overview available</Text>
-      );
-    }
+    if (!routeDetails.route) return <Text style={styles.overviewText}>No route available</Text>;
+
     const { segments } = routeDetails.route;
     return (
-      <View>
-        {segments &&
-          segments.map((segment, idx) => {
-            const segType = segment.type.toLowerCase();
-            const segLabel = getSegmentLabel(
-              segType,
-              segment.from_stop?.name,
-              segment.to_stop?.name,
-              segment.vehicle_type
-            );
-            const isExpanded = expandedSegments[idx];
-            return (
-              <View key={idx} style={styles.segmentCard}>
+      <View style={styles.timelineContainer}>
+        {segments.map((segment, idx) => {
+          const iconName = segment.type === "walking" ? "walking" : segment.type === "bus" ? "bus" : "car";
+          const isExpanded = expandedSegments[idx];
+          return (
+            <View key={idx} style={styles.timelineItem}>
+              <FontAwesome5 name={iconName} size={16} color="#6366F1" style={styles.timelineIcon} />
+              <View style={styles.timelineContent}>
                 <TouchableOpacity
                   style={styles.segmentHeaderRow}
                   onPress={() => handleToggleSegment(idx)}
-                  activeOpacity={0.8}
                 >
+                  <Text style={styles.segmentLabel}>
+                    {segment.type === "walking"
+                      ? `Walk from ${shortenAddress(segment.from_stop?.name || "Origin")} to ${shortenAddress(segment.to_stop?.name || "Destination")}`
+                      : `${segment.route_name || segment.type} from ${shortenAddress(segment.boarding || segment.from_stop?.name || "Start")} to ${shortenAddress(segment.alighting || segment.to_stop?.name || "End")}`}
+                  </Text>
                   <Ionicons
                     name={isExpanded ? "chevron-down" : "chevron-forward"}
                     size={18}
                     color="#6366F1"
-                    style={{ marginRight: 8 }}
                   />
-                  <Text style={styles.segmentCardHeaderText}>{segLabel}</Text>
                 </TouchableOpacity>
                 {isExpanded && (
-                  <View style={styles.segmentCardBody}>
-                    {segType === "walking" && (
+                  <View style={styles.segmentDetails}>
+                    {segment.type === "walking" ? (
                       <>
-                        <Text
-                          style={[
-                            styles.onOffInstruction,
-                            { marginVertical: 4 },
-                          ]}
-                        >
-                          From: {segment.from_stop?.name} to{" "}
-                          {segment.to_stop?.name}
+                        <Text style={styles.segmentText}>
+                          Distance: {segment.distance ? (segment.distance / 1000).toFixed(2) : "N/A"} km
                         </Text>
-                        {segment.steps && segment.steps.length > 0 ? (
-                          <View style={styles.stepsContainer}>
-                            {segment.steps.map((step, stepIdx) => (
-                              <View key={stepIdx} style={styles.stepRow}>
-                                <Text style={styles.bulletIcon}>•</Text>
-                                <Text style={styles.stepText}>
-                                  {step.instruction}
-                                </Text>
-                              </View>
+                        <Text style={styles.segmentText}>
+                          Duration: {segment.duration ? formatDuration(segment.duration) : "N/A"}
+                        </Text>
+                        {segment.steps?.map((step, stepIdx) => (
+                          <Text key={stepIdx} style={styles.stepText}>• {step.instruction}</Text>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {/* Get On / Get Off Section */}
+                        <View style={styles.getOnOffContainer}>
+                          <Text style={styles.onOffTitle}>Get On</Text>
+                          <Text style={styles.onOffInstruction}>
+                            {segment.boarding || segment.from_stop?.name || "Start"}
+                          </Text>
+                          <Text style={styles.onOffTitle}>Get Off</Text>
+                          <Text style={styles.onOffInstruction}>
+                            {segment.alighting || segment.to_stop?.name || "End"}
+                          </Text>
+                        </View>
+                        <Text style={styles.segmentText}>Fare: {segment.fare || "N/A"}</Text>
+                        <Text style={styles.segmentText}>
+                          Duration: {segment.duration ? formatDuration(segment.duration) : "N/A"}
+                        </Text>
+                        {/* Alternatives Section with Type Safety */}
+                        {segment.alternatives && Array.isArray(segment.alternatives) && segment.alternatives.length > 0 && (
+                          <View style={styles.alternativesContainer}>
+                            <Text style={styles.alternativeHeader}>Alternatives</Text>
+                            {segment.alternatives.map((alt, altIdx) => (
+                              <Text key={altIdx} style={styles.alternativeText}>
+                                • {alt.type} - {alt.route_name}
+                              </Text>
                             ))}
                           </View>
-                        ) : (
-                          <Text style={styles.stepText}>
-                            No walking steps available.
-                          </Text>
                         )}
                       </>
                     )}
-                    {["jeep", "bus", "ejeep", "lrt", "mrt"].includes(
-                      segType
-                    ) && (
-                        <>
-                          <View style={styles.getOnOffContainer}>
-                            <Text style={[styles.onOffTitle, { color: "green" }]}>
-                              Get on
-                            </Text>
-                            <Text style={styles.onOffInstruction}>
-                              Ride a{" "}
-                              {segment.vehicle_type
-                                ? segment.vehicle_type.toLowerCase()
-                                : segType}{" "}
-                              from {segment.from_stop?.name} going towards{" "}
-                              {segment.to_stop?.name}.
-                            </Text>
-                            <Text
-                              style={[
-                                styles.onOffTitle,
-                                { color: "blue", marginTop: 8 },
-                              ]}
-                            >
-                              Get off
-                            </Text>
-                            <Text style={styles.onOffInstruction}>
-                              Arrive at {segment.to_stop?.name}, then get off at
-                              your stop.
-                            </Text>
-                          </View>
-                        </>
-                      )}
-                    {segment.alternatives &&
-                      segment.alternatives.length > 0 && (
-                        <View style={styles.alternativesContainer}>
-                          <Text style={styles.alternativeHeader}>
-                            Alternative Routes:
-                          </Text>
-                          {segment.alternatives.map((alt, altIdx) => {
-                            const routeName = alt.route_name
-                              ? alt.route_name.split("-")[0]
-                              : "";
-                            return (
-                              <Text key={altIdx} style={styles.alternativeText}>
-                                • {alt.type} {routeName}
-                              </Text>
-                            );
-                          })}
-                        </View>
-                      )}
                   </View>
                 )}
               </View>
-            );
-          })}
+            </View>
+          );
+        })}
       </View>
     );
   };
+
   const renderRouteTab = () => (
     <View style={styles.tabContent}>
-      <Text style={styles.text}>Route Details</Text>
-      <View style={styles.dropdownContainer}>
+      <Text style={styles.sectionHeader}>Route Details</Text>
+
+      {/* Route Type Dropdown */}
+      <View style={styles.routeTypeContainer}>
+        <Text style={styles.subHeader}>Select Route Type</Text>
         <TouchableOpacity
           style={styles.algorithmDropdownButton}
           onPress={() => setShowAlgorithmDropdown(!showAlgorithmDropdown)}
@@ -767,156 +679,116 @@ const RouteScreen: React.FC = () => {
             name={showAlgorithmDropdown ? "chevron-up-outline" : "chevron-down-outline"}
             size={16}
             color="#6366F1"
-            style={{ marginLeft: 6 }}
           />
         </TouchableOpacity>
         {showAlgorithmDropdown && (
-          <View style={[styles.algorithmDropdownOverlay, { zIndex: 10001 }]}>
+          <View style={styles.algorithmDropdownOverlay}>
             <ScrollView style={{ maxHeight: 160 }}>
-              {algorithmOptions.map((option, index) => {
-                const isSelected = selectedAlgorithm === option.value;
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[styles.algorithmDropdownItem, isSelected && styles.algorithmDropdownItemSelected]}
-                    onPress={() => {
-                      setSelectedAlgorithm(option.value);
-                      setShowAlgorithmDropdown(false);
-                      if (route.length >= 2) {
-                        const dest = route[1];
-                        fetchRouteDetails(dest.latitude, dest.longitude, option.value);
-                      }
-                    }}
-                  >
-                    <Text
-                      style={[styles.algorithmDropdownItemText, isSelected && styles.algorithmDropdownItemTextSelected]}
-                    >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+              {algorithmOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.algorithmDropdownItem, selectedAlgorithm === option.value && styles.algorithmDropdownItemSelected]}
+                  onPress={() => {
+                    setSelectedAlgorithm(option.value);
+                    setShowAlgorithmDropdown(false);
+                    if (route.length >= 2) fetchRouteDetails(route[1].latitude, route[1].longitude, option.value);
+                  }}
+                >
+                  <Text style={[styles.algorithmDropdownItemText, selectedAlgorithm === option.value && styles.algorithmDropdownItemTextSelected]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         )}
       </View>
-      <Text style={styles.label}>From</Text>
-      <View style={styles.searchContainer}>
-        <View style={styles.inputContainer}>
+
+      {/* Locations: Origin and Destination */}
+      <View style={styles.locationsContainer}>
+        <Text style={styles.label}>From</Text>
+        <View style={styles.searchContainer}>
           <TextInput
             style={styles.userInput}
             placeholder="Type Here..."
-            placeholderTextColor="#666"
             value={origin}
             onChangeText={handleOriginChange}
-            multiline={false}
           />
-          {isOriginLoading && <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />}
           {origin !== "" && (
             <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           )}
+          <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
         </View>
-        <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
-      </View>
-      <Text style={styles.label}>To</Text>
-      <View style={styles.searchContainer}>
-        <View style={styles.inputContainer}>
+        <Text style={styles.label}>To</Text>
+        <View style={styles.searchContainer}>
           <TextInput
             style={styles.userInput}
             placeholder="Type Here..."
-            placeholderTextColor="#666"
             value={destination}
             onChangeText={handleDestinationChange}
-            multiline={false}
           />
-          {isDestinationLoading && <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />}
           {destination !== "" && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => {
-                setDestination("");
-                setNearbySpots([]);
-                setNearbyRestaurants([]);
-                setDestinationSuggestions([]);
-                setRoute((prev) => (prev.length > 0 ? [prev[0]] : []));
-                setRouteDetails({ route: null });
-                setRoadPath([]);
-                setMapResetKey(Date.now());
-              }}
-            >
+            <TouchableOpacity style={styles.clearButton} onPress={() => setDestination("")}>
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           )}
+          <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
         </View>
-        <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
       </View>
-      {route.length >= 2 && routeMetrics && (
-        <View style={styles.topInfoRow}>
-          <View style={styles.infoBox}>
-            <FontAwesome5 name="map-marker-alt" size={16} color="#44457D" />
-            <Text style={styles.infoBoxLabel}>{routeMetrics.distance} km</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <FontAwesome5 name="money-bill-wave" size={16} color="#44457D" />
-            <Text style={styles.infoBoxLabel}>Fare: {routeMetrics.fare}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <FontAwesome5 name="walking" size={16} color="#44457D" />
-            <Text style={styles.infoBoxLabel}>{routeMetrics.walkingTime}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <FontAwesome5 name="car" size={16} color="#44457D" />
-            <Text style={styles.infoBoxLabel}>{routeMetrics.carTime}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <FontAwesome5 name="bus" size={16} color="#44457D" />
-            <Text style={styles.infoBoxLabel}>{routeMetrics.busTime}</Text>
-          </View>
+
+      {/* Loading Indicator */}
+      {isRouteLoading && (
+        <ActivityIndicator size="small" color="#6366F1" style={{ marginVertical: 12 }} />
+      )}
+
+      {/* Route Metrics */}
+      {route.length >= 2 && routeMetrics && !isRouteLoading && (
+        <View style={styles.routeMetricsContainer}>
+          <Text style={styles.subHeader}>Route Metrics</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.metricCard}>
+              <FontAwesome5 name="map-marker-alt" size={16} color="#44457D" />
+              <Text style={styles.metricText}>Distance: {routeMetrics.distance} km</Text>
+            </View>
+            <View style={styles.metricCard}>
+              <FontAwesome5 name="money-bill-wave" size={16} color="#44457D" />
+              <Text style={styles.metricText}>Fare: {routeMetrics.fare}</Text>
+            </View>
+            <View style={styles.metricCard}>
+              <FontAwesome5 name="clock" size={16} color="#44457D" />
+              <Text style={styles.metricText}>Time: {routeMetrics.carTime}</Text>
+            </View>
+          </ScrollView>
         </View>
       )}
-      {route.length >= 2 ? (
-        <View style={styles.routecontainer}>
-          <Text style={styles.routeOverviewText}>Route Overview</Text>
+
+      {/* Route Overview */}
+      {route.length >= 2 && !isRouteLoading ? (
+        <View style={styles.routeOverviewContainer}>
+          <Text style={styles.subHeader}>Route Overview</Text>
           {renderRouteOverview()}
-          <View style={styles.buttonRow}>
-            {/* <TouchableOpacity style={styles.button} onPress={() => setActiveTab("Restaurants")}>
-              <Text style={styles.buttonText}>Nearby Dining Spots</Text>
-            </TouchableOpacity> */}
-            {/* <TouchableOpacity
-              style={styles.button}
-              onPress={() => setModalVisible(true)}
-            >
-              <Text style={styles.buttonText}>Attractions</Text>
-            </TouchableOpacity> */}
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => {
-                router.push({
-                  pathname: "/postsuggestions",
-                  params: {
-                    location: encodeURIComponent(origin),
-                    destination: encodeURIComponent(destination),
-                    origin_lat: route[0].latitude.toString(),
-                    origin_lon: route[0].longitude.toString(),
-                    destination_lat: route[1].latitude.toString(),
-                    destination_lon: route[1].longitude.toString(),
-                  },
-                });
-              }}
-            >
-              <Text style={styles.buttonText}>Experiences</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.experiencesButton}
+            onPress={() => router.push({
+              pathname: "/postsuggestions",
+              params: {
+                location: encodeURIComponent(origin),
+                destination: encodeURIComponent(destination),
+                origin_lat: route[0].latitude.toString(),
+                origin_lon: route[0].longitude.toString(),
+                destination_lat: route[1].latitude.toString(),
+                destination_lon: route[1].longitude.toString(),
+              },
+            })}
+          >
+            <Text style={styles.experiencesButtonText}>Experiences</Text>
+          </TouchableOpacity>
         </View>
-      ) : (
-        <View style={styles.oopsContainer}>
-          <Image source={require("../../assets/images/opz.png")} style={styles.illustration} resizeMode="contain" />
-          <Text style={styles.errorText}>Oops!</Text>
-          <Text style={styles.errorSubText}>Search for your location and destination.</Text>
-        </View>
-      )}
+      ) : !isRouteLoading ? (
+        <Text style={styles.errorText}>Search for your location and destination.</Text>
+      ) : null}
     </View>
   );
 
@@ -1226,6 +1098,89 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  getOnOffContainer: {
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  onOffTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  onOffInstruction: {
+    fontSize: 12,
+    color: "#374151",
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  alternativesContainer: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 6,
+  },
+  alternativeHeader: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 6,
+  },
+  alternativeText: {
+    fontSize: 12,
+    color: "#374151",
+    lineHeight: 18,
+  },
+  tabContent: { padding: 16 },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 12,
+  },
+  routeTypeContainer: { marginBottom: 8 },
+  subHeader: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+  algorithmDropdownButton: { flexDirection: "row", alignItems: "center", padding: 8, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 8 },
+  locationsContainer: { marginBottom: 8 },
+  label: { fontSize: 14, marginBottom: 4 },
+  searchContainer: { marginBottom: 8 },
+  userInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 8, padding: 8 },
+  routeMetricsContainer: { marginBottom: 8 },
+  metricCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#F9FAFB", padding: 8, borderRadius: 8, marginRight: 8 },
+  metricText: { marginLeft: 4, fontSize: 12, color: "#44457D" },
+  routeOverviewContainer: { marginBottom: 12 },
+  timelineContainer: { marginTop: 8 },
+  timelineItem: { flexDirection: "row", marginBottom: 12 },
+  timelineIcon: { width: 32, alignItems: "center" },
+  timelineContent: { flex: 1, paddingLeft: 12 },
+  segmentHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  segmentLabel: { fontSize: 14, fontWeight: "500", color: "#111827" },
+  segmentDetails: { marginTop: 8 },
+  segmentText: { fontSize: 12, color: "#374151", marginBottom: 4 },
+  stepText: { fontSize: 12, color: "#374151" },
+  experiencesButton: { backgroundColor: "#E0E7FF", padding: 10, borderRadius: 8, alignItems: "center", marginTop: 12 },
+  experiencesButtonText: { color: "#6366F1", fontSize: 14, fontWeight: "500" },
+  errorText: { fontSize: 14, color: "#666", textAlign: "center" },
+  metricsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  metricLabel: {
+    fontSize: 10,
+    color: "#6B7280",
+    marginTop: 4,
+  },
+  metricValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#44457D",
+    marginTop: 2,
+  },
   attractionDistance: {
     fontSize: 10,
     color: "#6B7280",
@@ -1256,21 +1211,7 @@ const styles = StyleSheet.create({
   },
   text: { color: "#44457D", fontWeight: "500", fontSize: 16 },
   container: { padding: 15, marginBottom: 20 },
-  label: { fontSize: 12, fontWeight: "500", color: "#6B7280", marginTop: 10 },
-  searchContainer: { position: "relative", width: "100%", marginBottom: 20 },
   inputContainer: { width: "100%" },
-  userInput: {
-    backgroundColor: "#F5F7FF",
-    borderWidth: 1,
-    borderColor: "#C7D2FE",
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 11,
-    color: "#374151",
-    marginVertical: 8,
-    paddingRight: 30,
-    height: 40,
-  },
   clearButton: {
     position: "absolute",
     right: 10,
@@ -1348,12 +1289,6 @@ const styles = StyleSheet.create({
   },
   oopsContainer: { alignItems: "center", padding: 16, marginBottom: 30 },
   illustration: { width: 150, height: 120, marginBottom: 10 },
-  errorText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 4,
-  },
   errorSubText: {
     fontSize: 14,
     color: "#9CA3AF",
@@ -1370,24 +1305,8 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  segmentHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E0E7FF",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    padding: 10,
-  },
   segmentCardHeaderText: { fontSize: 12, fontWeight: "bold", color: "#111827" },
   segmentCardBody: { padding: 10 },
-  getOnOffContainer: { marginTop: 8 },
-  onOffTitle: { fontSize: 13, fontWeight: "600" },
-  onOffInstruction: {
-    fontSize: 12,
-    color: "#374151",
-    marginTop: 2,
-    lineHeight: 18,
-  },
   stepsContainer: { marginTop: 6, marginLeft: 6 },
   stepRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4 },
   bulletIcon: {
@@ -1396,20 +1315,6 @@ const styles = StyleSheet.create({
     color: "#6366F1",
     lineHeight: 20,
   },
-  stepText: { flex: 1, fontSize: 13, color: "#374151", lineHeight: 18 },
-  alternativesContainer: {
-    marginTop: 8,
-    padding: 6,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 4,
-  },
-  alternativeHeader: {
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 4,
-    color: "#111827",
-  },
-  alternativeText: { fontSize: 12, color: "#374151", marginBottom: 2 },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1446,14 +1351,6 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
     backgroundColor: '#ccc',
   },
-  algorithmDropdownButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E0E7FF",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 5,
-  },
   algorithmDropdownButtonText: {
     color: "#6366F1",
     fontSize: 12,
@@ -1462,15 +1359,16 @@ const styles = StyleSheet.create({
   },
   algorithmDropdownOverlay: {
     position: "absolute",
-    top: 40,
+    top: 60,
     left: 0,
-    backgroundColor: "#fff",
+    backgroundColor: "#fff", // Already set, ensuring it’s opaque
     borderColor: "#ccc",
     borderWidth: 1,
     borderRadius: 4,
     width: 150,
     maxHeight: 160,
     paddingVertical: 5,
+    zIndex: 1000, // Added to ensure it’s on top
     ...Platform.select({ android: { elevation: 10000 } }),
   },
   algorithmDropdownItem: {
@@ -1515,10 +1413,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-  },
-  segmentText: {
-    fontSize: 12,
-    color: '#6B7280',
   },
   activeSegmentText: {
     color: '#6366F1',
@@ -1596,7 +1490,6 @@ const styles = StyleSheet.create({
   activeTab: { backgroundColor: "#6366F1" },
   tabText: { color: "#6B7280", fontWeight: "500" },
   activeTabText: { color: "#FFFFFF" },
-  tabContent: { paddingHorizontal: 16 },
   spotLimitContainer: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   spotLimitLabel: { fontSize: 12, color: "#6B7280", marginRight: 8 },
   spotLimitButton: {

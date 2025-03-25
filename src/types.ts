@@ -26,6 +26,7 @@ export interface Stop {
 }
 
 export interface Segment {
+  route_name: string;
   type: string;
   distance?: number;
   duration?: number;
@@ -129,6 +130,7 @@ export interface RouteDetails {
 }
 
 export interface RouteMetrics {
+  duration: number;
   distance: number;
   fare: number;
   walkingTime: string;
