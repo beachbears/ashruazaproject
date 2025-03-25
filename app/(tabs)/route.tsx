@@ -608,36 +608,55 @@ const RouteScreen: React.FC = () => {
     const { segments } = routeDetails.route;
     return (
       <View style={styles.timelineContainer}>
+        {/* Vertical Timeline Line */}
+        <View style={styles.timelineLine} />
         {segments.map((segment, idx) => {
-          const iconName = segment.type === "walking" ? "walking" : segment.type === "bus" ? "bus" : "car";
+          const iconName =
+            segment.type === "walking" ? "walking" : segment.type === "bus" ? "bus" : "car";
           const isExpanded = expandedSegments[idx];
+          const segmentColor = segment.type === "walking" ? "#808080" : "#6366F1";
+
           return (
             <View key={idx} style={styles.timelineItem}>
-              <View style={styles.timelineIconContainer}>
-                <FontAwesome5 name={iconName} size={16} color="#6366F1" />
-                <TouchableOpacity
-                  style={styles.viewButton}
-                  onPress={() => handleViewSegment(idx)}
-                >
-                  <Text style={styles.viewButtonText}>View</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.timelineContent}>
-                <TouchableOpacity
-                  style={styles.segmentHeaderRow}
-                  onPress={() => handleToggleSegment(idx)}
-                >
-                  <Text style={styles.segmentLabel}>
-                    {segment.type === "walking"
-                      ? `Walk from ${shortenAddress(segment.from_stop?.name || "Origin")} to ${shortenAddress(segment.to_stop?.name || "Destination")}`
-                      : `${segment.type} - ${segment.route_name}`}
-                  </Text>
-                  <Ionicons
-                    name={isExpanded ? "chevron-down" : "chevron-forward"}
-                    size={18}
-                    color="#6366F1"
-                  />
-                </TouchableOpacity>
+              {/* Timeline Dot */}
+              <View style={[styles.timelineDot, { backgroundColor: segmentColor }]} />
+              {/* Segment Card */}
+              <View style={styles.segmentCard}>
+                <View style={styles.segmentHeader}>
+                  <View style={styles.timelineIconContainer}>
+                    <FontAwesome5 name={iconName} size={16} color={segmentColor} />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.segmentHeaderRow}
+                    onPress={() => handleToggleSegment(idx)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <View style={styles.segmentTitleContainer}>
+                      <Text style={styles.segmentTitle}>
+                        {segment.type === "walking" ? "Walk" : segment.type.toUpperCase()}
+                      </Text>
+                      <Text style={styles.segmentSubtitle}>
+                        {segment.type === "walking"
+                          ? `${segment.distance ? (segment.distance / 1000).toFixed(2) + " km" : ""} (${formatDuration(segment.duration)})`
+                          : `${segment.route_name} (${formatDuration(segment.duration)})`}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={isExpanded ? "chevron-down" : "chevron-forward"}
+                      size={18}
+                      color="#6366F1"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => handleViewSegment(idx)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.viewButtonText}>View</Text>
+                  </TouchableOpacity>
+                </View>
                 {isExpanded && (
                   <View style={styles.segmentDetails}>
                     {segment.type === "walking" ? (
@@ -654,7 +673,6 @@ const RouteScreen: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        {/* Get On / Get Off Section */}
                         <View style={styles.getOnOffContainer}>
                           <Text style={styles.onOffTitle}>Get On</Text>
                           <Text style={styles.onOffInstruction}>
@@ -669,7 +687,6 @@ const RouteScreen: React.FC = () => {
                         <Text style={styles.segmentText}>
                           Duration: {segment.duration ? formatDuration(segment.duration) : "N/A"}
                         </Text>
-                        {/* Alternatives Section with Type Safety */}
                         {segment.alternatives && Array.isArray(segment.alternatives) && segment.alternatives.length > 0 && (
                           <View style={styles.alternativesContainer}>
                             <Text style={styles.alternativeHeader}>Alternatives</Text>
@@ -691,7 +708,6 @@ const RouteScreen: React.FC = () => {
       </View>
     );
   };
-
   const renderRouteTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.sectionHeader}>Route Details</Text>
@@ -1129,37 +1145,114 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
-  timelineIconContainer: {
+  timelineContainer: {
+    marginTop: 8,
+    position: "relative",
+  },
+  timelineLine: {
+    position: "absolute",
+    left: 15,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: "#6366F1",
+  },
+  timelineItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#6366F1", // Overridden per segment
+    position: "absolute",
+    left: 11,
+    top: 10,
+    zIndex: 1,
+  },
+  segmentCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 12,
+    marginLeft: 24, // Space for timeline
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  segmentHeader: {
     flexDirection: "row",
     alignItems: "center",
-    width: 60,
+    justifyContent: "space-between",
+  },
+  timelineIconContainer: {
+    marginRight: 8,
+  },
+  segmentHeaderRow: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  segmentTitleContainer: {
+    flexDirection: "column",
+  },
+  segmentTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  segmentSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
   },
   viewButton: {
-    marginLeft: 8,
-    backgroundColor: "#E0E7FF",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: "#6366F1",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 4,
+    marginLeft: 8,
   },
   viewButtonText: {
-    color: "#6366F1",
+    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "500",
   },
-  getOnOffContainer: {
+  segmentDetails: {
     marginTop: 8,
-    marginBottom: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  segmentText: {
+    fontSize: 12,
+    color: "#374151",
+    marginBottom: 4,
+  },
+  stepText: {
+    fontSize: 12,
+    color: "#374151",
+    marginBottom: 4,
+  },
+  getOnOffContainer: {
+    marginBottom: 8,
   },
   onOffTitle: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#111827",
+    marginTop: 4,
   },
   onOffInstruction: {
     fontSize: 12,
     color: "#374151",
     marginTop: 2,
-    lineHeight: 18,
   },
   alternativesContainer: {
     marginTop: 8,
@@ -1177,6 +1270,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#374151",
     lineHeight: 18,
+  },
+  overviewText: {
+    fontSize: 12,
+    color: "#44457D",
+    textAlign: "center",
+    marginVertical: 8,
   },
   tabContent: { padding: 16 },
   sectionHeader: {
@@ -1201,15 +1300,9 @@ const styles = StyleSheet.create({
   metricCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#F9FAFB", padding: 8, borderRadius: 8, marginRight: 8 },
   metricText: { marginLeft: 4, fontSize: 12, color: "#44457D" },
   routeOverviewContainer: { marginBottom: 12 },
-  timelineContainer: { marginTop: 8 },
-  timelineItem: { flexDirection: "row", marginBottom: 12 },
   timelineIcon: { width: 32, alignItems: "center" },
   timelineContent: { flex: 1, paddingLeft: 12 },
-  segmentHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   segmentLabel: { fontSize: 14, fontWeight: "500", color: "#111827" },
-  segmentDetails: { marginTop: 8 },
-  segmentText: { fontSize: 12, color: "#374151", marginBottom: 4 },
-  stepText: { fontSize: 12, color: "#374151" },
   experiencesButton: { backgroundColor: "#E0E7FF", padding: 10, borderRadius: 8, alignItems: "center", marginTop: 12 },
   experiencesButtonText: { color: "#6366F1", fontSize: 14, fontWeight: "500" },
   errorText: { fontSize: 14, color: "#666", textAlign: "center" },
@@ -1329,12 +1422,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: 18,
   },
-  overviewText: {
-    fontSize: 12,
-    color: "#44457D",
-    marginVertical: 4,
-    textAlign: "center",
-  },
   oopsContainer: { alignItems: "center", padding: 16, marginBottom: 30 },
   illustration: { width: 150, height: 120, marginBottom: 10 },
   errorSubText: {
@@ -1342,16 +1429,6 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     textAlign: "center",
     marginHorizontal: 20,
-  },
-  segmentCard: {
-    marginBottom: 15,
-    borderRadius: 8,
-    backgroundColor: "#FFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
   },
   segmentCardHeaderText: { fontSize: 12, fontWeight: "bold", color: "#111827" },
   segmentCardBody: { padding: 10 },

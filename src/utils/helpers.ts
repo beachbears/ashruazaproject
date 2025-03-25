@@ -2,9 +2,14 @@
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+export function formatDuration(seconds?: number): string {
+  if (seconds === undefined) return "N/A";
+
+  // Round seconds to the nearest whole number
+  const roundedSeconds = Math.round(seconds);
+
+  const mins = Math.floor(roundedSeconds / 60);
+  const secs = roundedSeconds % 60;
   if (mins >= 60) {
     const hours = Math.floor(mins / 60);
     const remainingMins = mins % 60;
