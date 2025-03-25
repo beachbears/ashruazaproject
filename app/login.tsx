@@ -377,13 +377,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#A0AEC0',
   },
   inputnameEmail: {
-    marginRight: 260,
+    marginRight: 240,
     marginBottom: 10,
     color: '#44457D',
     fontSize: 15,
   },
   inputnamePassword: {
-    marginRight: 230,
+    marginRight: 210,
     marginBottom: 10,
     color: '#44457D',
     fontSize: 15,

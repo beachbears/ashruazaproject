@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   Text,
   StyleSheet,
@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import { AuthContext, AuthContextType } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -40,6 +41,8 @@ const Feedback: React.FC = () => {
   const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
+   const { authToken } = useContext(AuthContext) as AuthContextType;
+   
 
   // Load feedback mula sa AsyncStorage on mount
   useEffect(() => {
@@ -145,11 +148,10 @@ const Feedback: React.FC = () => {
     setModalVisible(false);
   };
 
-  // Kapag pinindot ang "Submit Feedback" button, sine-check muna ang token.
-  const handleFeedbackPress = async () => {
-    const token = await getToken();
-    console.log('handleFeedbackPress - token:', token);
-    if (!token) {
+
+  const handleFeedbackPress = () => {
+    const isLoggedIn = !!authToken;
+    if (!isLoggedIn) {
       router.push('/login');
       return;
     }
