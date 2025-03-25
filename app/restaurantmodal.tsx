@@ -57,7 +57,7 @@ const ModalComponent: React.FC<ModalProps> = ({
   onView,
   onGoHere,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedCategory, setSelectedCategory] = useState<Category>("All");
   const [showCategories, setShowCategories] = useState(false);
   // Payment processing helper
   const getAcceptedPaymentMethods = (paymentData: string): string => {
@@ -88,8 +88,30 @@ const ModalComponent: React.FC<ModalProps> = ({
   const handlePhonePress = (phone: string) => {
     Linking.openURL(`tel:${phone}`);
   };
+  type Category =
+    | "All"
+    | "Restaurant"
+    | "Cafe"
+    | "Fast Food"
+    | "Pub"
+    | "Bar"
+    | "Ice Cream"
+    | "Food Court"
+    | "Biergarten";
 
-  const categories = [
+  const categoryMapping: Record<Category, string> = {
+    "All": "all",
+    "Restaurant": "restaurant",
+    "Cafe": "cafe",
+    "Fast Food": "fast_food",
+    "Pub": "pub",
+    "Bar": "bar",
+    "Ice Cream": "ice_cream",
+    "Food Court": "food_court",
+    "Biergarten": "biergarten"
+  };
+
+  const categories: Category[] = [
     "All",
     "Restaurant",
     "Cafe",
@@ -101,17 +123,17 @@ const ModalComponent: React.FC<ModalProps> = ({
     "Biergarten",
   ];
 
-  const handleSelectCategory = (cat: string) => {
+
+  const handleSelectCategory = (cat: Category) => {
     setSelectedCategory(cat);
     setShowCategories(false);
   };
 
   const filteredSpots = selectedCategory === "All"
-    ? restaurants
+    ? restaurants // Return all items if "All" is selected
     : restaurants.filter(
-      (spot) => spot.amenity?.toLowerCase() === selectedCategory.toLowerCase()
+      (spot) => spot.amenity?.toLowerCase() === categoryMapping[selectedCategory].toLowerCase()
     );
-
   return (
     <Modal
       animationType="slide"
