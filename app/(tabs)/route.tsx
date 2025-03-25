@@ -379,7 +379,7 @@ const RouteScreen: React.FC = () => {
       console.log("Fetching restaurants for:", selectedLocationType, selectedLocationCoords);
       fetchRestaurants(selectedLocationCoords.latitude, selectedLocationCoords.longitude, spotLimit);
     }
-  }, [selectedLocationCoords]);
+  }, [selectedLocationCoords, spotLimit]);
 
   useEffect(() => {
     if (activeTab === "Attractions" && selectedLocationCoords) {
@@ -927,6 +927,7 @@ const RouteScreen: React.FC = () => {
             key={limit}
             style={[styles.spotLimitButton, spotLimit === limit && styles.activeSpotLimitButton]}
             onPress={() => setSpotLimit(limit)}
+            activeOpacity={0.7} // Added for visual feedback
           >
             <Text style={[styles.spotLimitButtonText, spotLimit === limit && styles.activeSpotLimitButtonText]}>
               {limit}
@@ -1017,6 +1018,7 @@ const RouteScreen: React.FC = () => {
             key={limit}
             style={[styles.spotLimitButton, spotLimit === limit && styles.activeSpotLimitButton]}
             onPress={() => setSpotLimit(limit)}
+            activeOpacity={0.7}
           >
             <Text style={[styles.spotLimitButtonText, spotLimit === limit && styles.activeSpotLimitButtonText]}>
               {limit}
@@ -1063,50 +1065,32 @@ const RouteScreen: React.FC = () => {
       )}
       {selectedLocationCoords ? (
         nearbySpots.length > 0 ? (
-          <FlatList
-            data={nearbySpots}
-            keyExtractor={(item, index) => item.name + index}
-            renderItem={({ item }) => (
-              <View style={styles.attractionCard}>
-                <Image
-                  source={{ uri: item.image_url || "https://via.placeholder.com/300x200.png?text=No+Image" }}
-                  style={styles.attractionImage}
-                  defaultSource={{ uri: "https://via.placeholder.com/300x200.png?text=Loading..." }}
-                />
-                <Text style={styles.attractionName}>{item.name}</Text>
-                <Text style={styles.attractionDescription}>
-                  {item.description || "No description available."}
-                </Text>
-                <View style={styles.actionButtonsContainer}>
-                  <TouchableOpacity
-                    style={styles.viewButton}
-                    onPress={() => setSelectedSpot({ latitude: item.latitude, longitude: item.longitude })}
-                  >
-                    <Text style={styles.viewText}>View</Text>
-                    <Ionicons name="eye-outline" size={16} color="#3B82F6" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.goHereButton}
-                    onPress={() => {
-                      setDestination(item.name);
-                      const newDestination = { latitude: item.latitude, longitude: item.longitude };
-                      setRoadPath([]);
-                      const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
-                      setRoute([currentOrigin, newDestination]);
-                      fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
-                      setActiveTab("Route");
-                    }}
-                  >
-                    <Text style={styles.goHereText}>Go here</Text>
-                    <Ionicons name="navigate" size={18} color="#3B82F6" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-            contentContainerStyle={styles.scrollContent}
-          />
+          <View style={styles.attractionsPreview}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attractionsScroll}>
+              {nearbySpots.slice(0, 5).map((spot, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.attractionCardPreview}
+                  onPress={() => setModalVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={{ uri: spot.image_url || "https://via.placeholder.com/150.png?text=No+Image" }}
+                    style={styles.attractionImagePreview}
+                  />
+                  <Text style={styles.attractionNamePreview} numberOfLines={1}>
+                    {spot.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.seeAllButton} onPress={() => setModalVisible(true)}>
+              <Text style={styles.seeAllText}>See All Attractions</Text>
+              <Ionicons name="chevron-forward" size={16} color="#6366F1" />
+            </TouchableOpacity>
+          </View>
         ) : (
-          <Text style={styles.promptText}>No attractions found near {selectedLocationType}</Text>
+          <Text style={styles.noResultsText}>No attractions found near {selectedLocationType}</Text>
         )
       ) : (
         <Text style={styles.promptText}>Enter an origin/destination to view nearby attractions</Text>
@@ -1193,32 +1177,30 @@ const RouteScreen: React.FC = () => {
               setRestaurantModalVisible(false);
             }}
           />
-          {route.length >= 2 && (
-            <ReviewModal
-              visible={modalVisible}
-              onClose={() => setModalVisible(false)}
-              originCoords={route[0]}
-              destinationCoords={route[1]}
-              nearbySpots={nearbySpots}
-              scrollToSpot={scrollToSpot}
-              onSpotsFetched={(spots) => setNearbySpots(spots)}
-              onSpotSelect={(selectedSpot) => {
-                setNearbySpots([]);
-                setDestination(selectedSpot.name);
-                const newDestination = { latitude: selectedSpot.latitude, longitude: selectedSpot.longitude };
-                setRoadPath([]);
-                const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
-                setRoute([currentOrigin, newDestination]);
-                fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
-                setModalVisible(false);
-                setSelectedSpot(newDestination);
-              }}
-              onSpotView={(selectedSpot) => {
-                setSelectedSpot({ latitude: selectedSpot.latitude, longitude: selectedSpot.longitude });
-                setModalVisible(false);
-              }}
-            />
-          )}
+          <ReviewModal
+            visible={modalVisible}
+            onClose={() => setModalVisible(false)}
+            originCoords={route.length > 0 ? route[0] : undefined}
+            destinationCoords={route.length > 1 ? route[1] : undefined}
+            nearbySpots={nearbySpots}
+            scrollToSpot={scrollToSpot}
+            onSpotsFetched={(spots) => setNearbySpots(spots)}
+            onSpotSelect={(selectedSpot) => {
+              setNearbySpots([]);
+              setDestination(selectedSpot.name);
+              const newDestination = { latitude: selectedSpot.latitude, longitude: selectedSpot.longitude };
+              setRoadPath([]);
+              const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
+              setRoute([currentOrigin, newDestination]);
+              fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
+              setModalVisible(false);
+              setSelectedSpot(newDestination);
+            }}
+            onSpotView={(selectedSpot) => {
+              setSelectedSpot({ latitude: selectedSpot.latitude, longitude: selectedSpot.longitude });
+              setModalVisible(false);
+            }}
+          />
         </BottomSheetScrollView>
       </BottomSheet>
     </GestureHandlerRootView>
@@ -1606,7 +1588,13 @@ const styles = StyleSheet.create({
   tabContent: { paddingHorizontal: 16 },
   spotLimitContainer: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   spotLimitLabel: { fontSize: 12, color: "#6B7280", marginRight: 8 },
-  spotLimitButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: "#F3F4F6", marginRight: 8 },
+  spotLimitButton: {
+    paddingHorizontal: 12, // Already decent, could increase to 16 if needed
+    paddingVertical: 8,   // Increased from 6 for better touch area
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
+    marginRight: 8,
+  },
   activeSpotLimitButton: { backgroundColor: "#6366F1" },
   spotLimitButtonText: { fontSize: 12, color: "#6B7280" },
   activeSpotLimitButtonText: { color: "#FFFFFF" },
@@ -1620,4 +1608,35 @@ const styles = StyleSheet.create({
   goHereButton: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, backgroundColor: "#EFF6FF", borderRadius: 8, flex: 1 },
   goHereText: { color: "#3B82F6", fontWeight: "500" },
   scrollContent: { paddingBottom: 20 },
+  attractionsPreview: {
+    marginVertical: 12,
+  },
+  attractionsScroll: {
+    paddingRight: 16,
+  },
+  attractionCardPreview: {
+    width: 180,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  attractionImagePreview: {
+    width: '100%',
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  attractionNamePreview: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#111827',
+  },
 });
