@@ -126,6 +126,7 @@ export interface MapComponentProps {
 }
 
 export interface RouteDetails {
+  posts: Post[]; // Add this required property
   route: Route | null;
 }
 

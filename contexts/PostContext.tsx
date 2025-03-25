@@ -1,4 +1,4 @@
-import { ApiResponse } from '@/app/(tabs)/route';
+import { ApiResponse } from '../src/types';
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 export type PostCategory = 'routes' | 'postsuggestions' | 'community';
 export interface Post {
@@ -10,7 +10,7 @@ export interface Post {
   origin_lon: number;
   destination_lat: number;
   destination_lon: number;
-  
+
   // New fields from the API
   user?: {
     id: number;
@@ -27,17 +27,17 @@ export interface Post {
   comments_count?: number;
   created_at?: string;
   category?: PostCategory;
-   timestamp?: number;
-   destination_address?: string;
-   origin_address?: string
+  timestamp?: number;
+  destination_address?: string;
+  origin_address?: string
 }
 
 interface PostContextType {
   posts: Post[];
   addPost: (newPost: Omit<Post, 'category'>, source: PostCategory) => void;
-   handleUpvote: (postId: number) => void;
-   handleDownvote: (postId: number) => void;
-   getPostsByCategory: (category: PostCategory) => Post[];
+  handleUpvote: (postId: number) => void;
+  handleDownvote: (postId: number) => void;
+  getPostsByCategory: (category: PostCategory) => Post[];
   experienceOnly: boolean;
   setExperienceOnly: (value: boolean) => void;
   updatePost: (updatedPost: Post) => void; // <-- Add this line
@@ -55,22 +55,22 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addPost = (newPost: Post, source: PostCategory) => {
     setPosts(prevPosts => {
-        // Check if post already exists
-        const existingIndex = prevPosts.findIndex(post => post.id === newPost.id);
+      // Check if post already exists
+      const existingIndex = prevPosts.findIndex(post => post.id === newPost.id);
 
 
-        if (existingIndex !== -1) {
-            // If post exists, update it (e.g., vote count)
-            const updatedPosts = [...prevPosts];
-            updatedPosts[existingIndex] = newPost; // Replace with updated post
-            return updatedPosts;
-        }
+      if (existingIndex !== -1) {
+        // If post exists, update it (e.g., vote count)
+        const updatedPosts = [...prevPosts];
+        updatedPosts[existingIndex] = newPost; // Replace with updated post
+        return updatedPosts;
+      }
 
 
-        // Add new post at the top if it doesn't exist
-        return [newPost, ...prevPosts];
+      // Add new post at the top if it doesn't exist
+      return [newPost, ...prevPosts];
     });
-};
+  };
 
   const handleUpvote = (postId: number) => {
     setPosts(prev => prev.map(post =>
@@ -96,7 +96,7 @@ export const PostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           : post
       )
     );
-};
+  };
   return (
     <PostContext.Provider value={{
       posts,
@@ -122,14 +122,14 @@ export const usePostContext = () => {
     console.warn('PostContext is missing. Returning default values.');
     return {
       posts: [],
-      addPost: () => {},
-      updatePost: () => {},
-      handleUpvote: () => {},
-      handleDownvote: () => {},
+      addPost: () => { },
+      updatePost: () => { },
+      handleUpvote: () => { },
+      handleDownvote: () => { },
       getPostsByCategory: () => [],
       experienceOnly: false,
-      setExperienceOnly: () => {},
-      setPosts: () => {}, // Add this line 
+      setExperienceOnly: () => { },
+      setPosts: () => { }, // Add this line 
     };
   }
   return context;

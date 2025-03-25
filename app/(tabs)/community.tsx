@@ -52,7 +52,7 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 
 type VoteType = 'upvote' | 'downvote';
 export default function CommunityPage() {
-  const { posts: contextPosts, addPost,  setPosts,
+  const { posts: contextPosts, addPost, setPosts,
     handleUpvote,
     handleDownvote,
     updatePost } = usePostContext();
@@ -64,19 +64,19 @@ export default function CommunityPage() {
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // vote id
   const [isModalVisible, setIsModalVisible] = useState(false); // report
   const [modalVisible, setModalVisible] = useState(false); // post
-  const [isSubmitting, setIsSubmitting] = useState(false); 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const params = useLocalSearchParams();
-  const location = Array.isArray(params.location) 
+  const location = Array.isArray(params.location)
     ? decodeURIComponent(params.location[0])
-    : params.location 
-    ? decodeURIComponent(params.location)
-    : '';
+    : params.location
+      ? decodeURIComponent(params.location)
+      : '';
   const destination = Array.isArray(params.destination)
     ? decodeURIComponent(params.destination[0])
     : params.destination
-    ? decodeURIComponent(params.destination)
-    : '';
+      ? decodeURIComponent(params.destination)
+      : '';
   const closeReportModal = () => {
     setIsModalVisible(false);
     setSelectedPostId(null); // Reset after closing
@@ -88,7 +88,7 @@ export default function CommunityPage() {
   if (!authContext) return null; // Prevents errors if context is null
   const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
   const [selectedOption, setSelectedOption] = useState<string>('Time'); // dropdown
-   const origin_address =
+  const origin_address =
     routeDetails?.location ||
     (params.origin_address ? decodeURIComponent(params.origin_address as string) : 'Unknown Origin');
   const destination_address =
@@ -100,39 +100,39 @@ export default function CommunityPage() {
     routeDetails?.destination_lat ?? (params.destination_lat ? Number(params.destination_lat) : 0);
   const destination_lon =
     routeDetails?.destination_lon ?? (params.destination_lon ? Number(params.destination_lon) : 0);
-    
- const fetchOldPosts = async () => {
-  try {
-    const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
-    if (!response.ok) return;
-    
-    const data = await response.json();
-    
-    const transformedPosts: Post[] = data.map((post: any) => ({
-      ...post,
-      // Map API fields to your Post interface
-      location: post.origin_address || origin_address,
-      destination: post.destination_address || destination_address,
-      origin_lat: post.origin_lat,
-      origin_lon: post.origin_lon,
-      destination_lat: post.dest_lat,
-      destination_lon: post.dest_lon,
-      created_at: post.created_at,
-      timestamp: new Date(post.created_at).getTime(),
-    }));
-    setPosts(transformedPosts);
-  } catch (error) {
-    console.error('Fetch error:', error);
-  }
-};
 
-useEffect(() => {
-  const interval = setInterval(fetchOldPosts, 3000); // Poll every 3 seconds instead of 5
-  return () => clearInterval(interval);
-}, []);
+  const fetchOldPosts = async () => {
+    try {
+      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
+      if (!response.ok) return;
 
- 
- const handlePostSubmit = async (formData: Post) => {
+      const data = await response.json();
+
+      const transformedPosts: Post[] = data.map((post: any) => ({
+        ...post,
+        // Map API fields to your Post interface
+        location: post.origin_address || origin_address,
+        destination: post.destination_address || destination_address,
+        origin_lat: post.origin_lat,
+        origin_lon: post.origin_lon,
+        destination_lat: post.dest_lat,
+        destination_lon: post.dest_lon,
+        created_at: post.created_at,
+        timestamp: new Date(post.created_at).getTime(),
+      }));
+      setPosts(transformedPosts);
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(fetchOldPosts, 3000); // Poll every 3 seconds instead of 5
+    return () => clearInterval(interval);
+  }, []);
+
+
+  const handlePostSubmit = async (formData: Post) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -177,20 +177,20 @@ useEffect(() => {
       router.push('/login');
       return;
     }
-  
+
     const previousVote = selectedVotes[id];
     const previousVotesCount = contextPosts.find(p => p.id === id)?.votes || 0;
 
     setSelectedVotes(prev => ({ ...prev, [id]: action }));
-  const postToUpdate = contextPosts.find(p => p.id === id);
-  if (postToUpdate) {
-    updatePost({ ...postToUpdate, votes: previousVotesCount + (action === 'upvote' ? 1 : -1) });
-  }
-  
+    const postToUpdate = contextPosts.find(p => p.id === id);
+    if (postToUpdate) {
+      updatePost({ ...postToUpdate, votes: previousVotesCount + (action === 'upvote' ? 1 : -1) });
+    }
+
     try {
       // API call
       const success = await sendVoteRequest(id.toString(), action);
-      
+
       if (!success) {
         // 3. Revert if the API call fails
         setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
@@ -201,15 +201,15 @@ useEffect(() => {
       }
 
     } catch (error) {
-    // Revert changes if there's an error
-    setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
-    const postToUpdate = contextPosts.find(p => p.id === id);
-    if (postToUpdate) {
-      updatePost({ ...postToUpdate, votes: previousVotesCount });
+      // Revert changes if there's an error
+      setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
+      const postToUpdate = contextPosts.find(p => p.id === id);
+      if (postToUpdate) {
+        updatePost({ ...postToUpdate, votes: previousVotesCount });
+      }
     }
-  }
-};
-  
+  };
+
   // Modify sendVoteRequest to remove the fetchOldPosts call:
   const sendVoteRequest = async (postId: string, action: VoteType) => {
     try {
@@ -220,7 +220,7 @@ useEffect(() => {
           Authorization: `Bearer ${authToken}`,
         },
       });
-  
+
       return response.ok;
     } catch (error) {
       console.error('Vote error:', error);
@@ -233,10 +233,10 @@ useEffect(() => {
       Alert.alert("Error", "You must be logged in to report a post.");
       return;
     }
-  
-    const API_URL = "https://comgu20-production.up.railway.app/api/reports";  
+
+    const API_URL = "https://comgu20-production.up.railway.app/api/reports";
     console.log("Submitting report to:", API_URL); // ✅ Debugging API URL
-  
+
     try {
       const response = await fetch(API_URL, {
         method: "POST",
@@ -251,21 +251,21 @@ useEffect(() => {
           },
         }),
       });
-  
+
       console.log("Raw response status:", response.status); // ✅ Check response status
-  
+
       if (!response.ok) {
         const errorText = await response.text(); // Read error message
         console.error("API Error Response:", errorText);
         throw new Error(`API Error: ${response.status} - ${errorText}`);
       }
-  
+
       const text = await response.text();
       console.log("Raw response:", text); // ✅ Debugging server response
-  
+
       const data = JSON.parse(text); // Convert response to JSON
       console.log("Report submitted:", data);
-  
+
       Alert.alert("Success", data.message);
       closeReportModal();
     } catch (error) {
@@ -273,7 +273,7 @@ useEffect(() => {
       Alert.alert("Error", "Failed to submit report. Please try again.");
     }
   };
-  
+
   const handlePostPress = (postId: number, action: VoteType) => {
     if (!isLoggedIn) {
       router.push('/login');
@@ -281,7 +281,7 @@ useEffect(() => {
     }
     handleVote(postId, action);
   };
- 
+
   const sortedPosts = useMemo(() => {
     return [...contextPosts].sort((a, b) => {
       switch (selectedOption) {
@@ -307,7 +307,7 @@ useEffect(() => {
     return `${Math.floor(diff / day)}d ago`;
   };
   const getStatusStyle = (status: string) => {
-    switch(status.toLowerCase()) {
+    switch (status.toLowerCase()) {
       case "pending review":
         return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
       case "community approved":
@@ -321,8 +321,8 @@ useEffect(() => {
     }
   };
 
-   const getStatusTextColor = (status: string) => {
-    switch(status.toLowerCase()) {
+  const getStatusTextColor = (status: string) => {
+    switch (status.toLowerCase()) {
       case "flagged":
         return { color: "#b31b1b" };
       case "admin approved":
@@ -335,7 +335,7 @@ useEffect(() => {
         return {};
     }
   };
- 
+
   const handlePostButtonPress = () => {
     const isLoggedIn = !!authToken;
     if (!isLoggedIn) {
@@ -354,7 +354,7 @@ useEffect(() => {
     setSelectedPostId(postId);
     setIsModalVisible(true);
   };
-   
+
   return (
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
@@ -362,9 +362,9 @@ useEffect(() => {
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
-          <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-                  <Text style={styles.postButtonText}>Post</Text>
-                </TouchableOpacity>
+        <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+          <Text style={styles.postButtonText}>Post</Text>
+        </TouchableOpacity>
       </View>
       {isLoading && (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
@@ -391,23 +391,23 @@ useEffect(() => {
                     <Text style={styles.suggestorusername}>{post.user?.email}</Text>
                   </View>
                 </View>
-                <View style={{flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
-              <Text style={styles.postTimestamp}>
-                {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+                <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={styles.postTimestamp}>
+                    {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+                  </Text>
+                  <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
+                    <MaterialIcons name="report" size={20} color="#C52222" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* In your post rendering section - Fixed syntax and logic */}
+              <Text style={styles.postLocation}>
+                <Text style={styles.boldText}>From:</Text> {post.location || (params.location ? decodeURIComponent(params.location as string) : 'Unknown Location')}
               </Text>
-               <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
-               <MaterialIcons name="report" size={20} color="#C52222" />
-              </TouchableOpacity>
-              </View>
-              </View>
-              
-           {/* In your post rendering section - Fixed syntax and logic */}
-<Text style={styles.postLocation}>
- <Text style={styles.boldText}>From:</Text> {post.location || (params.location ? decodeURIComponent(params.location as string) : 'Unknown Location')}
-</Text>
-<Text style={styles.postDestination}>
-<Text style={styles.boldText}>To:</Text> {post.destination || (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination')}
-</Text>
+              <Text style={styles.postDestination}>
+                <Text style={styles.boldText}>To:</Text> {post.destination || (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination')}
+              </Text>
 
               <View style={{ flexDirection: 'column', gap: 8 }}>
                 <Text style={styles.label}>Experiences</Text>
@@ -415,11 +415,11 @@ useEffect(() => {
               </View>
               <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={styles.content}>
-                    <View style={[styles.badge, getStatusStyle(post.status || '')]}>
-                                    <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
-                                  </View>
+                  <View style={[styles.badge, getStatusStyle(post.status || '')]}>
+                    <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
+                  </View>
                 </View>
-               
+
                 <View style={styles.arrowcontainer}>
                   <TouchableOpacity
                     style={[
@@ -449,7 +449,7 @@ useEffect(() => {
                     />
                   </TouchableOpacity>
 
-              </View>
+                </View>
 
               </View>
             </View>
@@ -458,29 +458,29 @@ useEffect(() => {
       </View>
 
       <PostModal
-              visible={modalVisible}
-              onClose={() => setModalVisible(false)}
-              onSubmit={handlePostSubmit}
-              location={Array.isArray(location) ? location.join(', ') : location}
-              destination={Array.isArray(destination) ? destination.join(', ') : destination}
-              origin_lat={origin_lat}
-              origin_lon={origin_lon}
-              destination_lat={destination_lat}
-              destination_lon={destination_lon}
-              authToken={authToken}
-              userEmail={''}
-              userPassword={''}
-              isFromCommunity={true} 
-            />
-       
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSubmit={handlePostSubmit}
+        location={Array.isArray(location) ? location.join(', ') : location}
+        destination={Array.isArray(destination) ? destination.join(', ') : destination}
+        origin_lat={origin_lat}
+        origin_lon={origin_lon}
+        destination_lat={destination_lat}
+        destination_lon={destination_lon}
+        authToken={authToken}
+        userEmail={''}
+        userPassword={''}
+        isFromCommunity={true}
+      />
+
       {isModalVisible && selectedPostId !== null && (
-  <ModalComponent
-    visible={isModalVisible}
-    onClose={closeReportModal}
-    onSubmit={handleReportSubmit}
-    route_post_id={selectedPostId} // ✅ Now properly set
-  />
-)}
+        <ModalComponent
+          visible={isModalVisible}
+          onClose={closeReportModal}
+          onSubmit={handleReportSubmit}
+          route_post_id={selectedPostId} // ✅ Now properly set
+        />
+      )}
     </ScrollView>
   );
 }

@@ -72,7 +72,7 @@ const RouteScreen: React.FC = () => {
   const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>([]);
   const [route, setRoute] = useState<LatLng[]>([]);
   const [roadPath, setRoadPath] = useState<LatLng[] | string | LatLng[][] | SegmentPath[]>([]);
-  const [routeDetails, setRouteDetails] = useState<RouteDetails>({ route: null });
+  const [routeDetails, setRouteDetails] = useState<RouteDetails>({ route: null, posts: [] });
   const [routeMetrics, setRouteMetrics] = useState<RouteMetrics | null>(null);
   const [mapResetKey, setMapResetKey] = useState<number>(Date.now());
   const [manualOrigin, setManualOrigin] = useState<boolean>(false);
@@ -146,7 +146,7 @@ const RouteScreen: React.FC = () => {
       setDestination("");
       setDestinationSuggestions([]);
       setRoute([]);
-      setRouteDetails({ route: null });
+      setRouteDetails({ route: null, posts: [] });
       setRoadPath([]);
       setIsOriginLoading(false);
       return;
@@ -444,7 +444,7 @@ const RouteScreen: React.FC = () => {
     setOrigin("");
     setOriginSuggestions([]);
     setRoute((prev) => (prev.length > 1 ? [prev[1]] : [])); // Keep destination if exists
-    setRouteDetails({ route: null });
+    setRouteDetails({ route: null, posts: [] });
     setRoadPath([]);
     setNearbySpots([]);
     setSelectedLocationType(null);
@@ -547,8 +547,8 @@ const RouteScreen: React.FC = () => {
     };
     try {
       const response = await axios.get("https://comgu20-production.up.railway.app/api/routes/find", { params });
-      const routeData = response.data.route;
-      setRouteDetails({ route: routeData });
+      const { route: routeData, posts } = response.data;
+      setRouteDetails({ route: routeData, posts: response.data.posts || [], });
       if (routeData && routeData.summary) {
         const summary = routeData.summary;
         const formattedDuration = formatDuration(summary.total_duration); // Keep this since API returns seconds
@@ -820,17 +820,20 @@ const RouteScreen: React.FC = () => {
           {renderRouteOverview()}
           <TouchableOpacity
             style={styles.experiencesButton}
-            onPress={() => router.push({
-              pathname: "/postsuggestions",
-              params: {
-                location: encodeURIComponent(origin),
-                destination: encodeURIComponent(destination),
-                origin_lat: route[0].latitude.toString(),
-                origin_lon: route[0].longitude.toString(),
-                destination_lat: route[1].latitude.toString(),
-                destination_lon: route[1].longitude.toString(),
-              },
-            })}
+            onPress={() => {
+              router.push({
+                pathname: "/postsuggestions",
+                params: {
+                  location: encodeURIComponent(origin),
+                  destination: encodeURIComponent(destination),
+                  origin_lat: route[0].latitude.toString(),
+                  origin_lon: route[0].longitude.toString(),
+                  destination_lat: route[1].latitude.toString(),
+                  destination_lon: route[1].longitude.toString(),
+                  posts: JSON.stringify(routeDetails.posts) // ✅ Use existing data
+                },
+              });
+            }}
           >
             <Text style={styles.experiencesButtonText}>Experiences</Text>
           </TouchableOpacity>
