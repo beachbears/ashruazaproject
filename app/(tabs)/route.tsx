@@ -115,12 +115,6 @@ const RouteScreen: React.FC = () => {
     { label: "Minimal Walking", value: "minimal-walking" },
     { label: "Fastest", value: "fastest" },
   ];
-  const router = useRouter();
-  const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
-  const webviewRef = useRef<WebView>(null);
-  const originTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const destinationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [activeTab, setActiveTab] = useState("Route");
   const formatCuisine = (cuisine: string | undefined) => {
     if (!cuisine) return "Not specified";
     return cuisine
@@ -128,7 +122,46 @@ const RouteScreen: React.FC = () => {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(', ');
   };
-  const [spotLimit, setSpotLimit] = useState(20); // Default to 10 spots
+  const router = useRouter();
+  const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
+  const webviewRef = useRef<WebView>(null);
+  const [activeTab, setActiveTab] = useState("Route");
+  const [spotLimit, setSpotLimit] = useState(20);
+
+  // Debounce function
+  const debounce = (func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    return (...args: any[]) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func(...args);
+      }, delay);
+    };
+  };
+
+  // Debounced handler for origin changes
+  const debouncedHandleOriginChange = debounce(async (text: string) => {
+    if (!text) {
+      setOriginSuggestions([]);
+      setDestination("");
+      setDestinationSuggestions([]);
+      setRoute([]);
+      setRouteDetails({ route: null });
+      setRoadPath([]);
+      setIsOriginLoading(false);
+      return;
+    }
+    setIsOriginLoading(true);
+    try {
+      const suggestions = await geocodeAddress(text);
+      setOriginSuggestions(suggestions);
+    } catch (error) {
+      console.error("Search failed:", error);
+      setOriginSuggestions([]);
+    } finally {
+      setIsOriginLoading(false);
+    }
+  }, 300);
 
   useEffect(() => {
     if (selectedLocationType === "origin" && route[0]) {
@@ -186,20 +219,7 @@ const RouteScreen: React.FC = () => {
 
   const handleToggleSegment = (idx: number) => {
     setExpandedSegments((prev) => ({ ...prev, [idx]: !prev[idx] }));
-    if (webviewRef.current) {
-      webviewRef.current.postMessage(
-        JSON.stringify({ type: "toggleSegmentHighlight", index: idx })
-      );
-    }
   };
-
-  useEffect(() => {
-    return () => {
-      if (originTimeoutRef.current) clearTimeout(originTimeoutRef.current);
-      if (destinationTimeoutRef.current)
-        clearTimeout(destinationTimeoutRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     if (destParam) {
@@ -415,34 +435,9 @@ const RouteScreen: React.FC = () => {
     }
   }
 
-  const handleOriginChange = async (text: string) => {
+  const handleOriginChange = (text: string) => {
     setOrigin(text);
-    if (!text) {
-      setOriginSuggestions([]);
-      setDestination("");
-      setDestinationSuggestions([]);
-      setRoute([]);
-      setRouteDetails({ route: null });
-      setRoadPath([]);
-      setIsOriginLoading(false);
-      return;
-    }
-    if (originTimeoutRef.current) clearTimeout(originTimeoutRef.current);
-    setIsOriginLoading(true);
-    originTimeoutRef.current = setTimeout(async () => {
-      try {
-        const suggestions = await geocodeAddress(text);
-        setOriginSuggestions(suggestions);
-      } catch (error) {
-        console.error("Search failed:", error);
-        setOriginSuggestions([]);
-      } finally {
-        setIsOriginLoading(false);
-      }
-    }, 300);
-    const suggestions = await geocodeAddress(text);
-    setOriginSuggestions(suggestions);
-    setIsOriginLoading(false);
+    debouncedHandleOriginChange(text);
   };
 
   const clearOrigin = () => {
@@ -471,27 +466,27 @@ const RouteScreen: React.FC = () => {
     }
   };
 
-  const handleDestinationChange = async (text: string) => {
-    setDestination(text);
+  const debouncedHandleDestinationChange = debounce(async (text: string) => {
     if (!text) {
       setDestinationSuggestions([]);
       setIsDestinationLoading(false);
       return;
     }
-    if (destinationTimeoutRef.current)
-      clearTimeout(destinationTimeoutRef.current);
     setIsDestinationLoading(true);
-    destinationTimeoutRef.current = setTimeout(async () => {
-      try {
-        const suggestions = await geocodeAddress(text);
-        setDestinationSuggestions(suggestions);
-      } catch (error) {
-        console.error("Search failed:", error);
-        setDestinationSuggestions([]);
-      } finally {
-        setIsDestinationLoading(false);
-      }
-    }, 300);
+    try {
+      const suggestions = await geocodeAddress(text);
+      setDestinationSuggestions(suggestions);
+    } catch (error) {
+      console.error("Search failed:", error);
+      setDestinationSuggestions([]);
+    } finally {
+      setIsDestinationLoading(false);
+    }
+  }, 300);
+
+  const handleDestinationChange = (text: string) => {
+    setDestination(text);
+    debouncedHandleDestinationChange(text);
   };
 
   const selectDestinationSuggestion = async (item: any) => {
@@ -508,6 +503,34 @@ const RouteScreen: React.FC = () => {
     );
     await fetchRouteDetails(item.lat, item.lon, selectedAlgorithm);
     setMapResetKey(Date.now());
+  };
+
+  const handleViewSegment = (idx: number) => {
+    if (webviewRef.current && routeDetails.route?.segments[idx]) {
+      const segment = routeDetails.route.segments[idx];
+      if (segment.geometry) {
+        const coords = polyline.decode(segment.geometry).map((coord: any[]) => ({
+          latitude: coord[0],
+          longitude: coord[1],
+        }));
+
+        const latitudes = coords.map((c: { latitude: number; }) => c.latitude);
+        const longitudes = coords.map((c: { longitude: number; }) => c.longitude);
+        const minLat = Math.min(...latitudes);
+        const maxLat = Math.max(...latitudes);
+        const minLon = Math.min(...longitudes);
+        const maxLon = Math.max(...longitudes);
+
+        webviewRef.current.postMessage(
+          JSON.stringify({
+            type: "zoomToSegment",
+            bounds: { minLat, maxLat, minLon, maxLon },
+            index: idx,
+          })
+        );
+      }
+    }
+    bottomSheetRef.current?.snapToIndex(0); // Snap to 25%, adjust index as needed
   };
 
   const fetchRouteDetails = async (destLat: number, destLon: number, algorithm: string) => {
@@ -585,28 +608,55 @@ const RouteScreen: React.FC = () => {
     const { segments } = routeDetails.route;
     return (
       <View style={styles.timelineContainer}>
+        {/* Vertical Timeline Line */}
+        <View style={styles.timelineLine} />
         {segments.map((segment, idx) => {
-          const iconName = segment.type === "walking" ? "walking" : segment.type === "bus" ? "bus" : "car";
+          const iconName =
+            segment.type === "walking" ? "walking" : segment.type === "bus" ? "bus" : "car";
           const isExpanded = expandedSegments[idx];
+          const segmentColor = segment.type === "walking" ? "#808080" : "#6366F1";
+
           return (
             <View key={idx} style={styles.timelineItem}>
-              <FontAwesome5 name={iconName} size={16} color="#6366F1" style={styles.timelineIcon} />
-              <View style={styles.timelineContent}>
-                <TouchableOpacity
-                  style={styles.segmentHeaderRow}
-                  onPress={() => handleToggleSegment(idx)}
-                >
-                  <Text style={styles.segmentLabel}>
-                    {segment.type === "walking"
-                      ? `Walk from ${shortenAddress(segment.from_stop?.name || "Origin")} to ${shortenAddress(segment.to_stop?.name || "Destination")}`
-                      : `${segment.route_name || segment.type} from ${shortenAddress(segment.boarding || segment.from_stop?.name || "Start")} to ${shortenAddress(segment.alighting || segment.to_stop?.name || "End")}`}
-                  </Text>
-                  <Ionicons
-                    name={isExpanded ? "chevron-down" : "chevron-forward"}
-                    size={18}
-                    color="#6366F1"
-                  />
-                </TouchableOpacity>
+              {/* Timeline Dot */}
+              <View style={[styles.timelineDot, { backgroundColor: segmentColor }]} />
+              {/* Segment Card */}
+              <View style={styles.segmentCard}>
+                <View style={styles.segmentHeader}>
+                  <View style={styles.timelineIconContainer}>
+                    <FontAwesome5 name={iconName} size={16} color={segmentColor} />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.segmentHeaderRow}
+                    onPress={() => handleToggleSegment(idx)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <View style={styles.segmentTitleContainer}>
+                      <Text style={styles.segmentTitle}>
+                        {segment.type === "walking" ? "Walk" : segment.type.toUpperCase()}
+                      </Text>
+                      <Text style={styles.segmentSubtitle}>
+                        {segment.type === "walking"
+                          ? `${segment.distance ? (segment.distance / 1000).toFixed(2) + " km" : ""} (${formatDuration(segment.duration)})`
+                          : `${segment.route_name} (${formatDuration(segment.duration)})`}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={isExpanded ? "chevron-down" : "chevron-forward"}
+                      size={18}
+                      color="#6366F1"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => handleViewSegment(idx)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.viewButtonText}>View</Text>
+                  </TouchableOpacity>
+                </View>
                 {isExpanded && (
                   <View style={styles.segmentDetails}>
                     {segment.type === "walking" ? (
@@ -623,7 +673,6 @@ const RouteScreen: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        {/* Get On / Get Off Section */}
                         <View style={styles.getOnOffContainer}>
                           <Text style={styles.onOffTitle}>Get On</Text>
                           <Text style={styles.onOffInstruction}>
@@ -638,7 +687,6 @@ const RouteScreen: React.FC = () => {
                         <Text style={styles.segmentText}>
                           Duration: {segment.duration ? formatDuration(segment.duration) : "N/A"}
                         </Text>
-                        {/* Alternatives Section with Type Safety */}
                         {segment.alternatives && Array.isArray(segment.alternatives) && segment.alternatives.length > 0 && (
                           <View style={styles.alternativesContainer}>
                             <Text style={styles.alternativeHeader}>Alternatives</Text>
@@ -660,12 +708,10 @@ const RouteScreen: React.FC = () => {
       </View>
     );
   };
-
   const renderRouteTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.sectionHeader}>Route Details</Text>
 
-      {/* Route Type Dropdown */}
       <View style={styles.routeTypeContainer}>
         <Text style={styles.subHeader}>Select Route Type</Text>
         <TouchableOpacity
@@ -704,7 +750,6 @@ const RouteScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Locations: Origin and Destination */}
       <View style={styles.locationsContainer}>
         <Text style={styles.label}>From</Text>
         <View style={styles.searchContainer}>
@@ -718,6 +763,9 @@ const RouteScreen: React.FC = () => {
             <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
+          )}
+          {isOriginLoading && (
+            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
           )}
           <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
         </View>
@@ -734,16 +782,17 @@ const RouteScreen: React.FC = () => {
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           )}
+          {isDestinationLoading && (
+            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
+          )}
           <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
         </View>
       </View>
 
-      {/* Loading Indicator */}
       {isRouteLoading && (
         <ActivityIndicator size="small" color="#6366F1" style={{ marginVertical: 12 }} />
       )}
 
-      {/* Route Metrics */}
       {route.length >= 2 && routeMetrics && !isRouteLoading && (
         <View style={styles.routeMetricsContainer}>
           <Text style={styles.subHeader}>Route Metrics</Text>
@@ -791,7 +840,6 @@ const RouteScreen: React.FC = () => {
       ) : null}
     </View>
   );
-
   const renderRestaurantsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Dining Spots</Text>
@@ -1098,20 +1146,114 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
-  getOnOffContainer: {
+  timelineContainer: {
     marginTop: 8,
-    marginBottom: 6,
+    position: "relative",
+  },
+  timelineLine: {
+    position: "absolute",
+    left: 15,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: "#6366F1",
+  },
+  timelineItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#6366F1", // Overridden per segment
+    position: "absolute",
+    left: 11,
+    top: 10,
+    zIndex: 1,
+  },
+  segmentCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 12,
+    marginLeft: 24, // Space for timeline
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  segmentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  timelineIconContainer: {
+    marginRight: 8,
+  },
+  segmentHeaderRow: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  segmentTitleContainer: {
+    flexDirection: "column",
+  },
+  segmentTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  segmentSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  viewButton: {
+    backgroundColor: "#6366F1",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  viewButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  segmentDetails: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  segmentText: {
+    fontSize: 12,
+    color: "#374151",
+    marginBottom: 4,
+  },
+  stepText: {
+    fontSize: 12,
+    color: "#374151",
+    marginBottom: 4,
+  },
+  getOnOffContainer: {
+    marginBottom: 8,
   },
   onOffTitle: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#111827",
+    marginTop: 4,
   },
   onOffInstruction: {
     fontSize: 12,
     color: "#374151",
     marginTop: 2,
-    lineHeight: 18,
   },
   alternativesContainer: {
     marginTop: 8,
@@ -1129,6 +1271,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#374151",
     lineHeight: 18,
+  },
+  overviewText: {
+    fontSize: 12,
+    color: "#44457D",
+    textAlign: "center",
+    marginVertical: 8,
   },
   tabContent: { padding: 16 },
   sectionHeader: {
@@ -1153,15 +1301,9 @@ const styles = StyleSheet.create({
   metricCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#F9FAFB", padding: 8, borderRadius: 8, marginRight: 8 },
   metricText: { marginLeft: 4, fontSize: 12, color: "#44457D" },
   routeOverviewContainer: { marginBottom: 12 },
-  timelineContainer: { marginTop: 8 },
-  timelineItem: { flexDirection: "row", marginBottom: 12 },
   timelineIcon: { width: 32, alignItems: "center" },
   timelineContent: { flex: 1, paddingLeft: 12 },
-  segmentHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   segmentLabel: { fontSize: 14, fontWeight: "500", color: "#111827" },
-  segmentDetails: { marginTop: 8 },
-  segmentText: { fontSize: 12, color: "#374151", marginBottom: 4 },
-  stepText: { fontSize: 12, color: "#374151" },
   experiencesButton: { backgroundColor: "#E0E7FF", padding: 10, borderRadius: 8, alignItems: "center", marginTop: 12 },
   experiencesButtonText: { color: "#6366F1", fontSize: 14, fontWeight: "500" },
   errorText: { fontSize: 14, color: "#666", textAlign: "center" },
@@ -1281,12 +1423,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: 18,
   },
-  overviewText: {
-    fontSize: 12,
-    color: "#44457D",
-    marginVertical: 4,
-    textAlign: "center",
-  },
   oopsContainer: { alignItems: "center", padding: 16, marginBottom: 30 },
   illustration: { width: 150, height: 120, marginBottom: 10 },
   errorSubText: {
@@ -1294,16 +1430,6 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     textAlign: "center",
     marginHorizontal: 20,
-  },
-  segmentCard: {
-    marginBottom: 15,
-    borderRadius: 8,
-    backgroundColor: "#FFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
   },
   segmentCardHeaderText: { fontSize: 12, fontWeight: "bold", color: "#111827" },
   segmentCardBody: { padding: 10 },
@@ -1507,7 +1633,6 @@ const styles = StyleSheet.create({
   attractionName: { fontSize: 18, fontWeight: "bold", color: "#44457D", marginBottom: 5 },
   attractionDescription: { fontSize: 12, color: "#686A9C", marginBottom: 10 },
   actionButtonsContainer: { flexDirection: "row", gap: 8, marginVertical: 8, justifyContent: "space-between" },
-  viewButton: { flexDirection: "row", alignItems: "center", gap: 6, padding: 12, backgroundColor: "#EFF6FF", borderRadius: 8, flex: 1 },
   viewText: { color: "#3B82F6", fontWeight: "500" },
   goHereButton: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, backgroundColor: "#EFF6FF", borderRadius: 8, flex: 1 },
   goHereText: { color: "#3B82F6", fontWeight: "500" },
