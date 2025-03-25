@@ -11,7 +11,6 @@ import { AuthContext } from '../../contexts/AuthContext'; // adjust path as nece
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
-  'Warning: textShadow',
   'Warning: shadow',
   'VirtualizedLists',
 ]);
