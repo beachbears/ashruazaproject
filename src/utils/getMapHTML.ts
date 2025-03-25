@@ -146,50 +146,47 @@ export const getMapHTML = ({
   `;
 
   let messageListenerJS = `
-    var highlightedIndices = [];
-    
-    function toggleHighlightSegment(idx) {
-      var i = highlightedIndices.indexOf(idx);
-      if(i === -1) {
-        highlightedIndices.push(idx);
-      } else {
-        highlightedIndices.splice(i, 1);
-      }
-      updateSegmentStyles();
-    }
-    
-    function updateSegmentStyles() {
-      if(window.segmentPolylines) {
+    var highlightedIndex = null;
+
+    function zoomToSegment(bounds, idx) {
+      var southWest = L.latLng(bounds.minLat, bounds.minLon);
+      var northEast = L.latLng(bounds.maxLat, bounds.maxLon);
+      var segmentBounds = L.latLngBounds(southWest, northEast);
+      map.fitBounds(segmentBounds, { padding: [50, 50] });
+
+      // Highlight the selected segment
+      if (window.segmentPolylines) {
         window.segmentPolylines.forEach(function(polyline, index) {
-          var defaultColor = polyline.options.defaultColor || '${polylineColor}';
-          if(defaultColor === '#808080'){
-            polyline.setStyle({ color: '#808080', weight: (highlightedIndices.indexOf(index) !== -1) ? 6 : 3 });
+          if (index === idx) {
+            polyline.setStyle({ weight: 6 });
           } else {
-            if(highlightedIndices.indexOf(index) !== -1) {
-              polyline.setStyle({ color: '#1D4ED8', weight: 6 });
-            } else {
-              polyline.setStyle({ color: defaultColor, weight: 3 });
-            }
+            var defaultColor = polyline.options.defaultColor || '${polylineColor}';
+            polyline.setStyle({ color: defaultColor, weight: 3 });
           }
         });
+        highlightedIndex = idx;
       }
     }
-    
+
     document.addEventListener('message', function(event) {
       try {
         var data = JSON.parse(event.data);
-        if (data.type === 'toggleSegmentHighlight') {
+        if (data.type === 'zoomToSegment') {
+          zoomToSegment(data.bounds, data.index);
+        } else if (data.type === 'toggleSegmentHighlight') {
           toggleHighlightSegment(data.index);
         }
       } catch(e) {
         console.error(e);
       }
     });
-    
+
     window.addEventListener('message', function(event) {
       try {
         var data = JSON.parse(event.data);
-        if (data.type === 'toggleSegmentHighlight') {
+        if (data.type === 'zoomToSegment') {
+          zoomToSegment(data.bounds, data.index);
+        } else if (data.type === 'toggleSegmentHighlight') {
           toggleHighlightSegment(data.index);
         }
       } catch(e) {
@@ -197,7 +194,6 @@ export const getMapHTML = ({
       }
     });
   `;
-
   // Nearby spots markers
   if (nearbySpots && nearbySpots.length > 0) {
     nearbySpots.forEach((spot) => {

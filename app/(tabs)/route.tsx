@@ -186,11 +186,6 @@ const RouteScreen: React.FC = () => {
 
   const handleToggleSegment = (idx: number) => {
     setExpandedSegments((prev) => ({ ...prev, [idx]: !prev[idx] }));
-    if (webviewRef.current) {
-      webviewRef.current.postMessage(
-        JSON.stringify({ type: "toggleSegmentHighlight", index: idx })
-      );
-    }
   };
 
   useEffect(() => {
@@ -510,6 +505,34 @@ const RouteScreen: React.FC = () => {
     setMapResetKey(Date.now());
   };
 
+  const handleViewSegment = (idx: number) => {
+    if (webviewRef.current && routeDetails.route?.segments[idx]) {
+      const segment = routeDetails.route.segments[idx];
+      if (segment.geometry) {
+        const coords = polyline.decode(segment.geometry).map((coord: any[]) => ({
+          latitude: coord[0],
+          longitude: coord[1],
+        }));
+
+        const latitudes = coords.map((c: { latitude: number; }) => c.latitude);
+        const longitudes = coords.map((c: { longitude: number; }) => c.longitude);
+        const minLat = Math.min(...latitudes);
+        const maxLat = Math.max(...latitudes);
+        const minLon = Math.min(...longitudes);
+        const maxLon = Math.max(...longitudes);
+
+        webviewRef.current.postMessage(
+          JSON.stringify({
+            type: "zoomToSegment",
+            bounds: { minLat, maxLat, minLon, maxLon },
+            index: idx,
+          })
+        );
+      }
+    }
+    bottomSheetRef.current?.snapToIndex(0); // Snap to 25%, adjust index as needed
+  };
+
   const fetchRouteDetails = async (destLat: number, destLon: number, algorithm: string) => {
     setIsRouteLoading(true);
     setNearbySpots([]);
@@ -590,7 +613,15 @@ const RouteScreen: React.FC = () => {
           const isExpanded = expandedSegments[idx];
           return (
             <View key={idx} style={styles.timelineItem}>
-              <FontAwesome5 name={iconName} size={16} color="#6366F1" style={styles.timelineIcon} />
+              <View style={styles.timelineIconContainer}>
+                <FontAwesome5 name={iconName} size={16} color="#6366F1" />
+                <TouchableOpacity
+                  style={styles.viewButton}
+                  onPress={() => handleViewSegment(idx)}
+                >
+                  <Text style={styles.viewButtonText}>View</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.timelineContent}>
                 <TouchableOpacity
                   style={styles.segmentHeaderRow}
@@ -1098,6 +1129,23 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  timelineIconContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: 60,
+  },
+  viewButton: {
+    marginLeft: 8,
+    backgroundColor: "#E0E7FF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  viewButtonText: {
+    color: "#6366F1",
+    fontSize: 12,
+    fontWeight: "500",
+  },
   getOnOffContainer: {
     marginTop: 8,
     marginBottom: 6,
@@ -1507,7 +1555,6 @@ const styles = StyleSheet.create({
   attractionName: { fontSize: 18, fontWeight: "bold", color: "#44457D", marginBottom: 5 },
   attractionDescription: { fontSize: 12, color: "#686A9C", marginBottom: 10 },
   actionButtonsContainer: { flexDirection: "row", gap: 8, marginVertical: 8, justifyContent: "space-between" },
-  viewButton: { flexDirection: "row", alignItems: "center", gap: 6, padding: 12, backgroundColor: "#EFF6FF", borderRadius: 8, flex: 1 },
   viewText: { color: "#3B82F6", fontWeight: "500" },
   goHereButton: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, backgroundColor: "#EFF6FF", borderRadius: 8, flex: 1 },
   goHereText: { color: "#3B82F6", fontWeight: "500" },
