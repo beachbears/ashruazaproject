@@ -35,7 +35,22 @@ import { locationCacheRef } from "@/src/utils/locationsCache";
 import SuggestionList from "@/src/components/SuggestionList";
 
 const polyline = require("@mapbox/polyline");
+interface TabButtonProps {
+  title: string;
+  isActive: boolean;
+  onPress: () => void;
+}
 
+const TabButton = ({ title, isActive, onPress }: TabButtonProps) => (
+  <TouchableOpacity
+    style={[styles.tabButton, isActive && styles.activeTab]}
+    onPress={onPress}
+  >
+    <Text style={[styles.tabText, isActive && styles.activeTabText]}>
+      {title}
+    </Text>
+  </TouchableOpacity>
+);
 LogBox.ignoreLogs(["textShadow*", "shadow*"]);
 
 const RouteScreen: React.FC = () => {
@@ -52,16 +67,10 @@ const RouteScreen: React.FC = () => {
   const [origin, setOrigin] = useState<string>("");
   const [originSuggestions, setOriginSuggestions] = useState<any[]>([]);
   const [destination, setDestination] = useState<string>("");
-  const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>(
-    []
-  );
+  const [destinationSuggestions, setDestinationSuggestions] = useState<any[]>([]);
   const [route, setRoute] = useState<LatLng[]>([]);
-  const [roadPath, setRoadPath] = useState<
-    LatLng[] | string | LatLng[][] | SegmentPath[]
-  >([]);
-  const [routeDetails, setRouteDetails] = useState<RouteDetails>({
-    route: null,
-  });
+  const [roadPath, setRoadPath] = useState<LatLng[] | string | LatLng[][] | SegmentPath[]>([]);
+  const [routeDetails, setRouteDetails] = useState<RouteDetails>({ route: null });
   const [routeMetrics, setRouteMetrics] = useState<RouteMetrics | null>(null);
   const [mapResetKey, setMapResetKey] = useState<number>(Date.now());
   const [manualOrigin, setManualOrigin] = useState<boolean>(false);
@@ -70,12 +79,76 @@ const RouteScreen: React.FC = () => {
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const snapPoints = ['25%', '60%', '90%'];
-  const [mapHeight, setMapHeight] = useState(Dimensions.get('window').height * 0.6); // initial map height
-  const screenHeight = Dimensions.get('window').height;
-  const fixedMapHeight = screenHeight * 0.6;
-
+  const snapPoints = ["25%", "60%", "90%"];
+  const [selectedLocationType, setSelectedLocationType] = useState<"origin" | "destination">("origin");
+  const [selectedLocationCoords, setSelectedLocationCoords] = useState<LatLng | null>(null);
   const navigation = useNavigation();
+  const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
+  const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
+  const [nearbyRestaurants, setNearbyRestaurants] = useState<
+    Array<{
+      name: string;
+      latitude: number;
+      longitude: number;
+      cuisine: string;
+      amenity: string;
+      address: string;
+      opening_hours: string;
+      phone?: string;
+      website?: string;
+      image_url?: string;
+    }>
+  >([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<{
+    latitude: number;
+    longitude: number;
+    name: string;
+  } | null>(null);
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState<string>("best");
+  const [showAlgorithmDropdown, setShowAlgorithmDropdown] = useState<boolean>(false);
+  const algorithmOptions = [
+    { label: "Best", value: "best" },
+    { label: "Fewest Transfers", value: "fewest-transfers" },
+    { label: "Minimal Walking", value: "minimal-walking" },
+    { label: "Fastest", value: "fastest" },
+  ];
+  const router = useRouter();
+  const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
+  const webviewRef = useRef<WebView>(null);
+  const originTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const destinationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [activeTab, setActiveTab] = useState("Route");
+  useEffect(() => {
+    if (selectedLocationType === 'origin' && route[0]) {
+      setSelectedLocationCoords(route[0]);
+    } else if (selectedLocationType === 'destination' && route[1]) {
+      setSelectedLocationCoords(route[1]);
+    } else {
+      setSelectedLocationCoords(null);
+    }
+  }, [selectedLocationType, route]);
+
+  useEffect(() => {
+    if (selectedLocationType === "origin" && route[0]) {
+      setSelectedLocationCoords(route[0]);
+    } else if (selectedLocationType === "destination" && route[1]) {
+      setSelectedLocationCoords(route[1]);
+    } else {
+      setSelectedLocationCoords(null);
+    }
+  }, [selectedLocationType, route]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      tabBarStyle: { display: "none" },
+      headerShown: false,
+    });
+    return () =>
+      navigation.setOptions({
+        tabBarStyle: undefined,
+        headerShown: true,
+      });
+  }, [navigation]);
 
   useEffect(() => {
     // Hide both tab bar and header when this screen is focused
@@ -112,48 +185,6 @@ const RouteScreen: React.FC = () => {
     //   bottomSheetRef.current?.snapToIndex(2);
     // }
   };
-
-  const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
-  const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
-  const [nearbyRestaurants, setNearbyRestaurants] = useState<
-    Array<{
-      name: string;
-      latitude: number;
-      longitude: number;
-      cuisine: string;
-      amenity: string;
-      address: string;
-      opening_hours: string;
-      phone?: string;
-      website?: string;
-      image_url?: string;
-    }>
-  >([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState<{
-    latitude: number;
-    longitude: number;
-    name: string;
-  } | null>(null);
-
-  // --- NEW: Algorithm dropdown state ---
-  const [selectedAlgorithm, setSelectedAlgorithm] = useState<string>("best");
-  const [showAlgorithmDropdown, setShowAlgorithmDropdown] =
-    useState<boolean>(false);
-  const algorithmOptions = [
-    { label: "Best", value: "best" },
-    { label: "Fewest Transfers", value: "fewest-transfers" },
-    { label: "Minimal Walking", value: "minimal-walking" },
-    { label: "Fastest", value: "fastest" },
-  ];
-
-  const router = useRouter();
-
-  const [expandedSegments, setExpandedSegments] = useState<{
-    [index: number]: boolean;
-  }>({});
-  const webviewRef = useRef<WebView>(null);
-  const originTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const destinationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- NEW: Fix for "View" error in Restaurant Modal ---
   const handleViewRestaurant = (lat: number, lng: number) => {
@@ -335,12 +366,11 @@ const RouteScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    if (route.length >= 2) {
-      const destinationCoords = route[1];
-      console.log("Fetching restaurants for destination:", destinationCoords);
-      fetchRestaurants(destinationCoords.latitude, destinationCoords.longitude);
+    if (selectedLocationCoords) {
+      console.log("Fetching restaurants for:", selectedLocationType, selectedLocationCoords);
+      fetchRestaurants(selectedLocationCoords.latitude, selectedLocationCoords.longitude);
     }
-  }, [route]);
+  }, [selectedLocationCoords]);
 
   async function geocodeAddress(address: string) {
     if (locationCacheRef.current[address])
@@ -705,30 +735,23 @@ const RouteScreen: React.FC = () => {
       </View>
     );
   };
-
-  const detailsContent = (
-    <View style={styles.container}>
-      <Text style={styles.text}>Details</Text>
-
+  const renderRouteTab = () => (
+    <View style={styles.tabContent}>
+      <Text style={styles.text}>Route Details</Text>
       <View style={styles.dropdownContainer}>
         <TouchableOpacity
           style={styles.algorithmDropdownButton}
           onPress={() => setShowAlgorithmDropdown(!showAlgorithmDropdown)}
         >
+          <Text style={styles.algorithmDropdownButtonText}>
+            {algorithmOptions.find((opt) => opt.value === selectedAlgorithm)?.label || "Select Algorithm"}
+          </Text>
           <Ionicons
-            name={
-              showAlgorithmDropdown
-                ? "chevron-up-outline"
-                : "chevron-down-outline"
-            }
+            name={showAlgorithmDropdown ? "chevron-up-outline" : "chevron-down-outline"}
             size={16}
             color="#6366F1"
-            style={{ marginRight: 6 }}
+            style={{ marginLeft: 6 }}
           />
-          <Text style={styles.algorithmDropdownButtonText}>
-            {algorithmOptions.find((opt) => opt.value === selectedAlgorithm)
-              ?.label || "Select Algorithm"}
-          </Text>
         </TouchableOpacity>
         {showAlgorithmDropdown && (
           <View style={[styles.algorithmDropdownOverlay, { zIndex: 10001 }]}>
@@ -738,30 +761,18 @@ const RouteScreen: React.FC = () => {
                 return (
                   <TouchableOpacity
                     key={index}
-                    style={[
-                      styles.algorithmDropdownItem,
-                      isSelected && styles.algorithmDropdownItemSelected,
-                    ]}
+                    style={[styles.algorithmDropdownItem, isSelected && styles.algorithmDropdownItemSelected]}
                     onPress={() => {
                       setSelectedAlgorithm(option.value);
                       setShowAlgorithmDropdown(false);
-                      // Re-fetch route if destination exists
                       if (route.length >= 2) {
                         const dest = route[1];
-                        fetchRouteDetails(
-                          dest.latitude,
-                          dest.longitude,
-                          option.value
-                        );
+                        fetchRouteDetails(dest.latitude, dest.longitude, option.value);
                       }
                     }}
                   >
                     <Text
-                      style={[
-                        styles.algorithmDropdownItemText,
-                        isSelected &&
-                        styles.algorithmDropdownItemTextSelected,
-                      ]}
+                      style={[styles.algorithmDropdownItemText, isSelected && styles.algorithmDropdownItemTextSelected]}
                     >
                       {option.label}
                     </Text>
@@ -772,7 +783,6 @@ const RouteScreen: React.FC = () => {
           </View>
         )}
       </View>
-
       <Text style={styles.label}>From</Text>
       <View style={styles.searchContainer}>
         <View style={styles.inputContainer}>
@@ -784,23 +794,14 @@ const RouteScreen: React.FC = () => {
             onChangeText={handleOriginChange}
             multiline={false}
           />
-          {isOriginLoading && (
-            <ActivityIndicator
-              style={styles.loadingIndicator}
-              size="small"
-              color="#6366F1"
-            />
-          )}
+          {isOriginLoading && <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />}
           {origin !== "" && (
             <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           )}
         </View>
-        <SuggestionList
-          suggestions={originSuggestions}
-          onSelect={selectOriginSuggestion}
-        />
+        <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
       </View>
       <Text style={styles.label}>To</Text>
       <View style={styles.searchContainer}>
@@ -813,13 +814,7 @@ const RouteScreen: React.FC = () => {
             onChangeText={handleDestinationChange}
             multiline={false}
           />
-          {isDestinationLoading && (
-            <ActivityIndicator
-              style={styles.loadingIndicator}
-              size="small"
-              color="#6366F1"
-            />
-          )}
+          {isDestinationLoading && <ActivityIndicator style={styles.loadingIndicator} size="small" color="#6366F1" />}
           {destination !== "" && (
             <TouchableOpacity
               style={styles.clearButton}
@@ -838,10 +833,7 @@ const RouteScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
-        <SuggestionList
-          suggestions={destinationSuggestions}
-          onSelect={selectDestinationSuggestion}
-        />
+        <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
       </View>
       {route.length >= 2 && routeMetrics && (
         <View style={styles.topInfoRow}>
@@ -872,17 +864,11 @@ const RouteScreen: React.FC = () => {
           <Text style={styles.routeOverviewText}>Route Overview</Text>
           {renderRouteOverview()}
           <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => setRestaurantModalVisible(true)}
-            >
-              <Text style={styles.buttonText}>Restaurants Modal</Text>
+            <TouchableOpacity style={styles.button} onPress={() => setActiveTab("Restaurants")}>
+              <Text style={styles.buttonText}>Restaurants</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => setModalVisible(true)}
-            >
-              <Text style={styles.buttonText}>Nearby Attractions</Text>
+            <TouchableOpacity style={styles.button} onPress={() => setActiveTab("Attractions")}>
+              <Text style={styles.buttonText}>Attractions</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.button}
@@ -900,115 +886,119 @@ const RouteScreen: React.FC = () => {
                 });
               }}
             >
-              <Text style={styles.buttonText}>Route Post Suggestions</Text>
+              <Text style={styles.buttonText}>Post Suggestions</Text>
             </TouchableOpacity>
           </View>
-          <ModalComponent
-            visible={restaurantModalVisible}
-            onClose={() => setRestaurantModalVisible(false)}
-            restaurants={nearbyRestaurants.map((r) => ({
-              name: r.name,
-              latitude: r.latitude,
-              longitude: r.longitude,
-              cuisine: r.cuisine,
-              amenity: r.amenity,
-              address: r.address,
-              opening_hours: r.opening_hours,
-              phone: r.phone,
-              website: r.website,
-              image_url: r.image_url,
-            }))}
-            onView={(restaurant) => {
-              handleViewRestaurant(restaurant.latitude, restaurant.longitude);
-              setRestaurantModalVisible(false);
-            }}
-            onGoHere={(restaurant) => {
-              setDestination(restaurant.address || restaurant.name);
-              const newDestination = {
-                latitude: restaurant.latitude,
-                longitude: restaurant.longitude,
-              };
-              setRoadPath([]);
-              const currentOrigin =
-                route.length > 0
-                  ? route[0]
-                  : { latitude: region.latitude, longitude: region.longitude };
-              setRoute([currentOrigin, newDestination]);
-              fetchRouteDetails(
-                newDestination.latitude,
-                newDestination.longitude,
-                selectedAlgorithm
-              );
-              setRestaurantModalVisible(false);
-            }}
-          />
-          {route.length >= 2 && (
-            <ReviewModal
-              visible={modalVisible}
-              onClose={() => setModalVisible(false)}
-              originCoords={route[0]}
-              destinationCoords={route[1]}
-              nearbySpots={nearbySpots}
-              scrollToSpot={scrollToSpot}
-              onSpotsFetched={(spots) => setNearbySpots(spots)}
-              onSpotSelect={(selectedSpot) => {
-                setNearbySpots([]);
-                setDestination(selectedSpot.name);
-                const newDestination = {
-                  latitude: selectedSpot.latitude,
-                  longitude: selectedSpot.longitude,
-                };
-                setRoadPath([]);
-                const currentOrigin =
-                  route.length > 0
-                    ? route[0]
-                    : {
-                      latitude: region.latitude,
-                      longitude: region.longitude,
-                    };
-                setRoute([currentOrigin, newDestination]);
-                fetchRouteDetails(
-                  newDestination.latitude,
-                  newDestination.longitude,
-                  selectedAlgorithm
-                );
-                setModalVisible(false);
-                setSelectedSpot(newDestination);
-              }}
-              onSpotView={(selectedSpot) => {
-                setSelectedSpot({
-                  latitude: selectedSpot.latitude,
-                  longitude: selectedSpot.longitude,
-                });
-                setModalVisible(false);
-              }}
-            />
-          )}
         </View>
       ) : (
         <View style={styles.oopsContainer}>
-          <Image
-            source={require("../../assets/images/opz.png")}
-            style={styles.illustration}
-            resizeMode="contain"
-          />
+          <Image source={require("../../assets/images/opz.png")} style={styles.illustration} resizeMode="contain" />
           <Text style={styles.errorText}>Oops!</Text>
-          <Text style={styles.errorSubText}>
-            Search for your location and destination.
-          </Text>
+          <Text style={styles.errorSubText}>Search for your location and destination.</Text>
         </View>
       )}
     </View>
   );
 
+  const renderRestaurantsTab = () => (
+    <View style={styles.tabContent}>
+      <Text style={styles.text}>Nearby Restaurants</Text>
+      {(route[0] || route[1]) && (
+        <View style={styles.locationTypeContainer}>
+          <Text style={styles.locationTypeLabel}>Show restaurants near:</Text>
+          <View style={styles.segmentedControl}>
+            <TouchableOpacity
+              style={[styles.segmentButton, selectedLocationType === "origin" && styles.activeSegment]}
+              onPress={() => setSelectedLocationType("origin")}
+              disabled={!route[0]}
+            >
+              <Text
+                style={[
+                  styles.segmentText,
+                  selectedLocationType === "origin" && styles.activeSegmentText,
+                  !route[0] && styles.disabledSegmentText,
+                ]}
+              >
+                Origin
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segmentButton, selectedLocationType === "destination" && styles.activeSegment]}
+              onPress={() => setSelectedLocationType("destination")}
+              disabled={!route[1]}
+            >
+              <Text
+                style={[
+                  styles.segmentText,
+                  selectedLocationType === "destination" && styles.activeSegmentText,
+                  !route[1] && styles.disabledSegmentText,
+                ]}
+              >
+                Destination
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {selectedLocationCoords ? (
+        <View style={styles.restaurantsPreview}>
+          {nearbyRestaurants.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.restaurantsScroll}>
+              {nearbyRestaurants.slice(0, 5).map((restaurant, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.restaurantCard}
+                  onPress={() => setRestaurantModalVisible(true)}
+                >
+                  <Text style={styles.restaurantName} numberOfLines={1}>
+                    {restaurant.name}
+                  </Text>
+                  <Text style={styles.restaurantCuisine} numberOfLines={1}>
+                    {restaurant.cuisine}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={styles.noResultsText}>No restaurants found near {selectedLocationType}</Text>
+          )}
+          <TouchableOpacity style={styles.seeAllButton} onPress={() => setRestaurantModalVisible(true)}>
+            <Text style={styles.seeAllText}>See All Restaurants</Text>
+            <Ionicons name="chevron-forward" size={16} color="#6366F1" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <Text style={styles.promptText}>Enter an origin/destination to view nearby restaurants</Text>
+      )}
+    </View>
+  );
+
+  const renderAttractionsTab = () => (
+    <View style={styles.tabContent}>
+      <Text style={styles.text}>Nearby Attractions</Text>
+      <Text style={styles.promptText}>Attractions content will be implemented here.</Text>
+      {/* Add similar logic to restaurants here when implementing attractions */}
+    </View>
+  );
+
+  const detailsContent = (
+    <View style={styles.container}>
+      <View style={styles.tabContainer}>
+        <TabButton title="Route" isActive={activeTab === "Route"} onPress={() => setActiveTab("Route")} />
+        <TabButton title="Restaurants" isActive={activeTab === "Restaurants"} onPress={() => setActiveTab("Restaurants")} />
+        <TabButton title="Attractions" isActive={activeTab === "Attractions"} onPress={() => setActiveTab("Attractions")} />
+      </View>
+      {activeTab === "Route" && renderRouteTab()}
+      {activeTab === "Restaurants" && renderRestaurantsTab()}
+      {activeTab === "Attractions" && renderAttractionsTab()}
+    </View>
+  );
   // Render different layouts based on route length while updating MapComponent with new restaurant props
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* Full-screen map as the background */}
       <View style={styles.mapWrapper}>
         <MapComponent
           key={`map-${mapResetKey}-${nearbyRestaurants.length}`}
-
           initialRegion={region}
           route={route}
           roadPath={roadPath}
@@ -1032,35 +1022,73 @@ const RouteScreen: React.FC = () => {
             setModalVisible(true);
           }}
         />
-        {isRouteLoading && (
-          <ActivityIndicator style={styles.loadingIndicator} size="large" color="#6366F1" />
-        )}
+        {isRouteLoading && <ActivityIndicator style={styles.loadingIndicator} size="large" color="#6366F1" />}
       </View>
-
-      {/* Bottom Sheet overlay */}
       <BottomSheet
         ref={bottomSheetRef}
         snapPoints={snapPoints}
         index={1}
         enableContentPanningGesture={true}
         enableHandlePanningGesture={true}
-        backgroundComponent={({ style }) => (
-          <View style={[style, { backgroundColor: "#FFFFFF", borderRadius: 20 }]} />
-        )}
-        handleComponent={CustomHandle} // Make sure CustomHandle is defined/imported
+        backgroundComponent={({ style }) => <View style={[style, { backgroundColor: "#FFFFFF", borderRadius: 20 }]} />}
+        handleComponent={CustomHandle}
       >
         <BottomSheetScrollView
           nestedScrollEnabled
           contentContainerStyle={{ flexGrow: 1, paddingVertical: 10 }}
           showsVerticalScrollIndicator={false}
-          onScrollEndDrag={handleScrollEndDrag}
-          onMomentumScrollEnd={handleScrollEndDrag}
           keyboardShouldPersistTaps="always"
         >
           {detailsContent}
+          <ModalComponent
+            visible={restaurantModalVisible}
+            onClose={() => setRestaurantModalVisible(false)}
+            restaurants={nearbyRestaurants}
+            onView={(restaurant) => {
+              webviewRef.current?.injectJavaScript(
+                `if (window.map) { window.map.flyTo([${restaurant.latitude}, ${restaurant.longitude}], 16, { animate: true, duration: 2 }); }`
+              );
+              setRestaurantModalVisible(false);
+            }}
+            onGoHere={(restaurant) => {
+              setDestination(restaurant.address || restaurant.name);
+              const newDestination = { latitude: restaurant.latitude, longitude: restaurant.longitude };
+              setRoadPath([]);
+              const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
+              setRoute([currentOrigin, newDestination]);
+              fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
+              setRestaurantModalVisible(false);
+            }}
+          />
+          {route.length >= 2 && (
+            <ReviewModal
+              visible={modalVisible}
+              onClose={() => setModalVisible(false)}
+              originCoords={route[0]}
+              destinationCoords={route[1]}
+              nearbySpots={nearbySpots}
+              scrollToSpot={scrollToSpot}
+              onSpotsFetched={(spots) => setNearbySpots(spots)}
+              onSpotSelect={(selectedSpot) => {
+                setNearbySpots([]);
+                setDestination(selectedSpot.name);
+                const newDestination = { latitude: selectedSpot.latitude, longitude: selectedSpot.longitude };
+                setRoadPath([]);
+                const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
+                setRoute([currentOrigin, newDestination]);
+                fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
+                setModalVisible(false);
+                setSelectedSpot(newDestination);
+              }}
+              onSpotView={(selectedSpot) => {
+                setSelectedSpot({ latitude: selectedSpot.latitude, longitude: selectedSpot.longitude });
+                setModalVisible(false);
+              }}
+            />
+          )}
         </BottomSheetScrollView>
       </BottomSheet>
-    </GestureHandlerRootView >
+    </GestureHandlerRootView>
   );
 };
 
@@ -1335,4 +1363,102 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   algorithmDropdownItemTextSelected: { color: "#fff" },
+  locationTypeContainer: {
+    marginVertical: 12,
+  },
+  locationTypeLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    padding: 4,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  activeSegment: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  segmentText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  activeSegmentText: {
+    color: '#6366F1',
+    fontWeight: '500',
+  },
+  disabledSegmentText: {
+    color: '#D1D5DB',
+  },
+  restaurantsPreview: {
+    marginVertical: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  restaurantsScroll: {
+    paddingRight: 16,
+  },
+  restaurantCard: {
+    width: 160,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  restaurantName: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  restaurantCuisine: {
+    fontSize: 10,
+    color: '#6B7280',
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingVertical: 8,
+  },
+  seeAllText: {
+    color: '#6366F1',
+    fontSize: 12,
+    marginRight: 4,
+  },
+  noResultsText: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  promptText: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginVertical: 12,
+  },
+  tabContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 16 },
+  tabButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: "#F3F4F6" },
+  activeTab: { backgroundColor: "#6366F1" },
+  tabText: { color: "#6B7280", fontWeight: "500" },
+  activeTabText: { color: "#FFFFFF" },
+  tabContent: { paddingHorizontal: 16 },
 });
