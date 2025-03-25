@@ -115,12 +115,6 @@ const RouteScreen: React.FC = () => {
     { label: "Minimal Walking", value: "minimal-walking" },
     { label: "Fastest", value: "fastest" },
   ];
-  const router = useRouter();
-  const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
-  const webviewRef = useRef<WebView>(null);
-  const originTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const destinationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [activeTab, setActiveTab] = useState("Route");
   const formatCuisine = (cuisine: string | undefined) => {
     if (!cuisine) return "Not specified";
     return cuisine
@@ -128,7 +122,46 @@ const RouteScreen: React.FC = () => {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(', ');
   };
-  const [spotLimit, setSpotLimit] = useState(20); // Default to 10 spots
+  const router = useRouter();
+  const [expandedSegments, setExpandedSegments] = useState<{ [index: number]: boolean }>({});
+  const webviewRef = useRef<WebView>(null);
+  const [activeTab, setActiveTab] = useState("Route");
+  const [spotLimit, setSpotLimit] = useState(20);
+
+  // Debounce function
+  const debounce = (func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    return (...args: any[]) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func(...args);
+      }, delay);
+    };
+  };
+
+  // Debounced handler for origin changes
+  const debouncedHandleOriginChange = debounce(async (text: string) => {
+    if (!text) {
+      setOriginSuggestions([]);
+      setDestination("");
+      setDestinationSuggestions([]);
+      setRoute([]);
+      setRouteDetails({ route: null });
+      setRoadPath([]);
+      setIsOriginLoading(false);
+      return;
+    }
+    setIsOriginLoading(true);
+    try {
+      const suggestions = await geocodeAddress(text);
+      setOriginSuggestions(suggestions);
+    } catch (error) {
+      console.error("Search failed:", error);
+      setOriginSuggestions([]);
+    } finally {
+      setIsOriginLoading(false);
+    }
+  }, 300);
 
   useEffect(() => {
     if (selectedLocationType === "origin" && route[0]) {
@@ -187,14 +220,6 @@ const RouteScreen: React.FC = () => {
   const handleToggleSegment = (idx: number) => {
     setExpandedSegments((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
-
-  useEffect(() => {
-    return () => {
-      if (originTimeoutRef.current) clearTimeout(originTimeoutRef.current);
-      if (destinationTimeoutRef.current)
-        clearTimeout(destinationTimeoutRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     if (destParam) {
@@ -410,34 +435,9 @@ const RouteScreen: React.FC = () => {
     }
   }
 
-  const handleOriginChange = async (text: string) => {
+  const handleOriginChange = (text: string) => {
     setOrigin(text);
-    if (!text) {
-      setOriginSuggestions([]);
-      setDestination("");
-      setDestinationSuggestions([]);
-      setRoute([]);
-      setRouteDetails({ route: null });
-      setRoadPath([]);
-      setIsOriginLoading(false);
-      return;
-    }
-    if (originTimeoutRef.current) clearTimeout(originTimeoutRef.current);
-    setIsOriginLoading(true);
-    originTimeoutRef.current = setTimeout(async () => {
-      try {
-        const suggestions = await geocodeAddress(text);
-        setOriginSuggestions(suggestions);
-      } catch (error) {
-        console.error("Search failed:", error);
-        setOriginSuggestions([]);
-      } finally {
-        setIsOriginLoading(false);
-      }
-    }, 300);
-    const suggestions = await geocodeAddress(text);
-    setOriginSuggestions(suggestions);
-    setIsOriginLoading(false);
+    debouncedHandleOriginChange(text);
   };
 
   const clearOrigin = () => {
@@ -466,27 +466,27 @@ const RouteScreen: React.FC = () => {
     }
   };
 
-  const handleDestinationChange = async (text: string) => {
-    setDestination(text);
+  const debouncedHandleDestinationChange = debounce(async (text: string) => {
     if (!text) {
       setDestinationSuggestions([]);
       setIsDestinationLoading(false);
       return;
     }
-    if (destinationTimeoutRef.current)
-      clearTimeout(destinationTimeoutRef.current);
     setIsDestinationLoading(true);
-    destinationTimeoutRef.current = setTimeout(async () => {
-      try {
-        const suggestions = await geocodeAddress(text);
-        setDestinationSuggestions(suggestions);
-      } catch (error) {
-        console.error("Search failed:", error);
-        setDestinationSuggestions([]);
-      } finally {
-        setIsDestinationLoading(false);
-      }
-    }, 300);
+    try {
+      const suggestions = await geocodeAddress(text);
+      setDestinationSuggestions(suggestions);
+    } catch (error) {
+      console.error("Search failed:", error);
+      setDestinationSuggestions([]);
+    } finally {
+      setIsDestinationLoading(false);
+    }
+  }, 300);
+
+  const handleDestinationChange = (text: string) => {
+    setDestination(text);
+    debouncedHandleDestinationChange(text);
   };
 
   const selectDestinationSuggestion = async (item: any) => {
@@ -712,7 +712,6 @@ const RouteScreen: React.FC = () => {
     <View style={styles.tabContent}>
       <Text style={styles.sectionHeader}>Route Details</Text>
 
-      {/* Route Type Dropdown */}
       <View style={styles.routeTypeContainer}>
         <Text style={styles.subHeader}>Select Route Type</Text>
         <TouchableOpacity
@@ -751,7 +750,6 @@ const RouteScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Locations: Origin and Destination */}
       <View style={styles.locationsContainer}>
         <Text style={styles.label}>From</Text>
         <View style={styles.searchContainer}>
@@ -765,6 +763,9 @@ const RouteScreen: React.FC = () => {
             <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
+          )}
+          {isOriginLoading && (
+            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
           )}
           <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
         </View>
@@ -781,16 +782,17 @@ const RouteScreen: React.FC = () => {
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           )}
+          {isDestinationLoading && (
+            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
+          )}
           <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
         </View>
       </View>
 
-      {/* Loading Indicator */}
       {isRouteLoading && (
         <ActivityIndicator size="small" color="#6366F1" style={{ marginVertical: 12 }} />
       )}
 
-      {/* Route Metrics */}
       {route.length >= 2 && routeMetrics && !isRouteLoading && (
         <View style={styles.routeMetricsContainer}>
           <Text style={styles.subHeader}>Route Metrics</Text>
@@ -838,7 +840,6 @@ const RouteScreen: React.FC = () => {
       ) : null}
     </View>
   );
-
   const renderRestaurantsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Dining Spots</Text>
