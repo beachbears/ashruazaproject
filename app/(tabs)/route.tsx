@@ -398,11 +398,10 @@ const RouteScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    if (selectedLocationCoords) {
-      console.log("Fetching restaurants for:", selectedLocationType, selectedLocationCoords);
+    if (activeTab === "Dining" && selectedLocationCoords) {
       fetchRestaurants(selectedLocationCoords.latitude, selectedLocationCoords.longitude, spotLimit);
     }
-  }, [selectedLocationCoords, spotLimit]);
+  }, [activeTab, selectedLocationCoords, spotLimit]);
 
   useEffect(() => {
     if (activeTab === "Attractions" && selectedLocationCoords) {
