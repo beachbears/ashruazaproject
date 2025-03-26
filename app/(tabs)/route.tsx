@@ -376,6 +376,12 @@ const RouteScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (route.length >= 2) {
+      setMapResetKey(Date.now()); // Only reset when route data is ready
+    }
+  }, [route]);
+
+  useEffect(() => {
     if (activeTab === "Dining" && selectedLocationCoords) {
       fetchRestaurants(selectedLocationCoords.latitude, selectedLocationCoords.longitude, spotLimit);
     }

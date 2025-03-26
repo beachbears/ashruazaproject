@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo } from "react";
+import React, { useState, useEffect, useRef, memo, useMemo } from "react";
 import { View, ActivityIndicator, Animated, StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
 import { MapComponentProps, LatLng } from "../types";
@@ -33,8 +33,22 @@ const MapComponent = memo(
         toValue: 0,
         duration: 500,
         useNativeDriver: true,
-      }).start(() => setLoading(false));
+      }).start(() => {
+        setLoading(false);
+        setIsWebViewReady(true); // Mark WebView as ready
+      });
     };
+
+    const mapHTML = useMemo(() => {
+      return getMapHTML({
+        region: initialRegion,
+        route,
+        roadPath,
+        polylineColor,
+        nearbySpots,
+        nearbyRestaurants,
+      });
+    }, [initialRegion, route, roadPath, polylineColor, nearbySpots, nearbyRestaurants]);
 
     useEffect(() => {
       if (isWebViewReady && selectedSpot) {
@@ -87,48 +101,23 @@ const MapComponent = memo(
     return (
       <View style={{ flex: 1 }}>
         <WebView
-          ref={webviewRef || internalWebViewRef}
-          key={mapKey}
-          originWhitelist={["*"]}
-          source={{
-            html: getMapHTML({
-              region: initialRegion,
-              route,
-              roadPath,
-              polylineColor,
-              nearbySpots,
-              nearbyRestaurants,
-            }),
-          }}
+          ref={webviewRef} // Use the passed ref directly
+          source={{ html: mapHTML }}
           style={style}
-          onLoadStart={() => setLoading(true)}
-          onLoadEnd={() => {
-            handleLoadEnd();
-            setIsWebViewReady(true);
-          }}
-          onMessage={(event) => {
-            try {
-              const data = JSON.parse(event.nativeEvent.data);
-              if (data.type === "spotClick" && onSpotClick) onSpotClick(data.name);
-              if (data.type === "restaurantClick" && onRestaurantClick) onRestaurantClick(data.name);
-            } catch (e) {
-              console.error("Error parsing message:", e);
-            }
-          }}
+          onLoadEnd={() => setLoading(false)}
         />
         {(loading || isLoading) && (
           <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                opacity: fadeAnim,
-                backgroundColor: "#fff",
-                justifyContent: "center",
-                alignItems: "center",
-              },
-            ]}
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              backgroundColor: "rgba(255, 255, 255, 0.7)",
+              padding: 10,
+              borderRadius: 5,
+            }}
           >
-            <ActivityIndicator size="large" color="#6366F1" />
+            <ActivityIndicator size="small" color="#6366F1" />
           </Animated.View>
         )}
       </View>
