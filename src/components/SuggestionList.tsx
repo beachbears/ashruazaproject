@@ -1,6 +1,7 @@
 // src/components/SuggestionList.tsx
 import React from "react";
-import { ScrollView, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { ScrollView } from "react-native-gesture-handler"
 
 interface SuggestionListProps {
   suggestions: any[];
