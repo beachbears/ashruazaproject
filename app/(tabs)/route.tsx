@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import {
   View,
@@ -48,6 +48,7 @@ const TabButton = React.memo(({ title, isActive, onPress }: TabButtonProps) => (
     <Text style={[styles.tabText, isActive && styles.activeTabText]}>{title}</Text>
   </TouchableOpacity>
 ));
+
 LogBox.ignoreLogs(["textShadow*", "shadow*"]);
 
 const RouteScreen: React.FC = () => {
@@ -123,6 +124,9 @@ const RouteScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState("Route");
   const [spotLimit, setSpotLimit] = useState(20);
 
+  // const restaurantCache = useRef<{ [key: string]: Restaurant[] }>({});
+  const attractionCache = useRef<{ [key: string]: NearbySpot[] }>({});
+
   // Debounce function
   const debounce = (func: Function, delay: number) => {
     let timeoutId: NodeJS.Timeout | null = null;
@@ -134,29 +138,8 @@ const RouteScreen: React.FC = () => {
     };
   };
 
-  // Debounced handler for origin changes
-  const debouncedHandleOriginChange = debounce(async (text: string) => {
-    if (!text) {
-      setOriginSuggestions([]);
-      setDestination("");
-      setDestinationSuggestions([]);
-      setRoute([]);
-      setRouteDetails({ route: null, posts: [] });
-      setRoadPath([]);
-      setIsOriginLoading(false);
-      return;
-    }
-    setIsOriginLoading(true);
-    try {
-      const suggestions = await geocodeAddress(text);
-      setOriginSuggestions(suggestions);
-    } catch (error) {
-      console.error("Search failed:", error);
-      setOriginSuggestions([]);
-    } finally {
-      setIsOriginLoading(false);
-    }
-  }, 300);
+
+
 
   useEffect(() => {
     if (selectedLocationType === "origin" && route[0]) {
@@ -211,10 +194,6 @@ const RouteScreen: React.FC = () => {
       }, 300);
     }
   }, [modalVisible, scrollToSpot]);
-
-  const handleToggleSegment = (idx: number) => {
-    setExpandedSegments((prev) => ({ ...prev, [idx]: !prev[idx] }));
-  };
 
   useEffect(() => {
     if (destParam) {
@@ -362,35 +341,30 @@ const RouteScreen: React.FC = () => {
     }
   };
 
-  const fetchAttractions = async (lat: number, lon: number, limit: number) => {
+  const fetchAttractions = useCallback(async (lat: number, lon: number, limit: number) => {
+    const cacheKey = `${lat},${lon},${limit}`;
+    if (attractionCache.current[cacheKey]) {
+      setNearbySpots(attractionCache.current[cacheKey]);
+      return;
+    }
     try {
-      const response = await axios.get("https://comgu20-production.up.railway.app/api/tourist_spots", {
-        params: {
-          lat,
-          lon,
-          radius: 5,
-          page: 1,
-          per_page: limit,
-        },
+      const response = await axios.get('https://comgu20-production.up.railway.app/api/tourist_spots', {
+        params: { lat, lon, radius: 5, page: 1, per_page: limit },
       });
-      console.log("API Response for Attractions:", response.data.results);
       const mapped = response.data.results.map((item: any) => ({
-        name: item.tourist_spot || "Unnamed Attraction",
+        name: item.tourist_spot || 'Unnamed Attraction',
         latitude: item.latitude || 0,
         longitude: item.longitude || 0,
-        description: item.description || "No description available",
-        address: item.address || "Address not available",
         distance: item.distance,
-        image_url: item.image_url || "https://via.placeholder.com/150",
-        trivia: item.trivia || "No trivia available",
-        feedbacks: item.feedbacks || [],
+        image_url: item.image_url || 'https://via.placeholder.com/150',
       }));
+      attractionCache.current[cacheKey] = mapped;
       setNearbySpots(mapped);
     } catch (error) {
-      console.error("Error fetching attractions:", error);
+      console.error('Error fetching attractions:', error);
       setNearbySpots([]);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (activeTab === "Dining" && selectedLocationCoords) {
@@ -404,128 +378,126 @@ const RouteScreen: React.FC = () => {
     }
   }, [activeTab, selectedLocationCoords, spotLimit]);
 
-  async function geocodeAddress(address: string) {
-    if (locationCacheRef.current[address])
-      return locationCacheRef.current[address];
+  const geocodeAddress = useCallback(async (address: string) => {
+    if (locationCacheRef.current[address]) return locationCacheRef.current[address];
     try {
-      const { data } = await axios.get<LocationSuggestion[]>(
-        "https://comgu20-production.up.railway.app/api/locations/search",
+      const { data } = await axios.get(
+        'https://comgu20-production.up.railway.app/api/locations/search',
         { params: { term: address } }
       );
-      let results: any[] = [];
-      if (data && data.length) {
-        results = data.map((item: LocationSuggestion) => ({
-          name: item.label,
-          lat: parseFloat(item.latitude),
-          lon: parseFloat(item.longitude),
-        }));
-      }
+      const results = data.map((item: any) => ({
+        name: item.label,
+        lat: parseFloat(item.latitude),
+        lon: parseFloat(item.longitude),
+      }));
       locationCacheRef.current[address] = results;
       return results;
     } catch (err) {
-      console.error("Geocoding error:", err);
-      await sleep(1000);
+      console.error('Geocoding error:', err);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       return [];
     }
-  }
+  }, []);
 
-  const handleOriginChange = (text: string) => {
+  // Debounced handler for origin changes
+  const debouncedHandleOriginChange = useCallback(
+    debounce(async (text: string) => {
+      if (!text) {
+        setOriginSuggestions([]);
+        setDestination('');
+        setDestinationSuggestions([]);
+        setRoute([]);
+        setRouteDetails({ route: null, posts: [] });
+        setRoadPath([]);
+        setIsOriginLoading(false);
+        return;
+      }
+      setIsOriginLoading(true);
+      try {
+        const suggestions = await geocodeAddress(text);
+        setOriginSuggestions(suggestions);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setOriginSuggestions([]);
+      } finally {
+        setIsOriginLoading(false);
+      }
+    }, 300),
+    [geocodeAddress]
+  );
+
+  const debouncedHandleDestinationChange = useCallback(
+    debounce(async (text: string) => {
+      if (!text) {
+        setDestinationSuggestions([]);
+        setIsDestinationLoading(false);
+        return;
+      }
+      setIsDestinationLoading(true);
+      try {
+        const suggestions = await geocodeAddress(text);
+        setDestinationSuggestions(suggestions);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setDestinationSuggestions([]);
+      } finally {
+        setIsDestinationLoading(false);
+      }
+    }, 300),
+    [geocodeAddress]
+  );
+
+  // Event Handlers
+  const handleOriginChange = useCallback((text: string) => {
     setOrigin(text);
     debouncedHandleOriginChange(text);
-  };
+  }, [debouncedHandleOriginChange]);
 
-  const clearOrigin = () => {
-    setOrigin("");
+  const clearOrigin = useCallback(() => {
+    setOrigin('');
     setOriginSuggestions([]);
-    setRoute((prev) => (prev.length > 1 ? [prev[1]] : [])); // Keep destination if exists
+    setRoute((prev) => (prev.length > 1 ? [prev[1]] : []));
     setRouteDetails({ route: null, posts: [] });
     setRoadPath([]);
     setNearbySpots([]);
     setSelectedLocationType(null);
-  };
+  }, []);
 
-  const selectOriginSuggestion = async (item: any) => {
-    setOrigin(item.name);
-    setOriginSuggestions([]);
-    setRegion((prev) => ({ ...prev, latitude: item.lat, longitude: item.lon }));
-    const newRoute =
-      route.length > 0
-        ? [{ latitude: item.lat, longitude: item.lon }, ...route.slice(1)]
-        : [{ latitude: item.lat, longitude: item.lon }];
-    setRoute(newRoute);
-    setManualOrigin(true);
-    setMapResetKey(Date.now());
-    if (newRoute.length >= 2) {
-      await fetchRouteDetails(newRoute[1].latitude, newRoute[1].longitude, selectedAlgorithm);
-    }
-  };
-
-  const debouncedHandleDestinationChange = debounce(async (text: string) => {
-    if (!text) {
-      setDestinationSuggestions([]);
-      setIsDestinationLoading(false);
-      return;
-    }
-    setIsDestinationLoading(true);
-    try {
-      const suggestions = await geocodeAddress(text);
-      setDestinationSuggestions(suggestions);
-    } catch (error) {
-      console.error("Search failed:", error);
-      setDestinationSuggestions([]);
-    } finally {
-      setIsDestinationLoading(false);
-    }
-  }, 300);
-
-  const handleDestinationChange = (text: string) => {
+  const handleDestinationChange = useCallback((text: string) => {
     setDestination(text);
     debouncedHandleDestinationChange(text);
-  };
+  }, [debouncedHandleDestinationChange]);
 
-  const selectDestinationSuggestion = async (item: any) => {
-    setDestination(item.name);
-    setDestinationSuggestions([]);
-    setRoadPath([]);
-    setRoute((prev) =>
-      prev.length > 0
-        ? [prev[0], { latitude: item.lat, longitude: item.lon }]
-        : [
-          { latitude: region.latitude, longitude: region.longitude },
-          { latitude: item.lat, longitude: item.lon },
-        ]
-    );
-    await fetchRouteDetails(item.lat, item.lon, selectedAlgorithm);
-    setMapResetKey(Date.now());
-  };
 
-  const handleViewSegment = (idx: number) => {
+  const handleToggleSegment = useCallback((idx: number) => {
+    setExpandedSegments((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  }, []);
+
+  const handleViewSegment = useCallback((idx: number) => {
     if (webviewRef.current && routeDetails.route?.segments[idx]) {
       const segment = routeDetails.route.segments[idx];
       if (segment.geometry) {
-        const coords = polyline.decode(segment.geometry).map((coord: any[]) => ({
+        const coords = polyline.decode(segment.geometry).map((coord: number[]) => ({
           latitude: coord[0],
           longitude: coord[1],
         }));
-
-        const latitudes = coords.map((c: { latitude: number; }) => c.latitude);
-        const longitudes = coords.map((c: { longitude: number; }) => c.longitude);
+        const latitudes = coords.map((c: { latitude: any; }) => c.latitude);
+        const longitudes = coords.map((c: { longitude: any; }) => c.longitude);
         const minLat = Math.min(...latitudes);
         const maxLat = Math.max(...latitudes);
         const minLon = Math.min(...longitudes);
         const maxLon = Math.max(...longitudes);
-
         webviewRef.current.postMessage(
           JSON.stringify({
-            type: "zoomToSegment",
+            type: 'zoomToSegment',
             bounds: { minLat, maxLat, minLon, maxLon },
             index: idx,
           })
         );
       }
     }
-    bottomSheetRef.current?.snapToIndex(0); // Snap to 25%, adjust index as needed
-  };
+    bottomSheetRef.current?.snapToIndex(0);
+  }, [routeDetails.route]);
 
   const fetchRouteDetails = async (destLat: number, destLon: number, algorithm: string) => {
     setIsRouteLoading(true);
@@ -596,25 +568,62 @@ const RouteScreen: React.FC = () => {
     }
   };
 
-  const renderRouteOverview = () => {
-    if (!routeDetails.route) return <Text style={styles.overviewText}>No route available</Text>;
+  const selectOriginSuggestion = useCallback(async (item: any) => {
+    setOrigin(item.name);
+    setOriginSuggestions([]);
+    setRegion((prev) => ({ ...prev, latitude: item.lat, longitude: item.lon }));
+    const newRoute = route.length > 0
+      ? [{ latitude: item.lat, longitude: item.lon }, ...route.slice(1)]
+      : [{ latitude: item.lat, longitude: item.lon }];
+    setRoute(newRoute);
+    setManualOrigin(true);
+    setMapResetKey(Date.now());
+    if (newRoute.length >= 2) {
+      await fetchRouteDetails(newRoute[1].latitude, newRoute[1].longitude, selectedAlgorithm);
+    }
+  }, [route, selectedAlgorithm, fetchRouteDetails]);
 
+  const selectDestinationSuggestion = useCallback(async (item: any) => {
+    setDestination(item.name);
+    setDestinationSuggestions([]);
+    setRoadPath([]);
+    setRoute((prev) =>
+      prev.length > 0
+        ? [prev[0], { latitude: item.lat, longitude: item.lon }]
+        : [{ latitude: region.latitude, longitude: region.longitude }, { latitude: item.lat, longitude: item.lon }]
+    );
+    await fetchRouteDetails(item.lat, item.lon, selectedAlgorithm);
+    setMapResetKey(Date.now());
+  }, [region, selectedAlgorithm, fetchRouteDetails]);
+
+  const handleExperiencesPress = useCallback(() => {
+    router.push({
+      pathname: '/postsuggestions',
+      params: {
+        location: encodeURIComponent(origin),
+        destination: encodeURIComponent(destination),
+        origin_lat: route[0]?.latitude.toString(),
+        origin_lon: route[0]?.longitude.toString(),
+        destination_lat: route[1]?.latitude.toString(),
+        destination_lon: route[1]?.longitude.toString(),
+        posts: JSON.stringify(routeDetails.posts),
+      },
+    });
+  }, [origin, destination, route, routeDetails.posts]);
+
+  const renderRouteOverview = useCallback(() => {
+    if (!routeDetails.route) return <Text style={styles.overviewText}>No route available</Text>;
     const { segments } = routeDetails.route;
     return (
       <View style={styles.timelineContainer}>
-        {/* Vertical Timeline Line */}
         <View style={styles.timelineLine} />
-        {segments.map((segment, idx) => {
-          const iconName =
-            segment.type === "walking" ? "walking" : segment.type === "bus" ? "bus" : "car";
+        {segments.map((segment: any, idx: number) => {
+          const iconName = segment.type === 'walking' ? 'walking' : segment.type === 'bus' ? 'bus' : 'car';
           const isExpanded = expandedSegments[idx];
-          const segmentColor = segment.type === "walking" ? "#808080" : "#6366F1";
-
+          const segmentColor = segment.type === 'walking' ? '#808080' : '#6366F1';
           return (
             <View key={idx} style={styles.timelineItem}>
-              {/* Timeline Dot */}
               <View style={[styles.timelineDot, { backgroundColor: segmentColor }]} />
-              {/* Segment Card */}
               <View style={styles.segmentCard}>
                 <View style={styles.segmentHeader}>
                   <View style={styles.timelineIconContainer}>
@@ -624,44 +633,42 @@ const RouteScreen: React.FC = () => {
                     style={styles.segmentHeaderRow}
                     onPress={() => handleToggleSegment(idx)}
                     activeOpacity={0.7}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <View style={styles.segmentTitleContainer}>
                       <Text style={styles.segmentTitle}>
-                        {segment.type === "walking" ? "Walk" : segment.type.toUpperCase()}
+                        {segment.type === 'walking' ? 'Walk' : segment.type.toUpperCase()}
                       </Text>
                       <Text style={styles.segmentSubtitle}>
-                        {segment.type === "walking"
-                          ? `${segment.distance ? (segment.distance / 1000).toFixed(2) + " km" : ""} (${formatDuration(segment.duration)})`
+                        {segment.type === 'walking'
+                          ? `${segment.distance ? (segment.distance / 1000).toFixed(2) + ' km' : ''} (${formatDuration(segment.duration)})`
                           : `${segment.route_name} (${formatDuration(segment.duration)})`}
                       </Text>
                     </View>
                     <Ionicons
-                      name={isExpanded ? "chevron-down" : "chevron-forward"}
+                      name={isExpanded ? 'chevron-down' : 'chevron-forward'}
                       size={18}
-                      color="#6366F1"
+                      color='#6366F1'
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.viewButton}
                     onPress={() => handleViewSegment(idx)}
                     activeOpacity={0.7}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Text style={styles.viewButtonText}>View</Text>
                   </TouchableOpacity>
                 </View>
                 {isExpanded && (
                   <View style={styles.segmentDetails}>
-                    {segment.type === "walking" ? (
+                    {segment.type === 'walking' ? (
                       <>
                         <Text style={styles.segmentText}>
-                          Distance: {segment.distance ? (segment.distance / 1000).toFixed(2) : "N/A"} km
+                          Distance: {segment.distance ? (segment.distance / 1000).toFixed(2) : 'N/A'} km
                         </Text>
                         <Text style={styles.segmentText}>
-                          Duration: {segment.duration ? formatDuration(segment.duration) : "N/A"}
+                          Duration: {segment.duration ? formatDuration(segment.duration) : 'N/A'}
                         </Text>
-                        {segment.steps?.map((step, stepIdx) => (
+                        {segment.steps?.map((step: any, stepIdx: number) => (
                           <Text key={stepIdx} style={styles.stepText}>• {step.instruction}</Text>
                         ))}
                       </>
@@ -670,21 +677,21 @@ const RouteScreen: React.FC = () => {
                         <View style={styles.getOnOffContainer}>
                           <Text style={styles.onOffTitle}>Get On</Text>
                           <Text style={styles.onOffInstruction}>
-                            {segment.boarding || segment.from_stop?.name || "Start"}
+                            {segment.boarding || segment.from_stop?.name || 'Start'}
                           </Text>
                           <Text style={styles.onOffTitle}>Get Off</Text>
                           <Text style={styles.onOffInstruction}>
-                            {segment.alighting || segment.to_stop?.name || "End"}
+                            {segment.alighting || segment.to_stop?.name || 'End'}
                           </Text>
                         </View>
-                        <Text style={styles.segmentText}>Fare: {segment.fare || "N/A"}</Text>
+                        <Text style={styles.segmentText}>Fare: {segment.fare || 'N/A'}</Text>
                         <Text style={styles.segmentText}>
-                          Duration: {segment.duration ? formatDuration(segment.duration) : "N/A"}
+                          Duration: {segment.duration ? formatDuration(segment.duration) : 'N/A'}
                         </Text>
-                        {segment.alternatives && Array.isArray(segment.alternatives) && segment.alternatives.length > 0 && (
+                        {segment.alternatives?.length > 0 && (
                           <View style={styles.alternativesContainer}>
                             <Text style={styles.alternativeHeader}>Alternatives</Text>
-                            {segment.alternatives.map((alt, altIdx) => (
+                            {segment.alternatives.map((alt: any, altIdx: number) => (
                               <Text key={altIdx} style={styles.alternativeText}>
                                 • {alt.type} - {alt.route_name}
                               </Text>
@@ -701,11 +708,10 @@ const RouteScreen: React.FC = () => {
         })}
       </View>
     );
-  };
-  const renderRouteTab = () => (
+  }, [routeDetails.route, expandedSegments, handleToggleSegment, handleViewSegment]);
+  const renderRouteTab = useCallback(() => (
     <View style={styles.tabContent}>
       <Text style={styles.sectionHeader}>Route Details</Text>
-
       <View style={styles.routeTypeContainer}>
         <Text style={styles.subHeader}>Select Route Type</Text>
         <TouchableOpacity
@@ -713,12 +719,12 @@ const RouteScreen: React.FC = () => {
           onPress={() => setShowAlgorithmDropdown(!showAlgorithmDropdown)}
         >
           <Text style={styles.algorithmDropdownButtonText}>
-            {algorithmOptions.find((opt) => opt.value === selectedAlgorithm)?.label || "Select Algorithm"}
+            {algorithmOptions.find((opt) => opt.value === selectedAlgorithm)?.label || 'Select Algorithm'}
           </Text>
           <Ionicons
-            name={showAlgorithmDropdown ? "chevron-up-outline" : "chevron-down-outline"}
+            name={showAlgorithmDropdown ? 'chevron-up-outline' : 'chevron-down-outline'}
             size={16}
-            color="#6366F1"
+            color='#6366F1'
           />
         </TouchableOpacity>
         {showAlgorithmDropdown && (
@@ -727,14 +733,22 @@ const RouteScreen: React.FC = () => {
               {algorithmOptions.map((option, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={[styles.algorithmDropdownItem, selectedAlgorithm === option.value && styles.algorithmDropdownItemSelected]}
+                  style={[
+                    styles.algorithmDropdownItem,
+                    selectedAlgorithm === option.value && styles.algorithmDropdownItemSelected,
+                  ]}
                   onPress={() => {
                     setSelectedAlgorithm(option.value);
                     setShowAlgorithmDropdown(false);
                     if (route.length >= 2) fetchRouteDetails(route[1].latitude, route[1].longitude, option.value);
                   }}
                 >
-                  <Text style={[styles.algorithmDropdownItemText, selectedAlgorithm === option.value && styles.algorithmDropdownItemTextSelected]}>
+                  <Text
+                    style={[
+                      styles.algorithmDropdownItemText,
+                      selectedAlgorithm === option.value && styles.algorithmDropdownItemTextSelected,
+                    ]}
+                  >
                     {option.label}
                   </Text>
                 </TouchableOpacity>
@@ -743,23 +757,22 @@ const RouteScreen: React.FC = () => {
           </View>
         )}
       </View>
-
       <View style={styles.locationsContainer}>
         <Text style={styles.label}>From</Text>
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.userInput}
-            placeholder="Type Here..."
+            placeholder='Type Here...'
             value={origin}
             onChangeText={handleOriginChange}
           />
-          {origin !== "" && (
+          {origin && (
             <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
-              <Ionicons name="close" size={20} color="#666" />
+              <Ionicons name='close' size={20} color='#666' />
             </TouchableOpacity>
           )}
           {isOriginLoading && (
-            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
+            <ActivityIndicator size='small' color='#6366F1' style={styles.loadingIndicator} />
           )}
           <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
         </View>
@@ -767,68 +780,46 @@ const RouteScreen: React.FC = () => {
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.userInput}
-            placeholder="Type Here..."
+            placeholder='Type Here...'
             value={destination}
             onChangeText={handleDestinationChange}
           />
-          {destination !== "" && (
-            <TouchableOpacity style={styles.clearButton} onPress={() => setDestination("")}>
-              <Ionicons name="close" size={20} color="#666" />
+          {destination && (
+            <TouchableOpacity style={styles.clearButton} onPress={() => setDestination('')}>
+              <Ionicons name='close' size={20} color='#666' />
             </TouchableOpacity>
           )}
           {isDestinationLoading && (
-            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
+            <ActivityIndicator size='small' color='#6366F1' style={styles.loadingIndicator} />
           )}
           <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
         </View>
       </View>
-
-      {isRouteLoading && (
-        <ActivityIndicator size="small" color="#6366F1" style={{ marginVertical: 12 }} />
-      )}
-
+      {isRouteLoading && <ActivityIndicator size='small' color='#6366F1' style={{ marginVertical: 12 }} />}
       {route.length >= 2 && routeMetrics && !isRouteLoading && (
         <View style={styles.routeMetricsContainer}>
           <Text style={styles.subHeader}>Route Metrics</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.metricCard}>
-              <FontAwesome5 name="map-marker-alt" size={16} color="#44457D" />
+              <FontAwesome5 name='map-marker-alt' size={16} color='#44457D' />
               <Text style={styles.metricText}>Distance: {routeMetrics.distance} km</Text>
             </View>
             <View style={styles.metricCard}>
-              <FontAwesome5 name="money-bill-wave" size={16} color="#44457D" />
+              <FontAwesome5 name='money-bill-wave' size={16} color='#44457D' />
               <Text style={styles.metricText}>Fare: {routeMetrics.fare}</Text>
             </View>
             <View style={styles.metricCard}>
-              <FontAwesome5 name="clock" size={16} color="#44457D" />
+              <FontAwesome5 name='clock' size={16} color='#44457D' />
               <Text style={styles.metricText}>Time: {routeMetrics.carTime}</Text>
             </View>
           </ScrollView>
         </View>
       )}
-
-      {/* Route Overview */}
       {route.length >= 2 && !isRouteLoading ? (
         <View style={styles.routeOverviewContainer}>
           <Text style={styles.subHeader}>Route Overview</Text>
           {renderRouteOverview()}
-          <TouchableOpacity
-            style={styles.experiencesButton}
-            onPress={() => {
-              router.push({
-                pathname: "/postsuggestions",
-                params: {
-                  location: encodeURIComponent(origin),
-                  destination: encodeURIComponent(destination),
-                  origin_lat: route[0].latitude.toString(),
-                  origin_lon: route[0].longitude.toString(),
-                  destination_lat: route[1].latitude.toString(),
-                  destination_lon: route[1].longitude.toString(),
-                  posts: JSON.stringify(routeDetails.posts) // ✅ Use existing data
-                },
-              });
-            }}
-          >
+          <TouchableOpacity style={styles.experiencesButton} onPress={handleExperiencesPress}>
             <Text style={styles.experiencesButtonText}>Experiences</Text>
           </TouchableOpacity>
         </View>
@@ -836,7 +827,27 @@ const RouteScreen: React.FC = () => {
         <Text style={styles.errorText}>Search for your location and destination.</Text>
       ) : null}
     </View>
-  );
+  ), [
+    origin,
+    destination,
+    originSuggestions,
+    destinationSuggestions,
+    route,
+    routeMetrics,
+    isOriginLoading,
+    isDestinationLoading,
+    isRouteLoading,
+    selectedAlgorithm,
+    showAlgorithmDropdown,
+    handleOriginChange,
+    clearOrigin,
+    handleDestinationChange,
+    selectOriginSuggestion,
+    selectDestinationSuggestion,
+    fetchRouteDetails,
+    renderRouteOverview,
+    handleExperiencesPress,
+  ]);
   const renderRestaurantsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Dining Spots</Text>
@@ -928,7 +939,7 @@ const RouteScreen: React.FC = () => {
     </View>
   );
 
-  const renderAttractionsTab = () => (
+  const renderAttractionsTab = useCallback(() => (
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Attractions</Text>
       <View style={styles.spotLimitContainer}>
@@ -940,7 +951,9 @@ const RouteScreen: React.FC = () => {
             onPress={() => setSpotLimit(limit)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.spotLimitButtonText, spotLimit === limit && styles.activeSpotLimitButtonText]}>
+            <Text
+              style={[styles.spotLimitButtonText, spotLimit === limit && styles.activeSpotLimitButtonText]}
+            >
               {limit}
             </Text>
           </TouchableOpacity>
@@ -951,14 +964,14 @@ const RouteScreen: React.FC = () => {
           <Text style={styles.locationTypeLabel}>Show attractions near:</Text>
           <View style={styles.segmentedControl}>
             <TouchableOpacity
-              style={[styles.segmentButton, selectedLocationType === "origin" && styles.activeSegment]}
-              onPress={() => setSelectedLocationType("origin")}
+              style={[styles.segmentButton, selectedLocationType === 'origin' && styles.activeSegment]}
+              onPress={() => setSelectedLocationType('origin')}
               disabled={!route[0]}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  selectedLocationType === "origin" && styles.activeSegmentText,
+                  selectedLocationType === 'origin' && styles.activeSegmentText,
                   !route[0] && styles.disabledSegmentText,
                 ]}
               >
@@ -966,14 +979,14 @@ const RouteScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.segmentButton, selectedLocationType === "destination" && styles.activeSegment]}
-              onPress={() => setSelectedLocationType("destination")}
+              style={[styles.segmentButton, selectedLocationType === 'destination' && styles.activeSegment]}
+              onPress={() => setSelectedLocationType('destination')}
               disabled={!route[1]}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  selectedLocationType === "destination" && styles.activeSegmentText,
+                  selectedLocationType === 'destination' && styles.activeSegmentText,
                   !route[1] && styles.disabledSegmentText,
                 ]}
               >
@@ -986,30 +999,33 @@ const RouteScreen: React.FC = () => {
       {selectedLocationCoords ? (
         nearbySpots.length > 0 ? (
           <View style={styles.attractionsPreview}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attractionsScroll}>
-              {nearbySpots.slice(0, 5).map((spot, index) => (
+            <FlatList
+              horizontal
+              data={nearbySpots.slice(0, 5)}
+              keyExtractor={(item, index) => `${item.name}-${index}`}
+              renderItem={({ item }) => (
                 <TouchableOpacity
-                  key={index}
                   style={styles.attractionCardPreview}
                   onPress={() => setModalVisible(true)}
                   activeOpacity={0.7}
                 >
                   <Image
-                    source={{ uri: spot.image_url || "https://via.placeholder.com/150.png?text=No+Image" }}
+                    source={{ uri: item.image_url || 'https://via.placeholder.com/150.png?text=No+Image' }}
                     style={styles.attractionImagePreview}
                   />
                   <Text style={styles.attractionNamePreview} numberOfLines={1}>
-                    {spot.name}
+                    {item.name}
                   </Text>
                   <Text style={styles.attractionDistance}>
-                    {spot.distance?.toFixed(2)} km
+                    {item.distance?.toFixed(2)} km
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              )}
+              showsHorizontalScrollIndicator={false}
+            />
             <TouchableOpacity style={styles.seeAllButton} onPress={() => setModalVisible(true)}>
               <Text style={styles.seeAllText}>See All Attractions</Text>
-              <Ionicons name="chevron-forward" size={16} color="#6366F1" />
+              <Ionicons name='chevron-forward' size={16} color='#6366F1' />
             </TouchableOpacity>
           </View>
         ) : (
@@ -1019,7 +1035,7 @@ const RouteScreen: React.FC = () => {
         <Text style={styles.promptText}>Enter an origin/destination to view nearby attractions</Text>
       )}
     </View>
-  );
+  ), [route, selectedLocationType, nearbySpots, spotLimit]);
 
   const detailsContent = (
     <View style={styles.container}>
@@ -1038,7 +1054,7 @@ const RouteScreen: React.FC = () => {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={styles.mapWrapper}>
         <MapComponent
-          key={`map-${mapResetKey}-${nearbyRestaurants.length}`}
+          key={`map-${mapResetKey}`} // Simplified key to reduce re-mounts
           initialRegion={region}
           route={route}
           roadPath={roadPath}
@@ -1046,10 +1062,10 @@ const RouteScreen: React.FC = () => {
           style={styles.map}
           polylineColor={polylineColor}
           webviewRef={webviewRef}
-          nearbySpots={activeTab === "Attractions" ? nearbySpots : []} // Only show attractions when tab is active
+          nearbySpots={activeTab === 'Attractions' ? nearbySpots : []}
           selectedSpot={selectedSpot}
           isLoading={isRouteLoading}
-          nearbyRestaurants={activeTab === "Dining" ? nearbyRestaurants : []}
+          nearbyRestaurants={activeTab === 'Dining' ? nearbyRestaurants : []}
           onRestaurantClick={(name) => {
             const restaurant = nearbyRestaurants.find((r) => r.name === name);
             if (restaurant) {
@@ -1062,7 +1078,7 @@ const RouteScreen: React.FC = () => {
             setModalVisible(true);
           }}
         />
-        {isRouteLoading && <ActivityIndicator style={styles.loadingIndicator} size="large" color="#6366F1" />}
+        {isRouteLoading && <ActivityIndicator style={styles.loadingIndicator} size='large' color='#6366F1' />}
       </View>
       <BottomSheet
         ref={bottomSheetRef}
@@ -1070,14 +1086,14 @@ const RouteScreen: React.FC = () => {
         index={1}
         enableContentPanningGesture={true}
         enableHandlePanningGesture={true}
-        backgroundComponent={({ style }) => <View style={[style, { backgroundColor: "#FFFFFF", borderRadius: 20 }]} />}
+        backgroundComponent={({ style }) => <View style={[style, { backgroundColor: '#FFFFFF', borderRadius: 20 }]} />}
         handleComponent={CustomHandle}
       >
         <BottomSheetScrollView
           nestedScrollEnabled
           contentContainerStyle={{ flexGrow: 1, paddingVertical: 10 }}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="always"
+          keyboardShouldPersistTaps='always'
         >
           {detailsContent}
           <ModalComponent
@@ -1091,7 +1107,7 @@ const RouteScreen: React.FC = () => {
               setRestaurantModalVisible(false);
             }}
             onGoHere={(restaurant) => {
-              setDestination(restaurant.address || restaurant.name);
+              setDestination(restaurant.name);
               const newDestination = { latitude: restaurant.latitude, longitude: restaurant.longitude };
               setRoadPath([]);
               const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
