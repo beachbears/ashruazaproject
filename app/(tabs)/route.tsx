@@ -650,11 +650,11 @@ const RouteScreen: React.FC = () => {
                       <Text style={styles.segmentTitle}>
                         {segment.type === 'walking' ? 'Walk' : segment.type.toUpperCase()}
                       </Text>
-                      <Text style={styles.segmentSubtitle}>
-                        {segment.type === "walking"
-                          ? `towards ${shortenStopName(segment.to_stop?.name)}`
-                          : segment.type.toUpperCase()}
-                      </Text>
+                      {segment.type === "walking" && (
+                        <Text style={styles.segmentSubtitle}>
+                          {`towards ${shortenStopName(segment.to_stop?.name)}`}
+                        </Text>
+                      )}
                       <Text style={styles.segmentSubtitle}>
                         {segment.type === 'walking'
                           ? `${segment.to_stop ? (segment.distance / 1000).toFixed(2) + ' km' : ''} (${formatDuration(segment.duration)})`
