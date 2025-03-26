@@ -358,6 +358,14 @@ const RouteScreen: React.FC = () => {
         longitude: item.longitude || 0,
         distance: item.distance,
         image_url: item.image_url || 'https://via.placeholder.com/150',
+        trivia: item.trivia || 'No trivia available.',
+        link: item.link,
+        feedbacks: Array.isArray(item.feedbacks)
+          ? item.feedbacks
+          : typeof item.feedbacks === "string"
+            ? item.feedbacks.split(";")
+            : [],
+        description: item.description
       }));
       attractionCache.current[cacheKey] = mapped;
       setNearbySpots(mapped);
