@@ -35,6 +35,7 @@ import MapComponent from "@/src/components/MapComponent";
 import { locationCacheRef } from "@/src/utils/locationsCache";
 import SuggestionList from "@/src/components/SuggestionList";
 import AttractionsList from "@/src/components/AttractionsList";
+import { addWhitelistedNativeProps } from "react-native-reanimated/lib/typescript/ConfigHelper";
 
 const polyline = require("@mapbox/polyline");
 interface TabButtonProps {
@@ -610,7 +611,18 @@ const RouteScreen: React.FC = () => {
       },
     });
   }, [origin, destination, route, routeDetails.posts]);
-
+  // Utility function to shorten stop names
+  const shortenStopName = (name: string) => {
+    if (!name) return "destination"; // Fallback if no name
+    const parts = name.split(","); // Split by comma
+    // Take the first part as the primary identifier, trim whitespace
+    const primary = parts[0].trim();
+    // If the first part is numeric (e.g., "123 Main St"), try the second part if available
+    if (/^\d/.test(primary) && parts.length > 1) {
+      return parts[1].trim();
+    }
+    return primary;
+  };
   const renderRouteOverview = useCallback(() => {
     if (!routeDetails.route) return <Text style={styles.overviewText}>No route available</Text>;
     const { segments } = routeDetails.route;
@@ -639,8 +651,13 @@ const RouteScreen: React.FC = () => {
                         {segment.type === 'walking' ? 'Walk' : segment.type.toUpperCase()}
                       </Text>
                       <Text style={styles.segmentSubtitle}>
+                        {segment.type === "walking"
+                          ? `towards ${shortenStopName(segment.to_stop?.name)}`
+                          : segment.type.toUpperCase()}
+                      </Text>
+                      <Text style={styles.segmentSubtitle}>
                         {segment.type === 'walking'
-                          ? `${segment.distance ? (segment.distance / 1000).toFixed(2) + ' km' : ''} (${formatDuration(segment.duration)})`
+                          ? `${segment.to_stop ? (segment.distance / 1000).toFixed(2) + ' km' : ''} (${formatDuration(segment.duration)})`
                           : `${segment.route_name} (${formatDuration(segment.duration)})`}
                       </Text>
                     </View>
@@ -669,7 +686,7 @@ const RouteScreen: React.FC = () => {
                           Duration: {segment.duration ? formatDuration(segment.duration) : 'N/A'}
                         </Text>
                         {segment.steps?.map((step: any, stepIdx: number) => (
-                          <Text key={stepIdx} style={styles.stepText}>• {step.instruction}</Text>
+                          <Text key={stepIdx} style={styles.stepText}>{stepIdx + 1}. {step.instruction}</Text>
                         ))}
                       </>
                     ) : (
@@ -684,7 +701,7 @@ const RouteScreen: React.FC = () => {
                             {segment.alighting || segment.to_stop?.name || 'End'}
                           </Text>
                         </View>
-                        <Text style={styles.segmentText}>Fare: {segment.fare || 'N/A'}</Text>
+                        <Text style={styles.segmentText}>Fare: ₱{segment.fare || 'N/A'}</Text>
                         <Text style={styles.segmentText}>
                           Duration: {segment.duration ? formatDuration(segment.duration) : 'N/A'}
                         </Text>
@@ -709,6 +726,7 @@ const RouteScreen: React.FC = () => {
       </View>
     );
   }, [routeDetails.route, expandedSegments, handleToggleSegment, handleViewSegment]);
+
   const renderRouteTab = useCallback(() => (
     <View style={styles.tabContent}>
       <Text style={styles.sectionHeader}>Route Details</Text>
@@ -1159,6 +1177,29 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  userInput: {
+    borderWidth: 1,
+    borderColor: "#6366F1", // Purple border
+    borderRadius: 8,
+    padding: 8,
+    height: 40, // Fixed height to prevent expansion
+  },
+  clearButton: {
+    position: "absolute",
+    right: 10,
+    top: "50%",
+    borderRadius: 8,
+    borderColor: "#6366F1", // Purple border
+    backgroundColor: '#fff',
+    transform: [{ translateY: -10 }],
+  },
+  loadingIndicator: {
+    position: "absolute",
+    right: 40,
+    top: "50%",
+    transform: [{ translateY: -10 }],
+    zIndex: 11,
+  },
   timelineContainer: {
     marginTop: 8,
     position: "relative",
@@ -1309,7 +1350,6 @@ const styles = StyleSheet.create({
   locationsContainer: { marginBottom: 8 },
   label: { fontSize: 14, marginBottom: 4 },
   searchContainer: { marginBottom: 8 },
-  userInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 8, padding: 8 },
   routeMetricsContainer: { marginBottom: 8 },
   metricCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#F9FAFB", padding: 8, borderRadius: 8, marginRight: 8 },
   metricText: { marginLeft: 4, fontSize: 12, color: "#44457D" },
@@ -1367,19 +1407,6 @@ const styles = StyleSheet.create({
   text: { color: "#44457D", fontWeight: "500", fontSize: 16 },
   container: { padding: 15, marginBottom: 20 },
   inputContainer: { width: "100%" },
-  clearButton: {
-    position: "absolute",
-    right: 10,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-  },
-  loadingIndicator: {
-    position: "absolute",
-    right: 40,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-    zIndex: 11,
-  },
   suggestionList: {
     position: "absolute",
     top: 45,
@@ -1500,11 +1527,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 60,
     left: 0,
+    right: 0,
     backgroundColor: "#fff", // Already set, ensuring it’s opaque
     borderColor: "#ccc",
     borderWidth: 1,
     borderRadius: 4,
-    width: 150,
     maxHeight: 160,
     paddingVertical: 5,
     zIndex: 1000, // Added to ensure it’s on top
