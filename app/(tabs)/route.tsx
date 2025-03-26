@@ -43,16 +43,11 @@ interface TabButtonProps {
   onPress: () => void;
 }
 
-const TabButton = ({ title, isActive, onPress }: TabButtonProps) => (
-  <TouchableOpacity
-    style={[styles.tabButton, isActive && styles.activeTab]}
-    onPress={onPress}
-  >
-    <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-      {title}
-    </Text>
+const TabButton = React.memo(({ title, isActive, onPress }: TabButtonProps) => (
+  <TouchableOpacity style={[styles.tabButton, isActive && styles.activeTab]} onPress={onPress}>
+    <Text style={[styles.tabText, isActive && styles.activeTabText]}>{title}</Text>
   </TouchableOpacity>
-);
+));
 LogBox.ignoreLogs(["textShadow*", "shadow*"]);
 
 const RouteScreen: React.FC = () => {
