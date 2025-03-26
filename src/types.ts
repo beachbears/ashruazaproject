@@ -76,7 +76,10 @@ export interface NearbySpot {
   description: string;
   latitude: number;
   longitude: number;
+  trivia?: string;
   image_url?: string;
+  link?: string;
+  feedbacks?: string | string[];
   distance?: number;
 }
 
