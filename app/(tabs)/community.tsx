@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, FlatList, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import PostModal from '../postmodal';
 import { AuthContext, AuthContextType } from '../../contexts/AuthContext';
@@ -12,14 +11,24 @@ import ModalComponent from '../reportmodal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 const dropdownOptions = ['Popularity', 'Time'];
+
 interface DropdownProps {
   options: string[];
   onSelect?: (option: string) => void;
   defaultValue?: string;
 }
+
+
+interface PostItemProps {
+  post: Post;
+  selectedVote: VoteType | undefined;
+  onVote: (id: number, action: VoteType) => void;
+  onReport: (id: number) => void;
+}
 const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(defaultValue);
+
   const toggleDropdown = () => setIsOpen(!isOpen);
   const selectOption = (option: string) => {
     setSelectedOption(option);
@@ -51,22 +60,151 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 };
 
 type VoteType = 'upvote' | 'downvote';
+
+const PostItem = React.memo<PostItemProps>(
+  ({ post, selectedVote, onVote, onReport }) => {
+    const timeAgo = (timestamp: number): string => {
+      const now = Date.now();
+      const diff = now - timestamp;
+      const minute = 60 * 1000;
+      const hour = 60 * minute;
+      const day = 24 * hour;
+      if (diff < minute) return 'Just now';
+      if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+      if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+      return `${Math.floor(diff / day)}d ago`;
+    };
+
+    const getStatusStyle = (status: string) => {
+      switch (status.toLowerCase()) {
+        case 'pending review':
+          return { backgroundColor: '#fef9c3', borderColor: '#fef9c3' };
+        case 'community approved':
+          return { backgroundColor: '#dbeafe', borderColor: '#dbeafe' };
+        case 'flagged':
+          return { backgroundColor: '#fee2e2', borderColor: '#fee2e2' };
+        case 'admin approved':
+          return { backgroundColor: '#dcfce7', borderColor: '#dcfce7' };
+        default:
+          return {};
+      }
+    };
+
+    const getStatusTextColor = (status: string) => {
+      switch (status.toLowerCase()) {
+        case 'flagged':
+          return { color: '#b31b1b' };
+        case 'admin approved':
+          return { color: '#166534' };
+        case 'pending review':
+          return { color: '#a44d0e' };
+        case 'community approved':
+          return { color: '#4f40af' };
+        default:
+          return {};
+      }
+    };
+
+    return (
+      <View style={styles.containerpost}>
+        <View style={styles.suggestordetails}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+            <View style={styles.profile}>
+              <Text style={styles.initial}>
+                {post.user?.firstname && post.user?.lastname
+                  ? `${post.user.firstname[0].toUpperCase()}${post.user.lastname[0].toUpperCase()}`
+                  : 'G'}
+              </Text>
+            </View>
+            <View style={styles.suggestor}>
+              <Text style={styles.suggestorname}>
+                {post.user?.firstname && post.user?.lastname
+                  ? `${post.user.firstname} ${post.user.lastname}`
+                  : 'Guest'}
+              </Text>
+              <Text style={styles.suggestorusername}>{post.user?.email}</Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={styles.postTimestamp}>
+              {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+            </Text>
+            <TouchableOpacity onPress={() => post.id && onReport(post.id)}>
+              <MaterialIcons name="report" size={20} color="#C52222" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <Text style={styles.postLocation}>
+          <Text style={styles.boldText}>From:</Text> {post.location || 'Unknown Location'}
+        </Text>
+        <Text style={styles.postDestination}>
+          <Text style={styles.boldText}>To:</Text> {post.destination || 'Unknown Destination'}
+        </Text>
+        <View style={{ flexDirection: 'column', gap: 8 }}>
+          <Text style={styles.label}>Experiences</Text>
+          <Text style={styles.experience}>{post.content}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={styles.content}>
+            <View style={[styles.badge, getStatusStyle(post.status || '')]}>
+              <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
+            </View>
+          </View>
+          <View style={styles.arrowcontainer}>
+            <TouchableOpacity
+              style={[
+                styles.arrowup,
+                selectedVote === 'upvote' ? { backgroundColor: '#22C55E' } : undefined,
+              ]}
+              onPress={() => post.id && onVote(post.id, 'upvote')}
+            >
+              <AntDesign
+                name="arrowup"
+                size={13}
+                color={selectedVote === 'upvote' ? '#fff' : '#22C55E'}
+              />
+            </TouchableOpacity>
+            <Text style={styles.arrowupnum}>{post.votes}</Text>
+            <TouchableOpacity
+              style={[
+                styles.arrowdown,
+                selectedVote === 'downvote' ? { backgroundColor: '#C52222' } : undefined,
+              ]}
+              onPress={() => post.id && onVote(post.id, 'downvote')}
+            >
+              <AntDesign
+                name="arrowdown"
+                size={13}
+                color={selectedVote === 'downvote' ? '#fff' : '#C52222'}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  },
+  (prevProps, nextProps) =>
+    prevProps.post === nextProps.post &&
+    prevProps.selectedVote === nextProps.selectedVote &&
+    prevProps.onVote === nextProps.onVote &&
+    prevProps.onReport === nextProps.onReport
+);
+
 export default function CommunityPage() {
-  const { posts: contextPosts, addPost, setPosts,
-    handleUpvote,
-    handleDownvote,
-    updatePost } = usePostContext();
+  const { posts: contextPosts, addPost, setPosts, handleUpvote, handleDownvote, updatePost } = usePostContext();
   const { routeDetails } = useRouteContext();
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
-  const authContext = useContext(AuthContext) as AuthContextType | null;
-  const [selectedPostId, setSelectedPostId] = useState<number | null>(null); // vote id
-  const [isModalVisible, setIsModalVisible] = useState(false); // report
-  const [modalVisible, setModalVisible] = useState(false); // post
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string>('Time');
   const router = useRouter();
   const params = useLocalSearchParams();
+
   const location = Array.isArray(params.location)
     ? decodeURIComponent(params.location[0])
     : params.location
@@ -77,42 +215,16 @@ export default function CommunityPage() {
     : params.destination
       ? decodeURIComponent(params.destination)
       : '';
-  const closeReportModal = () => {
-    setIsModalVisible(false);
-    setSelectedPostId(null); // Reset after closing
-  };
-  const handleOptionSelect = (option: string) => {
-    setSelectedOption(option);
-  };
-
-  if (!authContext) return null; // Prevents errors if context is null
-  const { isLoggedIn, userName, userHandle, userInitials, } = authContext;
-  const [selectedOption, setSelectedOption] = useState<string>('Time'); // dropdown
-  const origin_address =
-    routeDetails?.location ||
-    (params.origin_address ? decodeURIComponent(params.origin_address as string) : 'Unknown Origin');
-  const destination_address =
-    routeDetails?.destination ||
-    (params.destination_address ? decodeURIComponent(params.destination_address as string) : 'Unknown Destination');
-  const origin_lat = routeDetails?.origin_lat ?? (params.origin_lat ? Number(params.origin_lat) : 0);
-  const origin_lon = routeDetails?.origin_lon ?? (params.origin_lon ? Number(params.origin_lon) : 0);
-  const destination_lat =
-    routeDetails?.destination_lat ?? (params.destination_lat ? Number(params.destination_lat) : 0);
-  const destination_lon =
-    routeDetails?.destination_lon ?? (params.destination_lon ? Number(params.destination_lon) : 0);
 
   const fetchOldPosts = async () => {
     try {
       const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
       if (!response.ok) return;
-
       const data = await response.json();
-
-      const transformedPosts: Post[] = data.map((post: any) => ({
+      const transformedPosts = data.map((post: any) => ({
         ...post,
-        // Map API fields to your Post interface
-        location: post.origin_address || origin_address,
-        destination: post.destination_address || destination_address,
+        location: post.origin_address || routeDetails?.location || location,
+        destination: post.destination_address || routeDetails?.destination || destination,
         origin_lat: post.origin_lat,
         origin_lon: post.origin_lon,
         destination_lat: post.dest_lat,
@@ -122,165 +234,166 @@ export default function CommunityPage() {
       }));
       setPosts(transformedPosts);
     } catch (error) {
-      // console.error('Fetch error:', error);
+      console.error('Fetch error:', error);
     }
   };
 
   useEffect(() => {
-    const interval = setInterval(fetchOldPosts, 3000); // Poll every 3 seconds instead of 5
+    const fetchInitialPosts = async () => {
+      setIsInitialLoading(true);
+      await fetchOldPosts();
+      setIsInitialLoading(false);
+    };
+    fetchInitialPosts();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(fetchOldPosts, 3000);
     return () => clearInterval(interval);
   }, []);
 
+  const handlePostSubmit = useCallback(
+    async (formData: Post) => {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+      try {
+        const requestBody = {
+          route_post: {
+            content: formData.content,
+            origin_address: formData.location,
+            destination_address: formData.destination,
+            origin_lat: formData.origin_lat,
+            origin_lon: formData.origin_lon,
+            dest_lat: formData.destination_lat,
+            dest_lon: formData.destination_lon,
+          },
+        };
+        const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(requestBody),
+        });
+        if (!response.ok) throw new Error('Failed to create post');
+        await response.json();
+        await fetchOldPosts();
+        setModalVisible(false);
+      } catch (error) {
+        console.error('Post submission error:', error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [authToken, isSubmitting]
+  );
 
-  const handlePostSubmit = async (formData: Post) => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      const requestBody = {
-        route_post: {
-          content: formData.content,
-          origin_address: formData.location,  // Use formData values
-          destination_address: formData.destination,
-          origin_lat: formData.origin_lat,
-          origin_lon: formData.origin_lon,
-          dest_lat: formData.destination_lat,
-          dest_lon: formData.destination_lon,
-        },
-      };
-      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
+  const handleVote = useCallback(
+    async (id: number, action: VoteType) => {
+      if (!authToken) {
+        router.push('/login');
+        return;
+      }
+      const previousVote = selectedVotes[id];
+      const previousVotesCount = contextPosts.find((p) => p.id === id)?.votes || 0;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        // console.error("Server Error Response:", errorData);
-        throw new Error(errorData.error || 'Failed to create post');
+      setSelectedVotes((prev) => ({ ...prev, [id]: action }));
+      const postToUpdate = contextPosts.find((p) => p.id === id);
+      if (postToUpdate) {
+        updatePost({ ...postToUpdate, votes: previousVotesCount + (action === 'upvote' ? 1 : -1) });
       }
 
-      await response.json();
-      fetchOldPosts();
-      setModalVisible(false);
-    } catch (error) {
-      // console.error('Post submission error:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleVote = async (id: number, action: VoteType) => {
-    if (!authToken) {
-      router.push('/login');
-      return;
-    }
-
-    const previousVote = selectedVotes[id];
-    const previousVotesCount = contextPosts.find(p => p.id === id)?.votes || 0;
-
-    setSelectedVotes(prev => ({ ...prev, [id]: action }));
-    const postToUpdate = contextPosts.find(p => p.id === id);
-    if (postToUpdate) {
-      updatePost({ ...postToUpdate, votes: previousVotesCount + (action === 'upvote' ? 1 : -1) });
-    }
-
-    try {
-      // API call
-      const success = await sendVoteRequest(id.toString(), action);
-
-      if (!success) {
-        // 3. Revert if the API call fails
-        setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
-        const postToUpdate = contextPosts.find(p => p.id === id);
+      try {
+        const success = await sendVoteRequest(id.toString(), action);
+        if (!success) {
+          setSelectedVotes((prev) => ({ ...prev, [id]: previousVote }));
+          if (postToUpdate) {
+            updatePost({ ...postToUpdate, votes: previousVotesCount });
+          }
+        }
+      } catch (error) {
+        setSelectedVotes((prev) => ({ ...prev, [id]: previousVote }));
         if (postToUpdate) {
           updatePost({ ...postToUpdate, votes: previousVotesCount });
         }
       }
+    },
+    [authToken, contextPosts, updatePost]
+  );
 
-    } catch (error) {
-      // Revert changes if there's an error
-      setSelectedVotes(prev => ({ ...prev, [id]: previousVote }));
-      const postToUpdate = contextPosts.find(p => p.id === id);
-      if (postToUpdate) {
-        updatePost({ ...postToUpdate, votes: previousVotesCount });
-      }
-    }
-  };
-
-  // Modify sendVoteRequest to remove the fetchOldPosts call:
   const sendVoteRequest = async (postId: string, action: VoteType) => {
     try {
-      const response = await fetch(`https://comgu20-production.up.railway.app/api/route_posts/${postId}/${action}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-
+      const response = await fetch(
+        `https://comgu20-production.up.railway.app/api/route_posts/${postId}/${action}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
       return response.ok;
     } catch (error) {
-      // console.error('Vote error:', error);
+      console.error('Vote error:', error);
       return false;
     }
   };
 
-  const handleReportSubmit = async (reason: string) => {
-    if (!isLoggedIn || !selectedPostId) {
-      Alert.alert("Error", "You must be logged in to report a post.");
-      return;
-    }
-
-    const API_URL = "https://comgu20-production.up.railway.app/api/reports";
-    // console.log("Submitting report to:", API_URL); // ✅ Debugging API URL
-
-    try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          report: {
-            reason: reason,
-            route_post_id: selectedPostId,
-          },
-        }),
-      });
-
-      // console.log("Raw response status:", response.status); // ✅ Check response status
-
-      if (!response.ok) {
-        const errorText = await response.text(); // Read error message
-        // console.error("API Error Response:", errorText);
-        throw new Error(`API Error: ${response.status} - ${errorText}`);
+  const handleReportSubmit = useCallback(
+    async (reason: string) => {
+      if (!authToken || !selectedPostId) {
+        Alert.alert('Error', 'You must be logged in to report a post.');
+        return;
       }
+      try {
+        const response = await fetch('https://comgu20-production.up.railway.app/api/reports', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            report: { reason, route_post_id: selectedPostId },
+          }),
+        });
+        if (!response.ok) throw new Error('Failed to submit report');
+        const data = await response.json();
+        Alert.alert('Success', data.message);
+        setIsModalVisible(false);
+        setSelectedPostId(null);
+      } catch (error) {
+        console.error('Error submitting report:', error);
+        Alert.alert('Error', 'Failed to submit report. Please try again.');
+      }
+    },
+    [authToken, selectedPostId]
+  );
 
-      const text = await response.text();
-      // console.log("Raw response:", text); // ✅ Debugging server response
-
-      const data = JSON.parse(text); // Convert response to JSON
-      // console.log("Report submitted:", data);
-
-      Alert.alert("Success", data.message);
-      closeReportModal();
-    } catch (error) {
-      // console.error("Error submitting report:", error);
-      Alert.alert("Error", "Failed to submit report. Please try again.");
-    }
-  };
-
-  const handlePostPress = (postId: number, action: VoteType) => {
-    if (!isLoggedIn) {
+  const handlePostButtonPress = useCallback(() => {
+    if (!authToken) {
       router.push('/login');
       return;
     }
-    handleVote(postId, action);
-  };
+    setModalVisible(true);
+  }, [authToken]);
+
+  const openReportModal = useCallback(
+    (postId: number) => {
+      if (!authToken) {
+        router.push('/login');
+        return;
+      }
+      setSelectedPostId(postId);
+      setIsModalVisible(true);
+    },
+    [authToken]
+  );
+
+  const handleOptionSelect = useCallback((option: string) => {
+    setSelectedOption(option);
+  }, []);
 
   const sortedPosts = useMemo(() => {
     return [...contextPosts].sort((a, b) => {
@@ -295,70 +408,18 @@ export default function CommunityPage() {
     });
   }, [contextPosts, selectedOption]);
 
-  const timeAgo = (timestamp: number): string => {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const minute = 60 * 1000;
-    const hour = 60 * minute;
-    const day = 24 * hour;
-    if (diff < minute) return 'Just now';
-    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
-    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
-    return `${Math.floor(diff / day)}d ago`;
-  };
-  const getStatusStyle = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "pending review":
-        return { backgroundColor: "#fef9c3", borderColor: "#fef9c3" };
-      case "community approved":
-        return { backgroundColor: "#dbeafe", borderColor: "#dbeafe" };
-      case "flagged":
-        return { backgroundColor: "#fee2e2", borderColor: "#fee2e2" };
-      case "admin approved":
-        return { backgroundColor: "#dcfce7", borderColor: "#dcfce7" };
-      default:
-        return {};
-    }
-  };
-
-  const getStatusTextColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "flagged":
-        return { color: "#b31b1b" };
-      case "admin approved":
-        return { color: "#166534" };
-      case "pending review":
-        return { color: "#a44d0e" };
-      case "community approved":
-        return { color: "#4f40af" };
-      default:
-        return {};
-    }
-  };
-
-  const handlePostButtonPress = () => {
-    const isLoggedIn = !!authToken;
-    if (!isLoggedIn) {
-      router.push('/login');
-      return;
-    }
-    setModalVisible(true);
-  };
-
-  const openReportModal = (postId: number) => {
-    const isLoggedIn = !!authToken;
-    if (!isLoggedIn) {
-      router.push('/login');
-      return;
-    }
-    setSelectedPostId(postId);
-    setIsModalVisible(true);
-  };
-
   return (
-    <ScrollView style={styles.maincontainer}>
+    <View style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3, marginBottom: 12 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: 3,
+          marginBottom: 12,
+        }}
+      >
         <View style={{ zIndex: 1000 }}>
           <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
         </View>
@@ -366,122 +427,62 @@ export default function CommunityPage() {
           <Text style={styles.postButtonText}>Post</Text>
         </TouchableOpacity>
       </View>
-      {isLoading && (
+      {isInitialLoading ? (
         <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
+      ) : (
+        <FlatList
+          data={sortedPosts}
+          renderItem={({ item }) => (
+            <PostItem
+              post={item}
+              selectedVote={item.id ? selectedVotes[item.id] : undefined}
+              onVote={handleVote}
+              onReport={openReportModal}
+            />
+          )}
+          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+          initialNumToRender={10}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={async () => {
+                setIsLoading(true);
+                await fetchOldPosts();
+                setIsLoading(false);
+              }}
+            />
+          }
+        />
       )}
-      <View style={{ marginBottom: 200 }}>
-        <View style={styles.postsContainer}>
-          {sortedPosts.map((post, index) => (
-            <View key={`${post.id}-${index}`} style={styles.containerpost}>
-              <View style={styles.suggestordetails}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                  <View style={styles.profile}>
-                    <Text style={styles.initial}>
-                      {post.user?.firstname && post.user?.lastname
-                        ? post.user.firstname[0].toUpperCase() + post.user.lastname[0].toUpperCase()
-                        : "G"}
-                    </Text>
-                  </View>
-                  <View style={styles.suggestor}>
-                    <Text style={styles.suggestorname}>
-                      {post.user?.firstname && post.user?.lastname
-                        ? `${post.user.firstname} ${post.user.lastname}`
-                        : "Guest"}
-                    </Text>
-                    <Text style={styles.suggestorusername}>{post.user?.email}</Text>
-                  </View>
-                </View>
-                <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={styles.postTimestamp}>
-                    {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
-                  </Text>
-                  <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
-                    <MaterialIcons name="report" size={20} color="#C52222" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* In your post rendering section - Fixed syntax and logic */}
-              <Text style={styles.postLocation}>
-                <Text style={styles.boldText}>From:</Text> {post.location || (params.location ? decodeURIComponent(params.location as string) : 'Unknown Location')}
-              </Text>
-              <Text style={styles.postDestination}>
-                <Text style={styles.boldText}>To:</Text> {post.destination || (params.destination ? decodeURIComponent(params.destination as string) : 'Unknown Destination')}
-              </Text>
-
-              <View style={{ flexDirection: 'column', gap: 8 }}>
-                <Text style={styles.label}>Experiences</Text>
-                <Text style={styles.experience}>{post.content}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={styles.content}>
-                  <View style={[styles.badge, getStatusStyle(post.status || '')]}>
-                    <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.arrowcontainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.arrowup,
-                      post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
-                    ]}
-                    onPress={() => post.id && handlePostPress(post.id, 'upvote')}
-                  >
-                    <AntDesign
-                      name="arrowup"
-                      size={13}
-                      color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
-                    />
-                  </TouchableOpacity>
-                  <Text style={styles.arrowupnum}>{post.votes}</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.arrowdown,
-                      post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
-                    ]}
-                    onPress={() => post.id && handlePostPress(post.id, 'downvote')}
-                  >
-                    <AntDesign
-                      name="arrowdown"
-                      size={13}
-                      color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
-                    />
-                  </TouchableOpacity>
-
-                </View>
-
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
-
       <PostModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handlePostSubmit}
-        location={Array.isArray(location) ? location.join(', ') : location}
-        destination={Array.isArray(destination) ? destination.join(', ') : destination}
-        origin_lat={origin_lat}
-        origin_lon={origin_lon}
-        destination_lat={destination_lat}
-        destination_lon={destination_lon}
+        location={location}
+        destination={destination}
+        origin_lat={routeDetails?.origin_lat ?? (params.origin_lat ? Number(params.origin_lat) : 0)}
+        origin_lon={routeDetails?.origin_lon ?? (params.origin_lon ? Number(params.origin_lon) : 0)}
+        destination_lat={routeDetails?.destination_lat ?? (params.destination_lat ? Number(params.destination_lat) : 0)}
+        destination_lon={routeDetails?.destination_lon ?? (params.destination_lon ? Number(params.destination_lon) : 0)}
         authToken={authToken}
         userEmail={''}
         userPassword={''}
         isFromCommunity={true}
       />
-
       {isModalVisible && selectedPostId !== null && (
         <ModalComponent
           visible={isModalVisible}
-          onClose={closeReportModal}
+          onClose={() => {
+            setIsModalVisible(false);
+            setSelectedPostId(null);
+          }}
           onSubmit={handleReportSubmit}
-          route_post_id={selectedPostId} // ✅ Now properly set
+          route_post_id={selectedPostId}
         />
       )}
-    </ScrollView>
+    </View>
   );
 }
 
