@@ -221,6 +221,7 @@ export default function CommunityPage() {
       : '';
 
   const fetchOldPosts = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -242,6 +243,8 @@ export default function CommunityPage() {
       setPosts(transformedPosts);
     } catch (error) {
       console.error('Fetch error:', error);
+    } finally {
+      setIsLoading(false); // Set loading to false after fetching
     }
   };
 
