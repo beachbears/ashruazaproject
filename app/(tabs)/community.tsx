@@ -462,52 +462,42 @@ export default function CommunityPage() {
 
   return (
     <View style={styles.maincontainer}>
-      <Text style={styles.sectionTitle}>Discover Experiences</Text>
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginTop: 3,
-          marginBottom: 12,
-        }}
-      >
-        <View style={{ zIndex: 1000 }}>
-          <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
-        </View>
-        <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-          <Text style={styles.postButtonText}>Post</Text>
-        </TouchableOpacity>
-      </View>
-      {isInitialLoading ? (
-        <ActivityIndicator size="large" color="#6366F1" style={styles.loadingIndicator} />
-      ) : (
-        <FlatList
-          data={sortedPosts}
-          renderItem={({ item }) => (
-            <PostItem
-              post={item}
-              // selectedVote={item.id ? selectedVotes[item.id] : undefined}
-              onVote={handleVote}
-              onReport={openReportModal}
-            />
-          )}
-          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-          initialNumToRender={10}
-          maxToRenderPerBatch={5}
-          windowSize={5}
-          refreshControl={
-            <RefreshControl
-              refreshing={isLoading}
-              onRefresh={async () => {
-                setIsLoading(true);
-                await fetchOldPosts();
-                setIsLoading(false);
-              }}
-            />
-          }
-        />
-      )}
+      <FlatList
+        ListHeaderComponent={
+          <>
+            <Text style={styles.sectionTitle}>Discover Experiences</Text>
+            <View style={styles.headerContainer}>
+              <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
+              <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+                <Text style={styles.postButtonText}>Post</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        }
+        contentContainerStyle={{ paddingBottom: 80 }} // Adjust bottom padding as needed
+        data={sortedPosts}
+        renderItem={({ item }) => (
+          <PostItem
+            post={item}
+            onVote={handleVote}
+            onReport={openReportModal}
+          />
+        )}
+        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+        initialNumToRender={10}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={async () => {
+              setIsLoading(true);
+              await fetchOldPosts();
+              setIsLoading(false);
+            }}
+          />
+        }
+      />
       <PostModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -539,8 +529,13 @@ export default function CommunityPage() {
 }
 
 const styles = StyleSheet.create({
-
-  maincontainer: { flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15 },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  maincontainer: { flex: 1, backgroundColor: '#F9FAFB', padding: 15 },
   containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#C7D2FE', padding: 12, elevation: 4, marginBottom: 20, width: '100%', borderWidth: 1 },
   suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2, justifyContent: "space-between" },
   profile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 16, },
@@ -565,7 +560,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
   },
-  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 20, textAlign: 'center', marginBottom: 20 },
+  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 20, textAlign: 'center', marginBottom: 10 },
   postbutton: { backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   postButtonText: { color: 'white', fontSize: 12, fontWeight: 600 },
   loadingIndicator: {
