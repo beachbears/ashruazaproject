@@ -197,8 +197,7 @@ export default function CommunityPage() {
   const { posts: contextPosts, addPost, setPosts, handleUpvote, handleDownvote, updatePost } = usePostContext();
   const { routeDetails } = useRouteContext();
   const { authToken } = React.useContext(AuthContext) as AuthContextType;
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -260,16 +259,11 @@ export default function CommunityPage() {
   // }, [contextPosts]);
 
   useEffect(() => {
-    const fetchInitialPosts = async () => {
-      setIsInitialLoading(true);
-      await fetchOldPosts();
-      setIsInitialLoading(false);
-    };
-    fetchInitialPosts();
+    fetchOldPosts();
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(fetchOldPosts, 3000);
+    const interval = setInterval(fetchOldPosts, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -490,15 +484,17 @@ export default function CommunityPage() {
         initialNumToRender={10}
         maxToRenderPerBatch={5}
         windowSize={5}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={async () => {
-              setIsLoading(true);
-              await fetchOldPosts();
-              setIsLoading(false);
-            }}
-          />
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={{ padding: 20 }}>
+              <ActivityIndicator size="large" color="#6366F1" />
+              <Text style={{ textAlign: 'center', marginTop: 10 }}>Loading posts...</Text>
+            </View>
+          ) : (
+            <View style={{ padding: 20 }}>
+              <Text style={{ textAlign: 'center', marginTop: 10 }}>No posts found.</Text>
+            </View>
+          )
         }
       />
       <PostModal
