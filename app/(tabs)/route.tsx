@@ -1242,10 +1242,23 @@ const RouteScreen: React.FC = () => {
               setSelectedSpot(newDestination);
             }}
             onSpotView={(selectedSpot) => {
-              setSelectedSpot({
-                latitude: selectedSpot.latitude,
-                longitude: selectedSpot.longitude,
-              });
+              const js = `
+                if (window.map) {
+                  const targetLat = ${selectedSpot.latitude};
+                  const targetLng = ${selectedSpot.longitude};
+                  window.map.flyTo([targetLat, targetLng], 16, { animate: true, duration: 1 }).once('moveend', function() {
+                    window.map.eachLayer(function(layer) {
+                      if (layer instanceof L.Marker && layer.options.isTouristSpot) {
+                        const latLng = layer.getLatLng();
+                        if (Math.abs(latLng.lat - targetLat) < 0.000001 && Math.abs(latLng.lng - targetLng) < 0.000001) {
+                          layer.openPopup();
+                        }
+                      }
+                    });
+                  });
+                }
+              `;
+              webviewRef.current?.injectJavaScript(js);
               setModalVisible(false);
             }}
           />
