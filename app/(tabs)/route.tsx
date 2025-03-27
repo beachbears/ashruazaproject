@@ -28,7 +28,7 @@ import ModalComponent from "../restaurantmodal";
 import { GestureHandlerRootView, } from 'react-native-gesture-handler';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Region, LatLng, MapComponentProps, Route, SegmentPath, RouteDetails, RouteMetrics, NearbySpot, LocationSuggestion, ApiResponse } from "../../src/types";
+import { Region, LatLng, MapComponentProps, Route, SegmentPath, RouteDetails, RouteMetrics, NearbySpot, LocationSuggestion, ApiResponse, Restaurant } from "../../src/types";
 import { sleep, formatDuration, shortenAddress, getSegmentLabel } from "../../src/utils/helpers";
 import { getMapHTML } from "../../src/utils/getMapHTML";
 import MapComponent from "@/src/components/MapComponent";
@@ -84,21 +84,7 @@ const RouteScreen: React.FC = () => {
   const navigation = useNavigation();
   const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<LatLng | null>(null);
-  const [nearbyRestaurants, setNearbyRestaurants] = useState<
-    Array<{
-      distance: number;
-      name: string;
-      latitude: number;
-      longitude: number;
-      cuisine: string;
-      amenity: string;
-      address: string;
-      opening_hours: string;
-      phone?: string;
-      website?: string;
-      image_url?: string;
-    }>
-  >([]);
+  const [nearbyRestaurants, setNearbyRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<{
     latitude: number;
     longitude: number;
@@ -125,7 +111,7 @@ const RouteScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState("Route");
   const [spotLimit, setSpotLimit] = useState(20);
 
-  // const restaurantCache = useRef<{ [key: string]: Restaurant[] }>({});
+  const restaurantCache = useRef<{ [key: string]: Restaurant[] }>({});
   const attractionCache = useRef<{ [key: string]: NearbySpot[] }>({});
 
   // Debounce function
@@ -303,6 +289,11 @@ const RouteScreen: React.FC = () => {
   }, []);
 
   const fetchRestaurants = async (lat: number, lon: number, limit: number) => {
+    const cacheKey = `${lat},${lon},${limit}`;
+    if (restaurantCache.current[cacheKey]) {
+      setNearbyRestaurants(restaurantCache.current[cacheKey]);
+      return;
+    }
     try {
       const response = await axios.get("https://comgu20-production.up.railway.app/api/sustenance", {
         params: {
@@ -327,17 +318,11 @@ const RouteScreen: React.FC = () => {
         website: item.contacts?.website,
         image_url: "https://via.placeholder.com/150",
         distance: item.distance,
-        brand: item.brand?.brand,
-        takeaway: item.metadata?.takeaway,
-        delivery: item.metadata?.delivery,
-        payment: item.metadata?.payment,
-        wheelchair: item.metadata?.wheelchair,
-        facebook: item.contacts?.facebook,
-        email: item.contacts?.email,
       }));
+      restaurantCache.current[cacheKey] = mapped;
       setNearbyRestaurants(mapped);
     } catch (error) {
-      // console.error("Error fetching restaurants:", error);
+      console.error("Error fetching restaurants:", error);
       setNearbyRestaurants([]);
     }
   };

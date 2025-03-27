@@ -128,6 +128,27 @@ export interface MapComponentProps {
   onRestaurantClick?: (restaurantName: string) => void;
 }
 
+export interface Restaurant {
+  name: string;
+  latitude: number;
+  longitude: number;
+  amenity: string;
+  cuisine?: string;
+  address?: string;
+  opening_hours?: string;
+  phone?: string;
+  website?: string;
+  image_url?: string;
+  distance: number;
+  brand?: string;
+  takeaway?: string;
+  delivery?: string;
+  payment?: string;
+  wheelchair?: string;
+  facebook?: string;
+  email?: string;
+}
+
 export interface RouteDetails {
   posts: Post[]; // Add this required property
   route: Route | null;
