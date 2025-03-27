@@ -1173,9 +1173,23 @@ const RouteScreen: React.FC = () => {
             onClose={() => setRestaurantModalVisible(false)}
             restaurants={nearbyRestaurants}
             onView={(restaurant) => {
-              webviewRef.current?.injectJavaScript(
-                `if (window.map) { window.map.flyTo([${restaurant.latitude}, ${restaurant.longitude}], 16, { animate: true, duration: 2 }); }`
-              );
+              const js = `
+                if (window.map) {
+                  const targetLat = ${restaurant.latitude};
+                  const targetLng = ${restaurant.longitude};
+                  window.map.flyTo([targetLat, targetLng], 16, { animate: true, duration: 1 }).once('moveend', function() {
+                    window.map.eachLayer(function(layer) {
+                      if (layer instanceof L.Marker && layer.options.isRestaurant) {
+                        const latLng = layer.getLatLng();
+                        if (Math.abs(latLng.lat - targetLat) < 0.00001 && Math.abs(latLng.lng - targetLng) < 0.00001) {
+                          layer.openPopup();
+                        }
+                      }
+                    });
+                  });
+                }
+              `;
+              webviewRef.current?.injectJavaScript(js);
               setRestaurantModalVisible(false);
             }}
             onGoHere={(restaurant) => {

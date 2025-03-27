@@ -132,6 +132,7 @@ export interface MapComponentProps {
   }>;
   onRestaurantClick: (name: string) => void;
   activeTab: string; // Added
+  selectedRestaurant?: { latitude: number; longitude: number; name: string; };
 }
 
 export interface Restaurant {

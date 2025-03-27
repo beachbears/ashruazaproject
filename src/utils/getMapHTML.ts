@@ -125,9 +125,6 @@ export const getMapHTML = ({
             <div style="max-width: 200px;">
               <b>${escapedName}</b>
               ${restaurant.cuisine ? `<p style="margin: 2px 0; color: #666;">Cuisine: ${restaurant.cuisine}</p>` : ""}
-              ${restaurant.image_url
-          ? `<img src="${restaurant.image_url}" style="width: 100%; height: auto; margin-top: 5px; border-radius: 4px; cursor: pointer;" onerror="this.src='https://via.placeholder.com/100x75.png?text=Image+Not+Available';" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'restaurantClick', name: '${escapedName}' }))" />`
-          : '<p style="margin: 5px 0; color: #666;">No image available</p>'}
             </div>
           \`);
       `);
