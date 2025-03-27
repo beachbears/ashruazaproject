@@ -98,14 +98,16 @@ export default function TabLayout() {
             <View style={styles.authContainer}>
               {isLoggedIn ? (
                 <View style={styles.dropdownContainer}>
-                  <View style={{width: 41, height: 41, backgroundColor: '#EEF2FF',   justifyContent: 'center',
-    alignItems: 'center',  borderRadius: 15,}}>
-                  <TouchableOpacity
-                    onPress={() => setShowDropdown(!showDropdown)}
-                    style={styles.account}
-                  >
-                    <Text style={styles.accountText}>{userInitial}</Text>
-                  </TouchableOpacity>
+                  <View style={{
+                    width: 41, height: 41, backgroundColor: '#EEF2FF', justifyContent: 'center',
+                    alignItems: 'center', borderRadius: 15,
+                  }}>
+                    <TouchableOpacity
+                      onPress={() => setShowDropdown(!showDropdown)}
+                      style={styles.account}
+                    >
+                      <Text style={styles.accountText}>{userInitial}</Text>
+                    </TouchableOpacity>
                   </View>
                   {showDropdown && (
                     <View style={styles.dropdown}>
@@ -239,7 +241,7 @@ const styles = StyleSheet.create({
   headerStyle: {
     backgroundColor: '#F9FAFB',
     position: 'absolute',
-     
+
   },
   header: {
     flexDirection: 'row',
@@ -289,7 +291,7 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     position: 'relative',
-     
+
   },
   account: {
     width: 31,
