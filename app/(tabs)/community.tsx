@@ -18,13 +18,12 @@ interface DropdownProps {
   defaultValue?: string;
 }
 
-
 interface PostItemProps {
   post: Post;
-  selectedVote: VoteType | undefined;
   onVote: (id: number, action: VoteType) => void;
   onReport: (id: number) => void;
 }
+
 const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(defaultValue);
@@ -62,7 +61,7 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 type VoteType = 'upvote' | 'downvote';
 
 const PostItem = React.memo<PostItemProps>(
-  ({ post, selectedVote, onVote, onReport }) => {
+  ({ post, onVote, onReport }) => {
     const timeAgo = (timestamp: number): string => {
       const now = Date.now();
       const diff = now - timestamp;
@@ -105,6 +104,10 @@ const PostItem = React.memo<PostItemProps>(
       }
     };
 
+    const voteStatus: VoteType | undefined =
+      post.user_vote === 1 ? 'upvote' : post.user_vote === -1 ? 'downvote' : undefined;
+
+    const selectedVote = post.user_vote === 1 ? 'upvote' : post.user_vote === -1 ? 'downvote' : undefined;
     return (
       <View style={styles.containerpost}>
         <View style={styles.suggestordetails}>
@@ -185,7 +188,7 @@ const PostItem = React.memo<PostItemProps>(
   },
   (prevProps, nextProps) =>
     prevProps.post === nextProps.post &&
-    prevProps.selectedVote === nextProps.selectedVote &&
+    // prevProps.selectedVote === nextProps.selectedVote &&
     prevProps.onVote === nextProps.onVote &&
     prevProps.onReport === nextProps.onReport
 );
@@ -203,6 +206,7 @@ export default function CommunityPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string>('Time');
   const router = useRouter();
+
   const params = useLocalSearchParams();
 
   const location = Array.isArray(params.location)
@@ -218,7 +222,9 @@ export default function CommunityPage() {
 
   const fetchOldPosts = async () => {
     try {
-      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts');
+      const response = await fetch('https://comgu20-production.up.railway.app/api/route_posts', {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       if (!response.ok) return;
       const data = await response.json();
       const transformedPosts = data.map((post: any) => ({
@@ -231,12 +237,24 @@ export default function CommunityPage() {
         destination_lon: post.dest_lon,
         created_at: post.created_at,
         timestamp: new Date(post.created_at).getTime(),
+        user_vote: post.user_vote, // Ensure this is included
       }));
       setPosts(transformedPosts);
     } catch (error) {
       console.error('Fetch error:', error);
     }
   };
+
+  // useEffect(() => {
+  //   const votes: { [key: number]: VoteType } = {};
+  //   contextPosts.forEach((post) => {
+  //     if (post.id && post.user_vote !== undefined) {
+  //       if (post.user_vote === 1) votes[post.id] = 'upvote';
+  //       else if (post.user_vote === -1) votes[post.id] = 'downvote';
+  //     }
+  //   });
+  //   setSelectedVotes(votes);
+  // }, [contextPosts]);
 
   useEffect(() => {
     const fetchInitialPosts = async () => {
@@ -289,37 +307,69 @@ export default function CommunityPage() {
     [authToken, isSubmitting]
   );
 
+
   const handleVote = useCallback(
-    async (id: number, action: VoteType) => {
+    async (id: number, action: 'upvote' | 'downvote') => {
       if (!authToken) {
         router.push('/login');
         return;
       }
-      const previousVote = selectedVotes[id];
-      const previousVotesCount = contextPosts.find((p) => p.id === id)?.votes || 0;
 
-      setSelectedVotes((prev) => ({ ...prev, [id]: action }));
-      const postToUpdate = contextPosts.find((p) => p.id === id);
-      if (postToUpdate) {
-        updatePost({ ...postToUpdate, votes: previousVotesCount + (action === 'upvote' ? 1 : -1) });
+      const post = contextPosts.find((p) => p.id === id);
+      if (!post || post.pendingVote) return;
+
+      const currentUserVote = post.user_vote || 0;
+      let newUserVote: number;
+      let voteDelta: number;
+
+      // Determine new vote state
+      if (action === 'upvote') {
+        newUserVote = currentUserVote === 1 ? 0 : 1;
+      } else {
+        newUserVote = currentUserVote === -1 ? 0 : -1;
       }
+
+      // Calculate vote change
+      voteDelta = newUserVote - currentUserVote;
+
+      // Optimistic update
+      updatePost({
+        ...post,
+        user_vote: newUserVote,
+        votes: (post.votes || 0) + voteDelta,
+        pendingVote: true
+      });
 
       try {
-        const success = await sendVoteRequest(id.toString(), action);
-        if (!success) {
-          setSelectedVotes((prev) => ({ ...prev, [id]: previousVote }));
-          if (postToUpdate) {
-            updatePost({ ...postToUpdate, votes: previousVotesCount });
-          }
+        const result = await sendVoteRequest(id.toString(), action);
+        if (result) {
+          // Confirm server's response
+          updatePost({
+            ...post,
+            votes: result.votes,
+            user_vote: result.user_vote,
+            pendingVote: false
+          });
+        } else {
+          // Revert on failure
+          updatePost({
+            ...post,
+            user_vote: currentUserVote,
+            votes: (post.votes || 0) - voteDelta,
+            pendingVote: false
+          });
         }
       } catch (error) {
-        setSelectedVotes((prev) => ({ ...prev, [id]: previousVote }));
-        if (postToUpdate) {
-          updatePost({ ...postToUpdate, votes: previousVotesCount });
-        }
+        console.error('Vote sync error:', error);
+        updatePost({
+          ...post,
+          user_vote: currentUserVote,
+          votes: (post.votes || 0) - voteDelta,
+          pendingVote: false
+        });
       }
     },
-    [authToken, contextPosts, updatePost]
+    [authToken, contextPosts, updatePost, router]
   );
 
   const sendVoteRequest = async (postId: string, action: VoteType) => {
@@ -334,10 +384,12 @@ export default function CommunityPage() {
           },
         }
       );
-      return response.ok;
+      if (!response.ok) throw new Error('Failed to send vote');
+      const data = await response.json();
+      return data; // Expect { id, votes, user_vote, ... }
     } catch (error) {
       console.error('Vote error:', error);
-      return false;
+      return null;
     }
   };
 
@@ -435,7 +487,7 @@ export default function CommunityPage() {
           renderItem={({ item }) => (
             <PostItem
               post={item}
-              selectedVote={item.id ? selectedVotes[item.id] : undefined}
+              // selectedVote={item.id ? selectedVotes[item.id] : undefined}
               onVote={handleVote}
               onReport={openReportModal}
             />
@@ -488,7 +540,7 @@ export default function CommunityPage() {
 
 const styles = StyleSheet.create({
 
-  maincontainer: { flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15, },
+  maincontainer: { flexDirection: 'column', backgroundColor: '#F9FAFB', width: '100%', padding: 15 },
   containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#C7D2FE', padding: 12, elevation: 4, marginBottom: 20, width: '100%', borderWidth: 1 },
   suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2, justifyContent: "space-between" },
   profile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 16, },

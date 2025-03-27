@@ -2,7 +2,7 @@ import { ApiResponse } from '../src/types';
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 export type PostCategory = 'routes' | 'postsuggestions' | 'community';
 export interface Post {
-  id?: number;
+  id: number;
   content: string;
   location: string;
   destination: string;
@@ -29,7 +29,9 @@ export interface Post {
   category?: PostCategory;
   timestamp?: number;
   destination_address?: string;
-  origin_address?: string
+  origin_address?: string;
+  user_vote?: number;
+  pendingVote?: boolean; // New field to track pending votes
 }
 
 interface PostContextType {

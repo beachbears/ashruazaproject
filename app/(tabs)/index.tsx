@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     width: '100%',
     elevation: 4,
-    maxHeight: 150,
+    maxHeight: 250,
   },
   suggestionItem: {
     padding: 10,
