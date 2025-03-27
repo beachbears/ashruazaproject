@@ -459,18 +459,14 @@ export default function CommunityPage() {
 
   return (
     <View style={styles.maincontainer}>
+      <Text style={styles.sectionTitle}>Discover Experiences</Text>
+      <View style={styles.headerContainer}>
+        <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
+        <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
+          <Text style={styles.postButtonText}>Post</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
-        ListHeaderComponent={
-          <>
-            <Text style={styles.sectionTitle}>Discover Experiences</Text>
-            <View style={styles.headerContainer}>
-              <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
-              <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-                <Text style={styles.postButtonText}>Post</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        }
         contentContainerStyle={{ paddingBottom: 80 }} // Adjust bottom padding as needed
         data={sortedPosts}
         renderItem={({ item }) => (
@@ -683,7 +679,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     borderColor: '#E5E7EB',
-    zIndex: 1000,
+    zIndex: 2000,
     width: 125,
     boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
     elevation: 4,
