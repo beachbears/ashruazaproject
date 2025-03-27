@@ -990,7 +990,7 @@ const RouteScreen: React.FC = () => {
                     {item.name}
                   </Text>
                   <Text style={styles.restaurantCuisine} numberOfLines={1}>
-                    {item.cuisine || 'Unknown'}
+                    {formatCuisine(item.cuisine) || 'Unknown'}
                   </Text>
                   <Text style={styles.restaurantDistance}>
                     {item.distance?.toFixed(2) || 'N/A'} km
