@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, FlatList, Alert } from 'react-native';
 import PostModal from './postmodal';
 import { AuthContext, AuthContextType } from './../contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -268,8 +268,12 @@ export default function PostSuggestions() {
   };
 
   const handleReportSubmit = async (reason: string) => {
-    if (!authToken || !selectedPostId) return;
+    if (!authToken || !selectedPostId) {
+      Alert.alert('Error', 'You must be logged in to report a post.');
+      return;
+    }
     try {
+      console.log('Submitting report - Post ID:', selectedPostId, 'Reason:', reason);
       const response = await fetch('https://comgu20-production.up.railway.app/api/reports', {
         method: 'POST',
         headers: {
@@ -283,10 +287,20 @@ export default function PostSuggestions() {
           },
         }),
       });
-      if (!response.ok) throw new Error('Failed to submit report');
+      console.log('Response status:', response.status);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log('Error response:', errorData);
+        throw new Error('Failed to submit report');
+      }
+      const data = await response.json();
+      console.log('Success response:', data);
+      Alert.alert('Success', data.message || 'Report submitted successfully');
       setIsModalVisible(false);
+      setSelectedPostId(null);
     } catch (error) {
       console.error('Error submitting report:', error);
+      Alert.alert('Error', 'Failed to submit report. Please try again.');
     }
   };
 
