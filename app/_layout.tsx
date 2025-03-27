@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '../contexts/AuthContext';
 import { PostProvider } from '../contexts/PostContext';
 import { RouteProvider } from '../contexts/RouteContext'; // Import your RouteProvider
+import React from 'react';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -41,7 +42,7 @@ export default function RootLayout() {
           <View style={{ flex: 1 }}>
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                 <Stack.Screen
+              <Stack.Screen
                 name="postsuggestions"
                 options={{
                   title: ' '
