@@ -798,7 +798,7 @@ const RouteScreen: React.FC = () => {
 
   const renderRouteTab = useCallback(() => (
     <View style={styles.tabContent}>
-      <Text style={styles.sectionHeader}>Route Details</Text>
+      <Text style={styles.text}>Route Details</Text>
       <View style={styles.routeTypeContainer}>
         <Text style={styles.subHeader}>Select Route Type</Text>
         <TouchableOpacity
