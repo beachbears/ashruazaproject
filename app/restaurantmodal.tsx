@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Modal,
   View,
@@ -12,36 +12,30 @@ import {
   FlatList,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Restaurant } from "@/src/types";
 
-// Placeholder image
-const placeholderImage = "https://via.placeholder.com/150";
 const formatCuisine = (cuisine: string | undefined) => {
   if (!cuisine) return "Not specified";
   return cuisine
     .split(/[_;]/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(', ');
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(", ");
 };
-interface Restaurant {
-  name: string;
-  latitude: number;
-  longitude: number;
-  amenity?: string;
-  cuisine?: string;
-  address?: string;
-  opening_hours?: string;
-  phone?: string;
-  website?: string;
-  image_url?: string;
-  distance?: number;
-  brand?: string;
-  takeaway?: string;
-  delivery?: string;
-  payment?: string;
-  wheelchair?: string;
-  facebook?: string;
-  email?: string;
-}
+
+const getAcceptedPaymentMethods = (paymentData: string): string => {
+  try {
+    const paymentObj = JSON.parse(paymentData);
+    const accepted = Object.entries(paymentObj)
+      .filter(([_, value]) =>
+        value && ["yes", "only"].includes(value.toString().toLowerCase())
+      )
+      .map(([key]) => key.replace(/^payment:/, ""));
+    return accepted.join(", ");
+  } catch (error) {
+    console.error("Error parsing payment data:", error);
+    return "";
+  }
+};
 
 interface ModalProps {
   visible: boolean;
@@ -50,6 +44,172 @@ interface ModalProps {
   onView?: (restaurant: { latitude: number; longitude: number; name: string }) => void;
   onGoHere?: (restaurant: Restaurant) => void;
 }
+
+interface RestaurantItemProps {
+  item: Restaurant;
+  onView?: (restaurant: { latitude: number; longitude: number; name: string }) => void;
+  onGoHere?: (restaurant: Restaurant) => void;
+}
+
+const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere }) => {
+  const handleWebsitePress = (url: string) => {
+    Linking.canOpenURL(url).then((supported) => {
+      if (supported) Linking.openURL(url);
+    });
+  };
+
+  const handlePhonePress = (phone: string) => {
+    Linking.openURL(`tel:${phone}`);
+  };
+
+  return (
+    <View style={styles.spotCard}>
+      {onView && (
+        <View style={styles.restaurantHeader}>
+          <View style={styles.restaurantInfo}>
+            <Text style={styles.restaurantName}>{item.name}</Text>
+            <Text style={styles.restaurantCuisine}>
+              {formatCuisine(item.cuisine)}
+            </Text>
+            {item.distance !== undefined && (
+              <Text style={styles.distanceText}>
+                {item.distance.toFixed(2)} km away
+              </Text>
+            )}
+          </View>
+          <View style={styles.buttonGroup}>
+            <TouchableOpacity
+              style={styles.viewButton}
+              onPress={() =>
+                onView({
+                  latitude: item.latitude,
+                  longitude: item.longitude,
+                  name: item.name,
+                })
+              }
+            >
+              <Text style={styles.viewButtonText}>View</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.goHereButton}
+              onPress={() => onGoHere?.(item)}
+            >
+              <Text style={styles.goHereButtonText}>Go Here</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      <View style={styles.detailsContainer}>
+        {!onView && (
+          <>
+            <Text style={styles.spotName}>{item.name}</Text>
+            {item.distance !== undefined && (
+              <Text style={styles.distanceText}>
+                {item.distance.toFixed(2)} km away
+              </Text>
+            )}
+          </>
+        )}
+        <View style={styles.amenityPill}>
+          <Text style={styles.amenityText}>
+            {item.amenity
+              ? item.amenity.charAt(0).toUpperCase() + item.amenity.slice(1)
+              : "Unknown"}
+          </Text>
+        </View>
+        {item.address && (
+          <View style={styles.infoRow}>
+            <Ionicons name="location-outline" size={16} color="#44457D" />
+            <Text style={styles.sectionValue}>{item.address}</Text>
+          </View>
+        )}
+        {item.cuisine && (
+          <View style={styles.infoRow}>
+            <Ionicons name="restaurant-outline" size={16} color="#44457D" />
+            <Text style={styles.sectionValue}>{formatCuisine(item.cuisine)}</Text>
+          </View>
+        )}
+        {item.opening_hours && (
+          <View style={styles.infoRow}>
+            <Ionicons name="time-outline" size={16} color="#44457D" />
+            <Text style={styles.sectionValue}>
+              {item.opening_hours === "Hours not specified"
+                ? "Not available"
+                : item.opening_hours}
+            </Text>
+          </View>
+        )}
+        {item.brand && (
+          <View style={styles.infoRow}>
+            <Ionicons name="business-outline" size={16} color="#44457D" />
+            <Text style={styles.sectionValue}>Brand: {item.brand}</Text>
+          </View>
+        )}
+        {item.takeaway !== null && item.takeaway !== undefined && (
+          <View style={styles.infoRow}>
+            <Ionicons name="bag-handle-outline" size={16} color="#44457D" />
+            <Text style={styles.sectionValue}>
+              Takeaway: {item.takeaway ? "Yes" : "No"}
+            </Text>
+          </View>
+        )}
+        {item.delivery && (
+          <View style={styles.infoRow}>
+            <Ionicons name="bicycle-outline" size={16} color="#44457D" />
+            <Text style={styles.sectionValue}>Delivery: {item.delivery}</Text>
+          </View>
+        )}
+        {item.payment && item.payment !== "{}" && (
+          <View style={styles.infoRow}>
+            <Ionicons name="card-outline" size={16} color="#44457D" />
+            <Text style={styles.sectionValue}>
+              Payment: {getAcceptedPaymentMethods(item.payment) || "Not specified"}
+            </Text>
+          </View>
+        )}
+        {item.wheelchair && (
+          <View style={styles.infoRow}>
+            <Ionicons name="accessibility-outline" size={16} color="#44457D" />
+            <Text style={styles.sectionValue}>Wheelchair: {item.wheelchair}</Text>
+          </View>
+        )}
+        {(item.phone || item.website || item.facebook || item.email) && (
+          <View style={styles.contactSection}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="call-outline" size={16} color="#44457D" /> Contact
+            </Text>
+            {item.phone && (
+              <TouchableOpacity
+                onPress={() => item.phone && handlePhonePress(item.phone)}
+              >
+                <Text style={styles.websiteText}>{item.phone}</Text>
+              </TouchableOpacity>
+            )}
+            {item.website && (
+              <TouchableOpacity
+                onPress={() => item.website && handleWebsitePress(item.website)}
+              >
+                <Text style={styles.websiteText}>Visit Website</Text>
+              </TouchableOpacity>
+            )}
+            {item.facebook && (
+              <TouchableOpacity
+                onPress={() => item.facebook && handleWebsitePress(item.facebook)}
+              >
+                <Text style={styles.websiteText}>Facebook</Text>
+              </TouchableOpacity>
+            )}
+            {item.email && (
+              <TouchableOpacity onPress={() => Linking.openURL(`mailto:${item.email}`)}>
+                <Text style={styles.websiteText}>{item.email}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+});
 
 const ModalComponent: React.FC<ModalProps> = ({
   visible,
@@ -60,35 +220,7 @@ const ModalComponent: React.FC<ModalProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<Category>("All");
   const [showCategories, setShowCategories] = useState(false);
-  // Payment processing helper
-  const getAcceptedPaymentMethods = (paymentData: string): string => {
-    try {
-      // Parse the JSON string into an object
-      const paymentObj = JSON.parse(paymentData);
-      // Extract methods where the value is "yes" or "only"
-      const accepted = Object.entries(paymentObj)
-        .filter(([key, value]) =>
-          value && ["yes", "only"].includes(value.toString().toLowerCase())
-        )
-        .map(([key]) => key.replace(/^payment:/, "")); // Remove the "payment:" prefix
-      return accepted.join(", ");
-    } catch (error) {
-      console.error("Error parsing payment data:", error);
-      return "";
-    }
-  };
 
-
-  // Handle website and phone linking
-  const handleWebsitePress = (url: string) => {
-    Linking.canOpenURL(url).then((supported) => {
-      if (supported) Linking.openURL(url);
-    });
-  };
-
-  const handlePhonePress = (phone: string) => {
-    Linking.openURL(`tel:${phone}`);
-  };
   type Category =
     | "All"
     | "Restaurant"
@@ -101,15 +233,15 @@ const ModalComponent: React.FC<ModalProps> = ({
     | "Biergarten";
 
   const categoryMapping: Record<Category, string> = {
-    "All": "all",
-    "Restaurant": "restaurant",
-    "Cafe": "cafe",
+    All: "all",
+    Restaurant: "restaurant",
+    Cafe: "cafe",
     "Fast Food": "fast_food",
-    "Pub": "pub",
-    "Bar": "bar",
+    Pub: "pub",
+    Bar: "bar",
     "Ice Cream": "ice_cream",
     "Food Court": "food_court",
-    "Biergarten": "biergarten"
+    Biergarten: "biergarten",
   };
 
   const categories: Category[] = [
@@ -124,20 +256,25 @@ const ModalComponent: React.FC<ModalProps> = ({
     "Biergarten",
   ];
 
+  const filteredSpots = useMemo(() => {
+    if (selectedCategory === "All") {
+      return restaurants;
+    }
+    return restaurants.filter(
+      (spot) =>
+        spot.amenity?.toLowerCase() ===
+        categoryMapping[selectedCategory].toLowerCase()
+    );
+  }, [selectedCategory, restaurants]);
 
   const handleSelectCategory = (cat: Category) => {
     setSelectedCategory(cat);
     setShowCategories(false);
   };
 
-  const filteredSpots = selectedCategory === "All"
-    ? restaurants // Return all items if "All" is selected
-    : restaurants.filter(
-      (spot) => spot.amenity?.toLowerCase() === categoryMapping[selectedCategory].toLowerCase()
-    );
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
@@ -145,8 +282,6 @@ const ModalComponent: React.FC<ModalProps> = ({
       <View style={styles.modalBackground}>
         <View style={styles.modalContainer}>
           <Text style={styles.modalTitle}>Nearby Dining Spots</Text>
-
-          {/* Category Dropdown */}
           <View style={styles.controlsContainer}>
             <View style={styles.dropdownContainer}>
               <TouchableOpacity
@@ -159,9 +294,7 @@ const ModalComponent: React.FC<ModalProps> = ({
                   color="#6366F1"
                   style={{ marginRight: 6 }}
                 />
-                <Text style={styles.dropdownButtonText}>
-                  {selectedCategory}
-                </Text>
+                <Text style={styles.dropdownButtonText}>{selectedCategory}</Text>
               </TouchableOpacity>
               {showCategories && (
                 <View style={[styles.dropdownOverlay, { zIndex: 10001 }]}>
@@ -171,7 +304,10 @@ const ModalComponent: React.FC<ModalProps> = ({
                       return (
                         <TouchableOpacity
                           key={index}
-                          style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]}
+                          style={[
+                            styles.dropdownItem,
+                            isSelected && styles.dropdownItemSelected,
+                          ]}
                           onPress={() => handleSelectCategory(cat)}
                         >
                           <Text
@@ -190,177 +326,21 @@ const ModalComponent: React.FC<ModalProps> = ({
               )}
             </View>
           </View>
-
-          {/* Restaurant List with FlatList */}
           <FlatList
             data={filteredSpots}
-            renderItem={({ item, index }) => (
-              <View key={index} style={styles.spotCard}>
-                {/* Header with Image, Name, Cuisine, Distance, and Buttons */}
-                {onView && (
-                  <View style={styles.restaurantHeader}>
-                    {/* <Image
-                        source={{ uri: item.image_url || placeholderImage }}
-                        style={styles.restaurantImage}
-                      /> */}
-                    <View style={styles.restaurantInfo}>
-                      <Text style={styles.restaurantName}>{item.name}</Text>
-                      <Text style={styles.restaurantCuisine}>
-                        {formatCuisine(item.cuisine)}
-                      </Text>
-                      {item.distance !== undefined && (
-                        <Text style={styles.distanceText}>
-                          {item.distance.toFixed(2)} km away
-                        </Text>
-                      )}
-                    </View>
-                    <View style={styles.buttonGroup}>
-                      <TouchableOpacity
-                        style={styles.viewButton}
-                        onPress={() =>
-                          onView({
-                            latitude: item.latitude,
-                            longitude: item.longitude,
-                            name: item.name,
-                          })
-                        }
-                      >
-                        <Text style={styles.viewButtonText}>View</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.goHereButton}
-                        onPress={() => onGoHere?.(item)}
-                      >
-                        <Text style={styles.goHereButtonText}>Go Here</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-
-                {/* Detailed Information */}
-                <View style={styles.detailsContainer}>
-                  {!onView && (
-                    <>
-                      <Text style={styles.spotName}>{item.name}</Text>
-                      {item.distance !== undefined && (
-                        <Text style={styles.distanceText}>
-                          {item.distance.toFixed(2)} km away
-                        </Text>
-                      )}
-                    </>
-                  )}
-                  <View style={styles.amenityPill}>
-                    <Text style={styles.amenityText}>
-                      {item.amenity
-                        ? item.amenity.charAt(0).toUpperCase() + item.amenity.slice(1)
-                        : "Unknown"}
-                    </Text>
-                  </View>
-                  {item.address && (
-                    <View style={styles.infoRow}>
-                      <Ionicons name="location-outline" size={16} color="#44457D" />
-                      <Text style={styles.sectionValue}>{item.address}</Text>
-                    </View>
-                  )}
-                  {item.cuisine && (
-                    <View style={styles.infoRow}>
-                      <Ionicons name="restaurant-outline" size={16} color="#44457D" />
-                      <Text style={styles.sectionValue}>{formatCuisine(item.cuisine)}</Text>
-                    </View>
-                  )}
-                  {item.opening_hours && (
-                    <View style={styles.infoRow}>
-                      <Ionicons name="time-outline" size={16} color="#44457D" />
-                      <Text style={styles.sectionValue}>
-                        {item.opening_hours === "Hours not specified"
-                          ? "Not available"
-                          : item.opening_hours}
-                      </Text>
-                    </View>
-                  )}
-                  {/* New Fields */}
-                  {item.brand && (
-                    <View style={styles.infoRow}>
-                      <Ionicons name="business-outline" size={16} color="#44457D" />
-                      <Text style={styles.sectionValue}>Brand: {item.brand}</Text>
-                    </View>
-                  )}
-                  {item.takeaway !== null && item.takeaway !== undefined && (
-                    <View style={styles.infoRow}>
-                      <Ionicons name="bag-handle-outline" size={16} color="#44457D" />
-                      <Text style={styles.sectionValue}>
-                        Takeaway: {item.takeaway ? "Yes" : "No"}
-                      </Text>
-                    </View>
-                  )}
-                  {item.delivery && (
-                    <View style={styles.infoRow}>
-                      <Ionicons name="bicycle-outline" size={16} color="#44457D" />
-                      <Text style={styles.sectionValue}>Delivery: {item.delivery}</Text>
-                    </View>
-                  )}
-                  {item.payment && item.payment !== "{}" && (
-                    <View style={styles.infoRow}>
-                      <Ionicons name="card-outline" size={16} color="#44457D" />
-                      <Text style={styles.sectionValue}>
-                        Payment: {getAcceptedPaymentMethods(item.payment) || "Not specified"}
-                      </Text>
-                    </View>
-                  )}
-                  {item.wheelchair && (
-                    <View style={styles.infoRow}>
-                      <Ionicons name="accessibility-outline" size={16} color="#44457D" />
-                      <Text style={styles.sectionValue}>Wheelchair: {item.wheelchair}</Text>
-                    </View>
-                  )}
-                  {/* Enhanced Contact Section */}
-                  {(item.phone || item.website || item.facebook || item.email) && (
-                    <View style={styles.contactSection}>
-                      <Text style={styles.sectionTitle}>
-                        <Ionicons name="call-outline" size={16} color="#44457D" /> Contact
-                      </Text>
-                      {item.phone && (
-                        <TouchableOpacity
-                          onPress={() => item.phone && handlePhonePress(item.phone)}
-                        >
-                          <Text style={styles.websiteText}>{item.phone}</Text>
-                        </TouchableOpacity>
-                      )}
-                      {item.website && (
-                        <TouchableOpacity
-                          onPress={() => item.website && handleWebsitePress(item.website)}
-                        >
-                          <Text style={styles.websiteText}>Visit Website</Text>
-                        </TouchableOpacity>
-                      )}
-                      {item.facebook && (
-                        <TouchableOpacity
-                          onPress={() => item.facebook && handleWebsitePress(item.facebook)}
-                        >
-                          <Text style={styles.websiteText}>Facebook</Text>
-                        </TouchableOpacity>
-                      )}
-                      {item.email && (
-                        <TouchableOpacity
-                          onPress={() => Linking.openURL(`mailto:${item.email}`)}
-                        >
-                          <Text style={styles.websiteText}>{item.email}</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-                </View>
-              </View>
+            renderItem={({ item }) => (
+              <RestaurantItem item={item} onView={onView} onGoHere={onGoHere} />
             )}
-            keyExtractor={(item: { name: any; }, index: any) => `${item.name}-${index}`}
+            keyExtractor={(item, index) => `${item.name}-${index}`}
+            initialNumToRender={5}
+            windowSize={5}
+            removeClippedSubviews={true}
             contentContainerStyle={{ paddingBottom: 20 }}
             style={styles.scrollArea}
             ListEmptyComponent={
               <Text style={styles.noResultsText}>No dining spots found.</Text>
             }
           />
-
-          {/* Close Button */}
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>Close</Text>
