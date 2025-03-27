@@ -237,7 +237,7 @@ const RouteScreen: React.FC = () => {
         );
         setMapResetKey(Date.now());
       } catch (error) {
-        console.error("Error parsing attraction parameter:", error);
+        // console.error("Error parsing attraction parameter:", error);
       }
     }
   }, [attraction]);
@@ -248,7 +248,7 @@ const RouteScreen: React.FC = () => {
         const { status } = await Location.requestForegroundPermissionsAsync();
         const servicesEnabled = await Location.hasServicesEnabledAsync();
         if (status !== "granted" || !servicesEnabled) {
-          console.log("Location permission not granted or services disabled.");
+          // console.log("Location permission not granted or services disabled.");
           setIsOriginLoading(false);
           return;
         }
@@ -274,7 +274,7 @@ const RouteScreen: React.FC = () => {
             const data = await response.json();
             return data.address;
           } catch (error) {
-            console.error("Reverse geocoding error:", error);
+            // console.error("Reverse geocoding error:", error);
             return null;
           }
         };
@@ -294,7 +294,7 @@ const RouteScreen: React.FC = () => {
           );
         }
       } catch (error) {
-        console.error("Geolocation error:", error);
+        // console.error("Geolocation error:", error);
         if (!origin) setOrigin("Current Location");
       } finally {
         setIsOriginLoading(false); // Stop loading indicator
@@ -337,7 +337,7 @@ const RouteScreen: React.FC = () => {
       }));
       setNearbyRestaurants(mapped);
     } catch (error) {
-      console.error("Error fetching restaurants:", error);
+      // console.error("Error fetching restaurants:", error);
       setNearbyRestaurants([]);
     }
   };
@@ -370,7 +370,7 @@ const RouteScreen: React.FC = () => {
       attractionCache.current[cacheKey] = mapped;
       setNearbySpots(mapped);
     } catch (error) {
-      console.error('Error fetching attractions:', error);
+      // console.error('Error fetching attractions:', error);
       setNearbySpots([]);
     }
   }, []);
@@ -408,7 +408,7 @@ const RouteScreen: React.FC = () => {
       locationCacheRef.current[address] = results;
       return results;
     } catch (err) {
-      console.error('Geocoding error:', err);
+      // console.error('Geocoding error:', err);
       await new Promise((resolve) => setTimeout(resolve, 1000));
       return [];
     }
@@ -432,7 +432,7 @@ const RouteScreen: React.FC = () => {
         const suggestions = await geocodeAddress(text);
         setOriginSuggestions(suggestions);
       } catch (error) {
-        console.error('Search failed:', error);
+        // console.error('Search failed:', error);
         setOriginSuggestions([]);
       } finally {
         setIsOriginLoading(false);
@@ -453,7 +453,7 @@ const RouteScreen: React.FC = () => {
         const suggestions = await geocodeAddress(text);
         setDestinationSuggestions(suggestions);
       } catch (error) {
-        console.error('Search failed:', error);
+        // console.error('Search failed:', error);
         setDestinationSuggestions([]);
       } finally {
         setIsDestinationLoading(false);
@@ -577,7 +577,7 @@ const RouteScreen: React.FC = () => {
         setRoadPath([]);
       }
     } catch (error) {
-      console.error("Error fetching route details:", error);
+      // console.error("Error fetching route details:", error);
     } finally {
       setIsRouteLoading(false);
     }
@@ -1084,14 +1084,15 @@ const RouteScreen: React.FC = () => {
   // Render different layouts based on route length while updating MapComponent with new restaurant props
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={styles.mapWrapper}>
+      {/* Top half: Map Component */}
+      <View style={{ flex: 1 }}>
         <MapComponent
-          key={`map-${mapResetKey}`} // Simplified key to reduce re-mounts
+          key={`map-${mapResetKey}`}
           initialRegion={region}
           route={route}
           roadPath={roadPath}
           mapResetKey={mapResetKey}
-          style={styles.map}
+          style={styles.map}  // Ensure this style does not use absolute fill
           polylineColor={polylineColor}
           webviewRef={webviewRef}
           nearbySpots={activeTab === 'Attractions' ? nearbySpots : []}
@@ -1110,22 +1111,22 @@ const RouteScreen: React.FC = () => {
             setModalVisible(true);
           }}
         />
-        {isRouteLoading && <ActivityIndicator style={styles.loadingIndicator} size='large' color='#6366F1' />}
+        {isRouteLoading && (
+          <ActivityIndicator
+            style={styles.loadingIndicator}
+            size="large"
+            color="#6366F1"
+          />
+        )}
       </View>
-      <BottomSheet
-        ref={bottomSheetRef}
-        snapPoints={snapPoints}
-        index={1}
-        enableContentPanningGesture={true}
-        enableHandlePanningGesture={true}
-        backgroundComponent={({ style }) => <View style={[style, { backgroundColor: '#FFFFFF', borderRadius: 20 }]} />}
-        handleComponent={CustomHandle}
-      >
-        <BottomSheetScrollView
+
+      {/* Bottom half: Details & Modal Components */}
+      <View style={[styles.normalViewContainer, { flex: 1 }]}>
+        <ScrollView
           nestedScrollEnabled
           contentContainerStyle={{ flexGrow: 1, paddingVertical: 10 }}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps='always'
+          keyboardShouldPersistTaps="always"
         >
           {detailsContent}
           <ModalComponent
@@ -1142,7 +1143,9 @@ const RouteScreen: React.FC = () => {
               setDestination(restaurant.name);
               const newDestination = { latitude: restaurant.latitude, longitude: restaurant.longitude };
               setRoadPath([]);
-              const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
+              const currentOrigin = route.length > 0
+                ? route[0]
+                : { latitude: region.latitude, longitude: region.longitude };
               setRoute([currentOrigin, newDestination]);
               fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
               setRestaurantModalVisible(false);
@@ -1161,7 +1164,9 @@ const RouteScreen: React.FC = () => {
               setDestination(selectedSpot.name);
               const newDestination = { latitude: selectedSpot.latitude, longitude: selectedSpot.longitude };
               setRoadPath([]);
-              const currentOrigin = route.length > 0 ? route[0] : { latitude: region.latitude, longitude: region.longitude };
+              const currentOrigin = route.length > 0
+                ? route[0]
+                : { latitude: region.latitude, longitude: region.longitude };
               setRoute([currentOrigin, newDestination]);
               fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
               setModalVisible(false);
@@ -1172,10 +1177,12 @@ const RouteScreen: React.FC = () => {
               setModalVisible(false);
             }}
           />
-        </BottomSheetScrollView>
-      </BottomSheet>
+        </ScrollView>
+      </View>
     </GestureHandlerRootView>
   );
+
+
 };
 
 export default RouteScreen;
@@ -1191,6 +1198,14 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  normalViewContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 10,
+  },
+
   userInput: {
     borderWidth: 1,
     borderColor: "#6366F1", // Purple border

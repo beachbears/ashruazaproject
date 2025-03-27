@@ -135,7 +135,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       if (!response.ok) throw new Error("Failed to fetch route data");
 
       const data = await response.json();
-      console.log("Fetched route data:", data);
+      // console.log("Fetched route data:", data);
 
       if (data.nearby_spots?.length) {
         const formattedData: RouteData[] = data.nearby_spots.map(

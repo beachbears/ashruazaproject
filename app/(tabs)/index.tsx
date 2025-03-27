@@ -110,7 +110,7 @@ const Home = () => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.log("Location permission not granted");
+        // console.log("Location permission not granted");
         return;
       }
       const locationObj = await Location.getCurrentPositionAsync({});
@@ -170,7 +170,7 @@ const Home = () => {
       }
       return [];
     } catch (error) {
-      console.error('Geocoding error:', error);
+      // console.error('Geocoding error:', error);
       return [];
     }
   };
@@ -190,7 +190,7 @@ const Home = () => {
   const handleSuggestionSelect = (suggestion: Suggestion) => {
     setLocation(suggestion.name);
     setDestinationSuggestions([]);
-    console.log("Selected suggestion:", suggestion);
+    // console.log("Selected suggestion:", suggestion);
   };
 
   // Kapag pinindot ang search button sa search bar ("Let's go")

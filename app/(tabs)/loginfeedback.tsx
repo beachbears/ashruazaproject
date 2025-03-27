@@ -41,8 +41,8 @@ const Feedback: React.FC = () => {
   const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
-   const { authToken } = useContext(AuthContext) as AuthContextType;
-   
+  const { authToken } = useContext(AuthContext) as AuthContextType;
+
 
   // Load feedback mula sa AsyncStorage on mount
   useEffect(() => {
@@ -53,7 +53,7 @@ const Feedback: React.FC = () => {
           setFeedbackData(JSON.parse(storedFeedback));
         }
       } catch (error) {
-        console.error('Error loading feedback:', error);
+        // console.error('Error loading feedback:', error);
       }
     };
     loadFeedback();
@@ -69,7 +69,7 @@ const Feedback: React.FC = () => {
           setFeedbackData(response.data);
         }
       } catch (error) {
-        console.error('Error fetching feedback:', error);
+        // console.error('Error fetching feedback:', error);
       } finally {
         setLoadingFeedback(false);
       }
@@ -83,7 +83,7 @@ const Feedback: React.FC = () => {
       try {
         await AsyncStorage.setItem('feedbackData', JSON.stringify(feedbackData));
       } catch (error) {
-        console.error('Error storing feedback:', error);
+        // console.error('Error storing feedback:', error);
       }
     };
     storeFeedback();
@@ -93,7 +93,7 @@ const Feedback: React.FC = () => {
   const getToken = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      console.log('getToken - Retrieved token:', token);
+      // console.log('getToken - Retrieved token:', token);
       if (
         token &&
         token.trim() !== '' &&
@@ -105,7 +105,7 @@ const Feedback: React.FC = () => {
       }
       return null;
     } catch (error) {
-      console.error('Error retrieving token:', error);
+      // console.error('Error retrieving token:', error);
       return null;
     }
   };
@@ -113,9 +113,9 @@ const Feedback: React.FC = () => {
   // Function para mag-post ng feedback, sine-check muna ang token.
   const postFeedback = async (feedbackPayload: { content: string; rating: number }) => {
     const token = await getToken();
-    console.log('postFeedback - token:', token);
+    // console.log('postFeedback - token:', token);
     if (!token) {
-      console.error('Walang valid token. Hindi naka-login.');
+      // console.error('Walang valid token. Hindi naka-login.');
       return;
     }
     try {
@@ -127,7 +127,7 @@ const Feedback: React.FC = () => {
       );
       return response.data;
     } catch (error) {
-      console.error('Error posting feedback:', error);
+      // console.error('Error posting feedback:', error);
     }
   };
 
@@ -135,7 +135,7 @@ const Feedback: React.FC = () => {
   const handleSubmit = async (text: string, rating: number) => {
     if (!text.trim()) return;
     const token = await getToken();
-    console.log('handleSubmit - token:', token);
+    // console.log('handleSubmit - token:', token);
     if (!token) {
       router.push('/login');
       return;
@@ -166,14 +166,14 @@ const Feedback: React.FC = () => {
       const lastInitials = lastname ? lastname.substring(0, 1).toUpperCase() : '';
       return firstInitial + lastInitials;
     };
-    
+
     return (
       <View style={styles.feedbackcontainer}>
         <View style={styles.suggestordetails}>
           <View style={styles.profile}>
-          <Text style={styles.initial}>
-            {getInitials(feedback.user?.firstname, feedback.user?.lastname)}
-          </Text>
+            <Text style={styles.initial}>
+              {getInitials(feedback.user?.firstname, feedback.user?.lastname)}
+            </Text>
           </View>
           <View style={styles.suggestor}>
             <Text style={styles.suggestorname}>{displayName}</Text>
@@ -201,13 +201,13 @@ const Feedback: React.FC = () => {
     );
   };
 
- 
+
 
   return (
     <ScrollView style={styles.maincontainer}>
       <Text style={styles.headerText}>Feedback</Text>
       <Text style={styles.descriptionText}>
-      We value your input on Kommutsera. Your feedback will help us to improve. Please share your thoughts and suggestions to make  Kommutsera even better!
+        We value your input on Kommutsera. Your feedback will help us to improve. Please share your thoughts and suggestions to make  Kommutsera even better!
       </Text>
       <View style={styles.ButtonContainer}>
         <TouchableOpacity style={styles.Button} onPress={handleFeedbackPress}>

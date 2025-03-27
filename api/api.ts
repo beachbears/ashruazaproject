@@ -5,30 +5,30 @@ import { AxiosError } from "axios"; // ✅ Import AxiosError for proper error ty
 
 // Helper function to handle API errors
 const handleApiError = (error: unknown) => {
-    const axiosError = error as AxiosError<{ message?: string }>; // ✅ Explicitly type response data
-    
-    if (axiosError.response) {
-      console.error("API Error:", axiosError.response.data?.message || axiosError.message);
-      throw new Error(axiosError.response.data?.message || "An error occurred");
-    } else {
-      console.error("Unexpected Error:", error);
-      throw new Error("An unexpected error occurred");
-    }
-  };
-  
+  const axiosError = error as AxiosError<{ message?: string }>; // ✅ Explicitly type response data
+
+  if (axiosError.response) {
+    // console.error("API Error:", axiosError.response.data?.message || axiosError.message);
+    throw new Error(axiosError.response.data?.message || "An error occurred");
+  } else {
+    // console.error("Unexpected Error:", error);
+    throw new Error("An unexpected error occurred");
+  }
+};
+
 
 // 🔹 LOGIN (POST request)
 export const loginUser = async (email: string, password: string) => {
   try {
     const response = await axiosInstance.post("/login", { email, password }); // 🔴 CHANGE ENDPOINT IF NEEDED
     const token = response.data.token;
-    
+
     if (token) {
       await AsyncStorage.setItem("token", token); // 🔴 Ensure the backend returns a token
     } else {
       throw new Error("No token received from server");
     }
-    
+
     return response.data;
   } catch (error) {
     handleApiError(error);

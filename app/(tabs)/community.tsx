@@ -122,7 +122,7 @@ export default function CommunityPage() {
       }));
       setPosts(transformedPosts);
     } catch (error) {
-      console.error('Fetch error:', error);
+      // console.error('Fetch error:', error);
     }
   };
 
@@ -158,7 +158,7 @@ export default function CommunityPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Server Error Response:", errorData);
+        // console.error("Server Error Response:", errorData);
         throw new Error(errorData.error || 'Failed to create post');
       }
 
@@ -166,7 +166,7 @@ export default function CommunityPage() {
       fetchOldPosts();
       setModalVisible(false);
     } catch (error) {
-      console.error('Post submission error:', error);
+      // console.error('Post submission error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -223,7 +223,7 @@ export default function CommunityPage() {
 
       return response.ok;
     } catch (error) {
-      console.error('Vote error:', error);
+      // console.error('Vote error:', error);
       return false;
     }
   };
@@ -235,7 +235,7 @@ export default function CommunityPage() {
     }
 
     const API_URL = "https://comgu20-production.up.railway.app/api/reports";
-    console.log("Submitting report to:", API_URL); // ✅ Debugging API URL
+    // console.log("Submitting report to:", API_URL); // ✅ Debugging API URL
 
     try {
       const response = await fetch(API_URL, {
@@ -252,24 +252,24 @@ export default function CommunityPage() {
         }),
       });
 
-      console.log("Raw response status:", response.status); // ✅ Check response status
+      // console.log("Raw response status:", response.status); // ✅ Check response status
 
       if (!response.ok) {
         const errorText = await response.text(); // Read error message
-        console.error("API Error Response:", errorText);
+        // console.error("API Error Response:", errorText);
         throw new Error(`API Error: ${response.status} - ${errorText}`);
       }
 
       const text = await response.text();
-      console.log("Raw response:", text); // ✅ Debugging server response
+      // console.log("Raw response:", text); // ✅ Debugging server response
 
       const data = JSON.parse(text); // Convert response to JSON
-      console.log("Report submitted:", data);
+      // console.log("Report submitted:", data);
 
       Alert.alert("Success", data.message);
       closeReportModal();
     } catch (error) {
-      console.error("Error submitting report:", error);
+      // console.error("Error submitting report:", error);
       Alert.alert("Error", "Failed to submit report. Please try again.");
     }
   };
