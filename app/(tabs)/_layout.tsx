@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { LogBox, StyleSheet, View, Text, TouchableOpacity, Image, Linking, AppState } from 'react-native';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
+import { LogBox, StyleSheet, View, Text, TouchableOpacity, Image, Linking } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -7,13 +7,9 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Entypo from '@expo/vector-icons/Entypo';
 import { APP_NAME } from '@/constants';
-import { AuthContext } from '../../contexts/AuthContext'; // adjust path as necessary
+import { AuthContext } from '../../contexts/AuthContext';
 
-// Ignore specific warnings
-LogBox.ignoreLogs([
-  'Warning: shadow',
-  'VirtualizedLists',
-]);
+LogBox.ignoreLogs(['Warning: shadow', 'VirtualizedLists']);
 
 export default function TabLayout() {
   const { isLoggedIn, userName, logout } = useContext(AuthContext);
@@ -22,65 +18,51 @@ export default function TabLayout() {
   const router = useRouter();
 
   const userInitial = userName ? userName.charAt(0).toUpperCase() : '';
+  // // Function to check location permissions
+  // const checkLocationPermission = useCallback(async () => {
+  //   const { status } = await Location.requestForegroundPermissionsAsync();
+  //   const servicesEnabled = await Location.hasServicesEnabledAsync();
+  //   setLocationEnabled(status === 'granted' && servicesEnabled);
+  // }, []);
 
-  // Function to check location permissions and services
-  const checkLocationPermission = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    const servicesEnabled = await Location.hasServicesEnabledAsync();
-    if (status !== 'granted' || !servicesEnabled) {
-      setLocationEnabled(false);
-    } else {
-      setLocationEnabled(true);
-    }
-  };
+  // // Run permission check once when the app starts
+  // useEffect(() => {
+  //   checkLocationPermission();
+  // }, [checkLocationPermission]);
 
-  // Initial check on mount
-  useEffect(() => {
-    checkLocationPermission();
-  }, []);
+  // // Show loading screen while checking permissions
+  // if (locationEnabled === null) {
+  //   return (
+  //     <View style={styles.centered}>
+  //       <Text style={styles.text}>Checking location permissions...</Text>
+  //     </View>
+  //   );
+  // }
 
-  // Re-check permissions when the app comes into focus
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active') {
-        checkLocationPermission();
-      }
-    });
-
-    return () => subscription.remove();
-  }, []);
-
-  if (locationEnabled === null) {
-    return (
-      <View style={styles.centered}>
-        <Text>Checking location permission...</Text>
-      </View>
-    );
-  }
-
-  if (!locationEnabled) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>
-          Location services are disabled or permission was not granted.
-        </Text>
-        <Text style={styles.errorText}>
-          Please enable your device’s location services to continue.
-        </Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => {
-            Linking.openSettings().catch(() => {
-              alert('Unable to open settings. Please enable location services manually.');
-            });
-          }}
-        >
-          <Text style={styles.buttonText}>Enable Location</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
+  // // Show permission prompt if location is not enabled
+  // if (!locationEnabled) {
+  //   return (
+  //     <View style={styles.centered}>
+  //       <Text style={styles.errorText}>
+  //         This app requires location permissions to function.
+  //       </Text>
+  //       <Text style={styles.text}>
+  //         Please enable location services in your device settings to continue.
+  //       </Text>
+  //       <TouchableOpacity
+  //         style={styles.button}
+  //         onPress={() => {
+  //           Linking.openSettings().catch(() => {
+  //             alert('Unable to open settings. Please enable location manually.');
+  //           });
+  //         }}
+  //       >
+  //         <Text style={styles.buttonText}>Go to Settings</Text>
+  //       </TouchableOpacity>
+  //     </View>
+  //   );
+  // }
+  // Render tabs directly unless location check is explicitly needed
   return (
     <Tabs
       screenOptions={{
@@ -89,19 +71,22 @@ export default function TabLayout() {
         header: () => (
           <View style={styles.header}>
             <View style={styles.headerContainer}>
-              <Image
-                source={require('../../assets/images/logo.png')}
-                style={styles.logo}
-              />
+              <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
               <Text style={styles.headerTitle}>{APP_NAME}</Text>
             </View>
             <View style={styles.authContainer}>
               {isLoggedIn ? (
                 <View style={styles.dropdownContainer}>
-                  <View style={{
-                    width: 41, height: 41, backgroundColor: '#EEF2FF', justifyContent: 'center',
-                    alignItems: 'center', borderRadius: 15,
-                  }}>
+                  <View
+                    style={{
+                      width: 41,
+                      height: 41,
+                      backgroundColor: '#EEF2FF',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderRadius: 15,
+                    }}
+                  >
                     <TouchableOpacity
                       onPress={() => setShowDropdown(!showDropdown)}
                       style={styles.account}
@@ -271,6 +256,11 @@ const styles = StyleSheet.create({
   },
   authContainer: {
     position: 'relative',
+  },
+  text: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginVertical: 10,
   },
   authButtonsContainer: {
     flexDirection: 'row',
