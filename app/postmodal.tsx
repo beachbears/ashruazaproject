@@ -286,11 +286,13 @@ const styles = StyleSheet.create({
     height: 40, // Fixed height for "From" and "To"
   },
   clearButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 10,
-    top: '50%',
+    top: "50%",
+    borderRadius: 8,
+    borderColor: "#6366F1", // Purple border
+    backgroundColor: '#fff',
     transform: [{ translateY: -10 }],
-    zIndex: 10,
   },
   suggestionList: {
     position: 'absolute',
