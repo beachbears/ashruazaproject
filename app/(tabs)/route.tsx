@@ -756,6 +756,18 @@ const RouteScreen: React.FC = () => {
     );
   }, [routeDetails.route, expandedSegments, handleToggleSegment, handleViewSegment]);
 
+  const metricsData = routeMetrics
+    ? [
+      { icon: 'map-marker-alt', text: `Distance: ${routeMetrics.distance} km` },
+      { icon: 'money-bill-wave', text: `Fare: ${routeMetrics.fare}` },
+      { icon: 'clock', text: `Time: ${routeMetrics.carTime}` },
+    ]
+    : [
+      { icon: 'map-marker-alt', text: 'Distance: N/A' },
+      { icon: 'money-bill-wave', text: 'Fare: N/A' },
+      { icon: 'clock', text: 'Time: N/A' },
+    ];
+
   const renderRouteTab = useCallback(() => (
     <View style={styles.tabContent}>
       <Text style={styles.sectionHeader}>Route Details</Text>
@@ -776,31 +788,33 @@ const RouteScreen: React.FC = () => {
         </TouchableOpacity>
         {showAlgorithmDropdown && (
           <View style={styles.algorithmDropdownOverlay}>
-            <ScrollView style={{ maxHeight: 160 }}>
-              {algorithmOptions.map((option, index) => (
+            <FlatList
+              data={algorithmOptions}
+              keyExtractor={(item, index) => `${item.value}-${index}`}
+              renderItem={({ item }) => (
                 <TouchableOpacity
-                  key={index}
                   style={[
                     styles.algorithmDropdownItem,
-                    selectedAlgorithm === option.value && styles.algorithmDropdownItemSelected,
+                    selectedAlgorithm === item.value && styles.algorithmDropdownItemSelected,
                   ]}
                   onPress={() => {
-                    setSelectedAlgorithm(option.value);
+                    setSelectedAlgorithm(item.value);
                     setShowAlgorithmDropdown(false);
-                    if (route.length >= 2) fetchRouteDetails(route[1].latitude, route[1].longitude, option.value);
+                    if (route.length >= 2) fetchRouteDetails(route[1].latitude, route[1].longitude, item.value);
                   }}
                 >
                   <Text
                     style={[
                       styles.algorithmDropdownItemText,
-                      selectedAlgorithm === option.value && styles.algorithmDropdownItemTextSelected,
+                      selectedAlgorithm === item.value && styles.algorithmDropdownItemTextSelected,
                     ]}
                   >
-                    {option.label}
+                    {item.label}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              )}
+              style={{ maxHeight: 160 }}
+            />
           </View>
         )}
       </View>
@@ -846,20 +860,18 @@ const RouteScreen: React.FC = () => {
       {route.length >= 2 && routeMetrics && !isRouteLoading && (
         <View style={styles.routeMetricsContainer}>
           <Text style={styles.subHeader}>Route Metrics</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.metricCard}>
-              <FontAwesome5 name='map-marker-alt' size={16} color='#44457D' />
-              <Text style={styles.metricText}>Distance: {routeMetrics.distance} km</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <FontAwesome5 name='money-bill-wave' size={16} color='#44457D' />
-              <Text style={styles.metricText}>Fare: {routeMetrics.fare}</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <FontAwesome5 name='clock' size={16} color='#44457D' />
-              <Text style={styles.metricText}>Time: {routeMetrics.carTime}</Text>
-            </View>
-          </ScrollView>
+          <FlatList
+            horizontal
+            data={metricsData}
+            keyExtractor={(item, index) => `metric-${index}`}
+            renderItem={({ item }) => (
+              <View style={styles.metricCard}>
+                <FontAwesome5 name={item.icon} size={16} color='#44457D' />
+                <Text style={styles.metricText}>{item.text}</Text>
+              </View>
+            )}
+            showsHorizontalScrollIndicator={false}
+          />
         </View>
       )}
       {route.length >= 2 && !isRouteLoading ? (
@@ -953,25 +965,28 @@ const RouteScreen: React.FC = () => {
       {selectedLocationCoords ? (
         <View style={styles.restaurantsPreview}>
           {nearbyRestaurants.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.restaurantsScroll}>
-              {nearbyRestaurants.slice(0, 5).map((restaurant, index) => (
+            <FlatList
+              horizontal
+              data={nearbyRestaurants.slice(0, 5)}
+              keyExtractor={(item, index) => `${item.name}-${index}`}
+              renderItem={({ item }) => (
                 <TouchableOpacity
-                  key={index}
                   style={styles.restaurantCard}
                   onPress={() => setRestaurantModalVisible(true)}
                 >
                   <Text style={styles.restaurantName} numberOfLines={1}>
-                    {restaurant.name}
+                    {item.name}
                   </Text>
                   <Text style={styles.restaurantCuisine} numberOfLines={1}>
-                    {formatCuisine(restaurant.cuisine)}
+                    {formatCuisine(item.cuisine)}
                   </Text>
                   <Text style={styles.restaurantDistance}>
-                    {restaurant.distance?.toFixed(2)} km
+                    {item.distance?.toFixed(2)} km
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              )}
+              showsHorizontalScrollIndicator={false}
+            />
           ) : (
             <Text style={styles.noResultsText}>No dining spots found near {selectedLocationType}</Text>
           )}
