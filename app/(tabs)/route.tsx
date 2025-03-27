@@ -4,7 +4,7 @@ import {
   View,
   Text,
   StyleSheet,
-
+  ScrollView,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
@@ -25,7 +25,7 @@ import { Ionicons } from "@expo/vector-icons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import ReviewModal from "../reviewmodal";
 import ModalComponent from "../restaurantmodal";
-import { GestureHandlerRootView, ScrollView, } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, } from 'react-native-gesture-handler';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Region, LatLng, MapComponentProps, Route, SegmentPath, RouteDetails, RouteMetrics, NearbySpot, LocationSuggestion, ApiResponse } from "../../src/types";
@@ -1083,8 +1083,8 @@ const RouteScreen: React.FC = () => {
   );
   // Render different layouts based on route length while updating MapComponent with new restaurant props
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* Top half: Map Component */}
+    <View style={{ flex: 1 }}>
+      {/* Top Half: Map */}
       <View style={{ flex: 1 }}>
         <MapComponent
           key={`map-${mapResetKey}`}
@@ -1092,7 +1092,7 @@ const RouteScreen: React.FC = () => {
           route={route}
           roadPath={roadPath}
           mapResetKey={mapResetKey}
-          style={styles.map}  // Ensure this style does not use absolute fill
+          style={styles.map} // Ensure this style doesn’t use absolute fill
           polylineColor={polylineColor}
           webviewRef={webviewRef}
           nearbySpots={activeTab === 'Attractions' ? nearbySpots : []}
@@ -1120,7 +1120,7 @@ const RouteScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Bottom half: Details & Modal Components */}
+      {/* Bottom Half: Details and Modals */}
       <View style={[styles.normalViewContainer, { flex: 1 }]}>
         <ScrollView
           nestedScrollEnabled
@@ -1141,13 +1141,21 @@ const RouteScreen: React.FC = () => {
             }}
             onGoHere={(restaurant) => {
               setDestination(restaurant.name);
-              const newDestination = { latitude: restaurant.latitude, longitude: restaurant.longitude };
+              const newDestination = {
+                latitude: restaurant.latitude,
+                longitude: restaurant.longitude,
+              };
               setRoadPath([]);
-              const currentOrigin = route.length > 0
-                ? route[0]
-                : { latitude: region.latitude, longitude: region.longitude };
+              const currentOrigin =
+                route.length > 0
+                  ? route[0]
+                  : { latitude: region.latitude, longitude: region.longitude };
               setRoute([currentOrigin, newDestination]);
-              fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
+              fetchRouteDetails(
+                newDestination.latitude,
+                newDestination.longitude,
+                selectedAlgorithm
+              );
               setRestaurantModalVisible(false);
             }}
           />
@@ -1162,24 +1170,35 @@ const RouteScreen: React.FC = () => {
             onSpotSelect={(selectedSpot) => {
               setNearbySpots([]);
               setDestination(selectedSpot.name);
-              const newDestination = { latitude: selectedSpot.latitude, longitude: selectedSpot.longitude };
+              const newDestination = {
+                latitude: selectedSpot.latitude,
+                longitude: selectedSpot.longitude,
+              };
               setRoadPath([]);
-              const currentOrigin = route.length > 0
-                ? route[0]
-                : { latitude: region.latitude, longitude: region.longitude };
+              const currentOrigin =
+                route.length > 0
+                  ? route[0]
+                  : { latitude: region.latitude, longitude: region.longitude };
               setRoute([currentOrigin, newDestination]);
-              fetchRouteDetails(newDestination.latitude, newDestination.longitude, selectedAlgorithm);
+              fetchRouteDetails(
+                newDestination.latitude,
+                newDestination.longitude,
+                selectedAlgorithm
+              );
               setModalVisible(false);
               setSelectedSpot(newDestination);
             }}
             onSpotView={(selectedSpot) => {
-              setSelectedSpot({ latitude: selectedSpot.latitude, longitude: selectedSpot.longitude });
+              setSelectedSpot({
+                latitude: selectedSpot.latitude,
+                longitude: selectedSpot.longitude,
+              });
               setModalVisible(false);
             }}
           />
         </ScrollView>
       </View>
-    </GestureHandlerRootView>
+    </View>
   );
 
 
