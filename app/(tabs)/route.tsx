@@ -848,7 +848,7 @@ const RouteScreen: React.FC = () => {
       </View>
       <View style={styles.locationsContainer}>
         <Text style={styles.label}>From</Text>
-        <View style={styles.searchContainer}>
+        <View style={styles.inputContainer}>
           <TextInput
             style={styles.userInput}
             placeholder='Type Here...'
@@ -866,7 +866,7 @@ const RouteScreen: React.FC = () => {
           <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
         </View>
         <Text style={styles.label}>To</Text>
-        <View style={styles.searchContainer}>
+        <View style={styles.inputContainer}>
           <TextInput
             style={styles.userInput}
             placeholder='Type Here...'
@@ -1316,10 +1316,14 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
   },
   userInput: {
+    backgroundColor: '#F5F7FF', // Light purple background from PostModal
     borderWidth: 1,
-    borderColor: "#6366F1", // Purple border
+    borderColor: '#6366F1', // Purple border from PostModal
     borderRadius: 8,
     padding: 8,
+    fontSize: 14,
+    color: '#374151',
+    paddingRight: 40, // Space for clear button
     height: 40, // Fixed height to prevent expansion
   },
   clearButton: {
@@ -1484,7 +1488,22 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: 4,
   },
-  algorithmDropdownButton: { flexDirection: "row", alignItems: "center", padding: 8, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 8 },
+  algorithmDropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between', // Spread text and icon evenly
+    backgroundColor: '#F5F7FF', // Light purple background like PostModal
+    borderWidth: 1,
+    borderColor: '#6366F1', // Purple border
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12, // Slightly more padding for comfort
+    shadowColor: '#000', // Subtle shadow for elevation
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2, // Android shadow
+  },
   locationsContainer: { marginBottom: 8 },
   label: { fontSize: 14, marginBottom: 4 },
   searchContainer: { marginBottom: 8 },
@@ -1544,17 +1563,21 @@ const styles = StyleSheet.create({
   },
   text: { color: "#44457D", fontWeight: "500", fontSize: 16 },
   container: { padding: 8, marginBottom: 20 },
-  inputContainer: { width: "100%" },
+  inputContainer: { // Renamed from searchContainer for consistency with PostModal
+    position: 'relative',
+    marginBottom: 8,
+  },
   suggestionList: {
-    position: "absolute",
-    top: 45,
+    position: 'absolute',
+    top: 40, // Below the input field, adjusted from 45 to match PostModal
     left: 0,
     right: 0,
-    backgroundColor: "#FFFFFF",
-    zIndex: 10,
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
-    elevation: 4,
-    maxHeight: 250
+    borderWidth: 1,
+    borderColor: '#ddd',
+    maxHeight: 250,
+    zIndex: 1000, // Higher z-index to ensure visibility
   },
   suggestionItem: {
     padding: 12, // Increased padding for better touch target.
@@ -1563,6 +1586,7 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     color: "#444",
+    fontSize: 14,
   },
   topInfoRow: {
     flexDirection: "row",
@@ -1656,41 +1680,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
   },
   algorithmDropdownButtonText: {
-    color: "#6366F1",
-    fontSize: 12,
-    fontWeight: "bold",
-    flexShrink: 1,
+    fontSize: 14, // Match PostModal input text size
+    color: '#374151', // Match PostModal text color
+    fontWeight: '500', // Slightly bolder for emphasis
+    flex: 1, // Allow text to take available space
+    marginRight: 8, // Space between text and chevron
   },
   algorithmDropdownOverlay: {
-    position: "absolute",
-    top: 60,
+    position: 'absolute',
+    top: 60, // Adjusted to sit nicely below the button
     left: 0,
     right: 0,
-    backgroundColor: "#fff", // Already set, ensuring it’s opaque
-    borderColor: "#ccc",
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderRadius: 4,
+    borderColor: '#6366F1', // Purple border to match
+    borderRadius: 8,
     maxHeight: 160,
-    paddingVertical: 5,
-    zIndex: 1000, // Added to ensure it’s on top
-    ...Platform.select({ android: { elevation: 10000 } }),
+    paddingVertical: 4, // Reduced padding for tighter layout
+    zIndex: 1000,
   },
   algorithmDropdownItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderBottomColor: "#ccc",
-    borderBottomWidth: 1,
+    paddingVertical: 10, // Increased for better touch area
+    paddingHorizontal: 12,
+    backgroundColor: '#F5F7FF', // Light purple background
   },
   algorithmDropdownItemSelected: {
-    backgroundColor: "#6366F1",
-    borderBottomColor: "#6366F1",
+    backgroundColor: '#6366F1', // Purple when selected
   },
   algorithmDropdownItemText: {
-    fontSize: 12,
-    color: "#374151",
-    flexWrap: "wrap",
+    fontSize: 14, // Match PostModal text size
+    color: '#374151', // Default text color
+    fontWeight: '500', // Slightly bolder for clarity
   },
-  algorithmDropdownItemTextSelected: { color: "#fff" },
+  algorithmDropdownItemTextSelected: {
+    color: '#FFFFFF', // White text when selected
+    fontWeight: '600', // Bolder for emphasis
+  },
   locationTypeContainer: {
     marginVertical: 12,
   },
