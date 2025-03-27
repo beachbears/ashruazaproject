@@ -1474,7 +1474,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginVertical: 8,
   },
-  tabContent: { padding: 16 },
+  tabContent: { paddingTop: 0, paddingLeft: 16, paddingRight: 16 },
   sectionHeader: {
     fontSize: 16,
     fontWeight: "600",
@@ -1561,7 +1561,7 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  text: { color: "#44457D", fontWeight: "500", fontSize: 16 },
+  text: { color: "#44457D", fontWeight: "500", fontSize: 16, marginBottom: 16 },
   container: { padding: 8, marginBottom: 20 },
   inputContainer: { // Renamed from searchContainer for consistency with PostModal
     position: 'relative',
