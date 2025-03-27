@@ -942,7 +942,7 @@ const RouteScreen: React.FC = () => {
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Dining Spots</Text>
       <View style={styles.spotLimitContainer}>
-        <Text style={styles.spotLimitLabel}>Show:</Text>
+        <Text style={styles.spotLimitHint}>Limit results to:</Text>
         {[10, 20, 50].map((limit) => (
           <TouchableOpacity
             key={limit}
@@ -995,10 +995,11 @@ const RouteScreen: React.FC = () => {
       )}
       {selectedLocationCoords ? (
         <View style={styles.restaurantsPreview}>
+          <Text style={styles.subHeader}>Top Nearby Dining Spots</Text>
           {previewRestaurants.length > 0 ? (
             <FlatList
               horizontal
-              data={previewRestaurants} // Use the memoized array here
+              data={previewRestaurants}
               keyExtractor={(item, index) => `${item.name}-${index}`}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -1036,7 +1037,7 @@ const RouteScreen: React.FC = () => {
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Attractions</Text>
       <View style={styles.spotLimitContainer}>
-        <Text style={styles.spotLimitLabel}>Show:</Text>
+        <Text style={styles.spotLimitHint}>Limit results to:</Text>
         {[10, 20, 50].map((limit) => (
           <TouchableOpacity
             key={limit}
@@ -1092,6 +1093,7 @@ const RouteScreen: React.FC = () => {
       {selectedLocationCoords ? (
         nearbySpots.length > 0 ? (
           <View style={styles.attractionsPreview}>
+            <Text style={styles.subHeader}>Top Nearby Attractions</Text>
             <FlatList
               horizontal
               data={nearbySpots.slice(0, 5)}
@@ -1820,17 +1822,34 @@ const styles = StyleSheet.create({
   tabText: { color: "#6B7280", fontWeight: "500" },
   activeTabText: { color: "#FFFFFF" },
   spotLimitContainer: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  spotLimitLabel: { fontSize: 12, color: "#6B7280", marginRight: 8 },
-  spotLimitButton: {
-    paddingHorizontal: 12, // Already decent, could increase to 16 if needed
-    paddingVertical: 8,   // Increased from 6 for better touch area
-    borderRadius: 16,
-    backgroundColor: "#F3F4F6",
+  spotLimitLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#44457D', // Match PostModal label color
     marginRight: 8,
   },
-  activeSpotLimitButton: { backgroundColor: "#6366F1" },
-  spotLimitButtonText: { fontSize: 12, color: "#6B7280" },
-  activeSpotLimitButtonText: { color: "#FFFFFF" },
+  spotLimitHint: {
+    fontSize: 12,
+    color: '#6B7280', // Subtle gray for hint text
+    marginRight: 8,
+  },
+  spotLimitButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    marginRight: 8,
+  },
+  activeSpotLimitButton: {
+    backgroundColor: '#6366F1',
+  },
+  spotLimitButtonText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  activeSpotLimitButtonText: {
+    color: '#FFFFFF',
+  },
   attractionCard: { marginBottom: 20, borderWidth: 1, borderColor: "#C7D2FE", borderRadius: 8, padding: 10, backgroundColor: "#FBFCFF" },
   attractionImage: { height: 200, width: "100%", borderRadius: 10, marginBottom: 10 },
   attractionName: { fontSize: 18, fontWeight: "bold", color: "#44457D", marginBottom: 5 },
