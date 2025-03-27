@@ -18,6 +18,17 @@ export default function TabLayout() {
   const router = useRouter();
 
   const userInitial = userName ? userName.charAt(0).toUpperCase() : '';
+
+  // Request location permissions on mount
+  const checkLocationPermission = useCallback(async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    const servicesEnabled = await Location.hasServicesEnabledAsync();
+    setLocationEnabled(status === 'granted' && servicesEnabled);
+  }, []);
+
+  useEffect(() => {
+    checkLocationPermission();
+  }, [checkLocationPermission]);
   // // Function to check location permissions
   // const checkLocationPermission = useCallback(async () => {
   //   const { status } = await Location.requestForegroundPermissionsAsync();
