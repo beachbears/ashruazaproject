@@ -9,6 +9,7 @@ import {
   Platform,
   Image,
   Linking,
+  FlatList,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -190,171 +191,174 @@ const ModalComponent: React.FC<ModalProps> = ({
             </View>
           </View>
 
-          {/* Restaurant List */}
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }} style={styles.scrollArea}>
-            {filteredSpots.length > 0 ? (
-              filteredSpots.map((spot, idx) => (
-                <View key={idx} style={styles.spotCard}>
-                  {/* Header with Image, Name, Cuisine, Distance, and Buttons */}
-                  {onView && (
-                    <View style={styles.restaurantHeader}>
-                      {/* <Image
-                        source={{ uri: spot.image_url || placeholderImage }}
+          {/* Restaurant List with FlatList */}
+          <FlatList
+            data={filteredSpots}
+            renderItem={({ item, index }) => (
+              <View key={index} style={styles.spotCard}>
+                {/* Header with Image, Name, Cuisine, Distance, and Buttons */}
+                {onView && (
+                  <View style={styles.restaurantHeader}>
+                    {/* <Image
+                        source={{ uri: item.image_url || placeholderImage }}
                         style={styles.restaurantImage}
                       /> */}
-                      <View style={styles.restaurantInfo}>
-                        <Text style={styles.restaurantName}>{spot.name}</Text>
-                        <Text style={styles.restaurantCuisine}>
-                          {formatCuisine(spot.cuisine)}
+                    <View style={styles.restaurantInfo}>
+                      <Text style={styles.restaurantName}>{item.name}</Text>
+                      <Text style={styles.restaurantCuisine}>
+                        {formatCuisine(item.cuisine)}
+                      </Text>
+                      {item.distance !== undefined && (
+                        <Text style={styles.distanceText}>
+                          {item.distance.toFixed(2)} km away
                         </Text>
-                        {spot.distance !== undefined && (
-                          <Text style={styles.distanceText}>
-                            {spot.distance.toFixed(2)} km away
-                          </Text>
-                        )}
-                      </View>
-                      <View style={styles.buttonGroup}>
-                        <TouchableOpacity
-                          style={styles.viewButton}
-                          onPress={() =>
-                            onView({
-                              latitude: spot.latitude,
-                              longitude: spot.longitude,
-                              name: spot.name,
-                            })
-                          }
-                        >
-                          <Text style={styles.viewButtonText}>View</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.goHereButton}
-                          onPress={() => onGoHere?.(spot)}
-                        >
-                          <Text style={styles.goHereButtonText}>Go Here</Text>
-                        </TouchableOpacity>
-                      </View>
+                      )}
+                    </View>
+                    <View style={styles.buttonGroup}>
+                      <TouchableOpacity
+                        style={styles.viewButton}
+                        onPress={() =>
+                          onView({
+                            latitude: item.latitude,
+                            longitude: item.longitude,
+                            name: item.name,
+                          })
+                        }
+                      >
+                        <Text style={styles.viewButtonText}>View</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.goHereButton}
+                        onPress={() => onGoHere?.(item)}
+                      >
+                        <Text style={styles.goHereButtonText}>Go Here</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Detailed Information */}
+                <View style={styles.detailsContainer}>
+                  {!onView && (
+                    <>
+                      <Text style={styles.spotName}>{item.name}</Text>
+                      {item.distance !== undefined && (
+                        <Text style={styles.distanceText}>
+                          {item.distance.toFixed(2)} km away
+                        </Text>
+                      )}
+                    </>
+                  )}
+                  <View style={styles.amenityPill}>
+                    <Text style={styles.amenityText}>
+                      {item.amenity
+                        ? item.amenity.charAt(0).toUpperCase() + item.amenity.slice(1)
+                        : "Unknown"}
+                    </Text>
+                  </View>
+                  {item.address && (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="location-outline" size={16} color="#44457D" />
+                      <Text style={styles.sectionValue}>{item.address}</Text>
                     </View>
                   )}
-
-                  {/* Detailed Information */}
-                  <View style={styles.detailsContainer}>
-                    {!onView && (
-                      <>
-                        <Text style={styles.spotName}>{spot.name}</Text>
-                        {spot.distance !== undefined && (
-                          <Text style={styles.distanceText}>
-                            {spot.distance.toFixed(2)} km away
-                          </Text>
-                        )}
-                      </>
-                    )}
-                    <View style={styles.amenityPill}>
-                      <Text style={styles.amenityText}>
-                        {spot.amenity
-                          ? spot.amenity.charAt(0).toUpperCase() + spot.amenity.slice(1)
-                          : "Unknown"}
+                  {item.cuisine && (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="restaurant-outline" size={16} color="#44457D" />
+                      <Text style={styles.sectionValue}>{formatCuisine(item.cuisine)}</Text>
+                    </View>
+                  )}
+                  {item.opening_hours && (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="time-outline" size={16} color="#44457D" />
+                      <Text style={styles.sectionValue}>
+                        {item.opening_hours === "Hours not specified"
+                          ? "Not available"
+                          : item.opening_hours}
                       </Text>
                     </View>
-                    {spot.address && (
-                      <View style={styles.infoRow}>
-                        <Ionicons name="location-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>{spot.address}</Text>
-                      </View>
-                    )}
-                    {spot.cuisine && (
-                      <View style={styles.infoRow}>
-                        <Ionicons name="restaurant-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>{formatCuisine(spot.cuisine)}</Text>
-                      </View>
-                    )}
-                    {spot.opening_hours && (
-                      <View style={styles.infoRow}>
-                        <Ionicons name="time-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>
-                          {spot.opening_hours === "Hours not specified"
-                            ? "Not available"
-                            : spot.opening_hours}
-                        </Text>
-                      </View>
-                    )}
-                    {/* New Fields */}
-                    {spot.brand && (
-                      <View style={styles.infoRow}>
-                        <Ionicons name="business-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>Brand: {spot.brand}</Text>
-                      </View>
-                    )}
-                    {spot.takeaway !== null && spot.takeaway !== undefined && (
-                      <View style={styles.infoRow}>
-                        <Ionicons name="bag-handle-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>
-                          Takeaway: {spot.takeaway ? "Yes" : "No"}
-                        </Text>
-                      </View>
-                    )}
-                    {spot.delivery && (
-                      <View style={styles.infoRow}>
-                        <Ionicons name="bicycle-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>Delivery: {spot.delivery}</Text>
-                      </View>
-                    )}
-                    {spot.payment && spot.payment !== "{}" && (
-                      <View style={styles.infoRow}>
-                        <Ionicons name="card-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>
-                          Payment: {getAcceptedPaymentMethods(spot.payment) || "Not specified"}
-                        </Text>
-                      </View>
-                    )}
-                    {spot.wheelchair && (
-                      <View style={styles.infoRow}>
-                        <Ionicons name="accessibility-outline" size={16} color="#44457D" />
-                        <Text style={styles.sectionValue}>Wheelchair: {spot.wheelchair}</Text>
-                      </View>
-                    )}
-                    {/* Enhanced Contact Section */}
-                    {(spot.phone || spot.website || spot.facebook || spot.email) && (
-                      <View style={styles.contactSection}>
-                        <Text style={styles.sectionTitle}>
-                          <Ionicons name="call-outline" size={16} color="#44457D" /> Contact
-                        </Text>
-                        {spot.phone && (
-                          <TouchableOpacity
-                            onPress={() => spot.phone && handlePhonePress(spot.phone)}
-                          >
-                            <Text style={styles.websiteText}>{spot.phone}</Text>
-                          </TouchableOpacity>
-                        )}
-                        {spot.website && (
-                          <TouchableOpacity
-                            onPress={() => spot.website && handleWebsitePress(spot.website)}
-                          >
-                            <Text style={styles.websiteText}>Visit Website</Text>
-                          </TouchableOpacity>
-                        )}
-                        {spot.facebook && (
-                          <TouchableOpacity
-                            onPress={() => spot.facebook && handleWebsitePress(spot.facebook)}
-                          >
-                            <Text style={styles.websiteText}>Facebook</Text>
-                          </TouchableOpacity>
-                        )}
-                        {spot.email && (
-                          <TouchableOpacity
-                            onPress={() => Linking.openURL(`mailto:${spot.email}`)}
-                          >
-                            <Text style={styles.websiteText}>{spot.email}</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    )}
-                  </View>
+                  )}
+                  {/* New Fields */}
+                  {item.brand && (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="business-outline" size={16} color="#44457D" />
+                      <Text style={styles.sectionValue}>Brand: {item.brand}</Text>
+                    </View>
+                  )}
+                  {item.takeaway !== null && item.takeaway !== undefined && (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="bag-handle-outline" size={16} color="#44457D" />
+                      <Text style={styles.sectionValue}>
+                        Takeaway: {item.takeaway ? "Yes" : "No"}
+                      </Text>
+                    </View>
+                  )}
+                  {item.delivery && (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="bicycle-outline" size={16} color="#44457D" />
+                      <Text style={styles.sectionValue}>Delivery: {item.delivery}</Text>
+                    </View>
+                  )}
+                  {item.payment && item.payment !== "{}" && (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="card-outline" size={16} color="#44457D" />
+                      <Text style={styles.sectionValue}>
+                        Payment: {getAcceptedPaymentMethods(item.payment) || "Not specified"}
+                      </Text>
+                    </View>
+                  )}
+                  {item.wheelchair && (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="accessibility-outline" size={16} color="#44457D" />
+                      <Text style={styles.sectionValue}>Wheelchair: {item.wheelchair}</Text>
+                    </View>
+                  )}
+                  {/* Enhanced Contact Section */}
+                  {(item.phone || item.website || item.facebook || item.email) && (
+                    <View style={styles.contactSection}>
+                      <Text style={styles.sectionTitle}>
+                        <Ionicons name="call-outline" size={16} color="#44457D" /> Contact
+                      </Text>
+                      {item.phone && (
+                        <TouchableOpacity
+                          onPress={() => item.phone && handlePhonePress(item.phone)}
+                        >
+                          <Text style={styles.websiteText}>{item.phone}</Text>
+                        </TouchableOpacity>
+                      )}
+                      {item.website && (
+                        <TouchableOpacity
+                          onPress={() => item.website && handleWebsitePress(item.website)}
+                        >
+                          <Text style={styles.websiteText}>Visit Website</Text>
+                        </TouchableOpacity>
+                      )}
+                      {item.facebook && (
+                        <TouchableOpacity
+                          onPress={() => item.facebook && handleWebsitePress(item.facebook)}
+                        >
+                          <Text style={styles.websiteText}>Facebook</Text>
+                        </TouchableOpacity>
+                      )}
+                      {item.email && (
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(`mailto:${item.email}`)}
+                        >
+                          <Text style={styles.websiteText}>{item.email}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
                 </View>
-              ))
-            ) : (
-              <Text style={styles.noResultsText}>No dining spots found.</Text>
+              </View>
             )}
-          </ScrollView>
+            keyExtractor={(item: { name: any; }, index: any) => `${item.name}-${index}`}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            style={styles.scrollArea}
+            ListEmptyComponent={
+              <Text style={styles.noResultsText}>No dining spots found.</Text>
+            }
+          />
 
           {/* Close Button */}
           <View style={styles.modalFooter}>
