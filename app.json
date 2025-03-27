@@ -29,7 +29,7 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
+        "foregroundImage": "./assets/images/logo-white.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.gabooo.capstone"
