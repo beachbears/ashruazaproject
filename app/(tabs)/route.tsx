@@ -916,6 +916,9 @@ const RouteScreen: React.FC = () => {
     renderRouteOverview,
     handleExperiencesPress,
   ]);
+  // Memoize the preview data at the top level
+  const previewRestaurants = useMemo(() => nearbyRestaurants.slice(0, 5), [nearbyRestaurants]);
+
   const renderRestaurantsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.text}>Nearby Dining Spots</Text>
@@ -926,7 +929,7 @@ const RouteScreen: React.FC = () => {
             key={limit}
             style={[styles.spotLimitButton, spotLimit === limit && styles.activeSpotLimitButton]}
             onPress={() => setSpotLimit(limit)}
-            activeOpacity={0.7} // Added for visual feedback
+            activeOpacity={0.7}
           >
             <Text style={[styles.spotLimitButtonText, spotLimit === limit && styles.activeSpotLimitButtonText]}>
               {limit}
@@ -939,14 +942,14 @@ const RouteScreen: React.FC = () => {
           <Text style={styles.locationTypeLabel}>Show dining spots near:</Text>
           <View style={styles.segmentedControl}>
             <TouchableOpacity
-              style={[styles.segmentButton, selectedLocationType === "origin" && styles.activeSegment]}
-              onPress={() => setSelectedLocationType("origin")}
+              style={[styles.segmentButton, selectedLocationType === 'origin' && styles.activeSegment]}
+              onPress={() => setSelectedLocationType('origin')}
               disabled={!route[0]}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  selectedLocationType === "origin" && styles.activeSegmentText,
+                  selectedLocationType === 'origin' && styles.activeSegmentText,
                   !route[0] && styles.disabledSegmentText,
                 ]}
               >
@@ -954,14 +957,14 @@ const RouteScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.segmentButton, selectedLocationType === "destination" && styles.activeSegment]}
-              onPress={() => setSelectedLocationType("destination")}
+              style={[styles.segmentButton, selectedLocationType === 'destination' && styles.activeSegment]}
+              onPress={() => setSelectedLocationType('destination')}
               disabled={!route[1]}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  selectedLocationType === "destination" && styles.activeSegmentText,
+                  selectedLocationType === 'destination' && styles.activeSegmentText,
                   !route[1] && styles.disabledSegmentText,
                 ]}
               >
@@ -973,10 +976,10 @@ const RouteScreen: React.FC = () => {
       )}
       {selectedLocationCoords ? (
         <View style={styles.restaurantsPreview}>
-          {nearbyRestaurants.length > 0 ? (
+          {previewRestaurants.length > 0 ? (
             <FlatList
               horizontal
-              data={nearbyRestaurants.slice(0, 5)}
+              data={previewRestaurants} // Use the memoized array here
               keyExtractor={(item, index) => `${item.name}-${index}`}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -987,10 +990,10 @@ const RouteScreen: React.FC = () => {
                     {item.name}
                   </Text>
                   <Text style={styles.restaurantCuisine} numberOfLines={1}>
-                    {formatCuisine(item.cuisine)}
+                    {item.cuisine || 'Unknown'}
                   </Text>
                   <Text style={styles.restaurantDistance}>
-                    {item.distance?.toFixed(2)} km
+                    {item.distance?.toFixed(2) || 'N/A'} km
                   </Text>
                 </TouchableOpacity>
               )}
@@ -1288,9 +1291,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 10,
   },
-
   userInput: {
     borderWidth: 1,
     borderColor: "#6366F1", // Purple border
@@ -1519,7 +1520,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   text: { color: "#44457D", fontWeight: "500", fontSize: 16 },
-  container: { padding: 15, marginBottom: 20 },
+  container: { padding: 8, marginBottom: 20 },
   inputContainer: { width: "100%" },
   suggestionList: {
     position: "absolute",
