@@ -61,13 +61,13 @@ const Home = () => {
 
   // Listahan ng tourist attractions
   const touristAttractions: Attraction[] = [
-    { id: 1, name: "Sanctuario de San Ezekiel Moreno", city: "Manila", image: require('../../assets/images/attractions/Sanctuario.jpg'), latitude: 14.473, longitude: 120.980 },
-    { id: 2, name: "Rizal Park", city: "Manila", image: require('../../assets/images/rizalpark.jpg'), latitude: 14.582, longitude: 120.975 },
-    { id: 3, name: "National Museum of Fine Arts", city: "Manila", image: require('../../assets/images/nationalmos.jpg'), latitude: 14.580, longitude: 120.978 },
-    { id: 4, name: "SM Mall of Asia", city: "Pasay", image: require('../../assets/images/smallasia.jpg'), latitude: 14.536, longitude: 120.982 },
-    { id: 5, name: "Bonifacio High Street", city: "Taguig", image: require('../../assets/images/hs.jpg'), latitude: 14.550, longitude: 121.050 },
-    { id: 6, name: "Quezon Memorial Circle", city: "Quezon City", image: require('../../assets/images/attractions/circle.jpg'), latitude: 14.651, longitude: 121.046 },
-    { id: 7, name: "Eastwood City", city: "Quezon City", image: require('../../assets/images/EW.png'), latitude: 14.578, longitude: 121.057 },
+    { id: 1, name: "Rizal Park", city: "Manila", image: require('../../assets/images/rizalpark.jpg'), latitude: 14.582, longitude: 120.975 },
+    { id: 2, name: "National Museum of Fine Arts", city: "Manila", image: require('../../assets/images/nationalmos.jpg'), latitude: 14.580, longitude: 120.978 },
+    { id: 3, name: "SM Mall of Asia", city: "Pasay", image: require('../../assets/images/smallasia.jpg'), latitude: 14.536, longitude: 120.982 },
+    { id: 4, name: "Bonifacio High Street", city: "Taguig", image: require('../../assets/images/hs.jpg'), latitude: 14.550, longitude: 121.050 },
+    { id: 5, name: "Quezon Memorial Circle", city: "Quezon City", image: require('../../assets/images/attractions/circle.jpg'), latitude: 14.651, longitude: 121.046 },
+    { id: 6, name: "Eastwood City", city: "Quezon City", image: require('../../assets/images/EW.png'), latitude: 14.578, longitude: 121.057 },
+    { id: 7, name: "Sanctuario de San Ezekiel Moreno", city: "Manila", image: require('../../assets/images/attractions/Sanctuario.jpg'), latitude: 14.473, longitude: 120.980 },
     { id: 8, name: "Star City", city: "Pasay", image: require('../../assets/images/STCity.jpg'), latitude: 14.531, longitude: 120.979 },
     { id: 9, name: "Bonifacio Monument", city: "Caloocan City", image: require('../../assets/images/attractions/Bonmon.png'), latitude: 14.657, longitude: 120.982 },
     { id: 10, name: "San Roque", city: "Caloocan City", image: require('../../assets/images/attractions/sanroqcathed.jpg'), latitude: 14.645, longitude: 121.030 },
