@@ -17,6 +17,7 @@ import {
   NativeScrollEvent,
   Platform,
   FlatList,
+  KeyboardAvoidingView,
 } from "react-native";
 import axios from "axios";
 import { WebView } from "react-native-webview";
@@ -113,6 +114,24 @@ const RouteScreen: React.FC = () => {
   const webviewRef = useRef<WebView>(null);
   const [activeTab, setActiveTab] = useState("Route");
   const [spotLimit, setSpotLimit] = useState(20);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const originInputRef = useRef<View>(null);
+  const destinationInputRef = useRef<View>(null);
+  const [originInputY, setOriginInputY] = useState(0);
+  const [destinationInputY, setDestinationInputY] = useState(0);
+
+  useEffect(() => {
+    if (originInputRef.current && originSuggestions.length > 0) {
+      originInputRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setOriginInputY(pageY + height); // Position below the input
+      });
+    }
+    if (destinationInputRef.current && destinationSuggestions.length > 0) {
+      destinationInputRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setDestinationInputY(pageY + height);
+      });
+    }
+  }, [originSuggestions, destinationSuggestions]);
 
   const CACHE_EXPIRATION = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -1125,58 +1144,63 @@ const RouteScreen: React.FC = () => {
   );
   // Render different layouts based on route length while updating MapComponent with new restaurant props
   return (
-    <View style={{ flex: 1 }}>
-      {/* Top Half: Map */}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
       <View style={{ flex: 1 }}>
-        <MapComponentMemo
-          initialRegion={region}
-          route={route}
-          roadPath={roadPath}
-          mapResetKey={mapResetKey}
-          style={styles.map}
-          polylineColor={polylineColor}
-          webviewRef={webviewRef}
-          nearbySpots={memoizedSpots}
-          selectedSpot={selectedSpot}
-          isLoading={isRouteLoading}
-          nearbyRestaurants={memoizedRestaurants}
-          onRestaurantClick={(name: string) => {
-            const restaurant = nearbyRestaurants.find((r) => r.name === name);
-            if (restaurant) {
-              setSelectedRestaurant(restaurant);
-              setRestaurantModalVisible(true);
-            }
-          }}
-          onSpotClick={(spotName: React.SetStateAction<string | null>) => {
-            setScrollToSpot(spotName);
-            setModalVisible(true);
-          }}
-          activeTab={activeTab}
-        />
-        {isRouteLoading && (
-          <ActivityIndicator
-            style={styles.loadingIndicator}
-            size="large"
-            color="#6366F1"
+        {/* Top Half: Map */}
+        <View style={{ flex: 1 }}>
+          <MapComponentMemo
+            initialRegion={region}
+            route={route}
+            roadPath={roadPath}
+            mapResetKey={mapResetKey}
+            style={styles.map}
+            polylineColor={polylineColor}
+            webviewRef={webviewRef}
+            nearbySpots={memoizedSpots}
+            selectedSpot={selectedSpot}
+            isLoading={isRouteLoading}
+            nearbyRestaurants={memoizedRestaurants}
+            onRestaurantClick={(name: string) => {
+              const restaurant = nearbyRestaurants.find((r) => r.name === name);
+              if (restaurant) {
+                setSelectedRestaurant(restaurant);
+                setRestaurantModalVisible(true);
+              }
+            }}
+            onSpotClick={(spotName: React.SetStateAction<string | null>) => {
+              setScrollToSpot(spotName);
+              setModalVisible(true);
+            }}
+            activeTab={activeTab}
           />
-        )}
-      </View>
+          {isRouteLoading && (
+            <ActivityIndicator
+              style={styles.loadingIndicator}
+              size="large"
+              color="#6366F1"
+            />
+          )}
+        </View>
 
-      {/* Bottom Half: Details and Modals */}
-      <View style={[styles.normalViewContainer, { flex: 1 }]}>
-        <ScrollView
-          nestedScrollEnabled
-          contentContainerStyle={{ flexGrow: 1, paddingVertical: 10 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="always"
-        >
-          {detailsContent}
-          <ModalComponent
-            visible={restaurantModalVisible}
-            onClose={() => setRestaurantModalVisible(false)}
-            restaurants={nearbyRestaurants}
-            onView={(restaurant) => {
-              const js = `
+        {/* Bottom Half: Details and Modals */}
+        <View style={[styles.normalViewContainer, { flex: 1 }]}>
+          <ScrollView
+            nestedScrollEnabled
+            contentContainerStyle={{ flexGrow: 1, paddingVertical: 10 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+          >
+            {detailsContent}
+            <ModalComponent
+              visible={restaurantModalVisible}
+              onClose={() => setRestaurantModalVisible(false)}
+              restaurants={nearbyRestaurants}
+              onView={(restaurant) => {
+                const js = `
                 if (window.map) {
                   const targetLat = ${restaurant.latitude};
                   const targetLng = ${restaurant.longitude};
@@ -1192,60 +1216,60 @@ const RouteScreen: React.FC = () => {
                   });
                 }
               `;
-              webviewRef.current?.injectJavaScript(js);
-              setRestaurantModalVisible(false);
-            }}
-            onGoHere={(restaurant) => {
-              setDestination(restaurant.name);
-              const newDestination = {
-                latitude: restaurant.latitude,
-                longitude: restaurant.longitude,
-              };
-              setRoadPath([]);
-              const currentOrigin =
-                route.length > 0
-                  ? route[0]
-                  : { latitude: region.latitude, longitude: region.longitude };
-              setRoute([currentOrigin, newDestination]);
-              fetchRouteDetails(
-                newDestination.latitude,
-                newDestination.longitude,
-                selectedAlgorithm
-              );
-              setRestaurantModalVisible(false);
-            }}
-          />
-          <ReviewModal
-            visible={modalVisible}
-            onClose={() => setModalVisible(false)}
-            originCoords={route.length > 0 ? route[0] : undefined}
-            destinationCoords={route.length > 1 ? route[1] : undefined}
-            nearbySpots={nearbySpots}
-            scrollToSpot={scrollToSpot}
-            onSpotsFetched={(spots) => setNearbySpots(spots)}
-            onSpotSelect={(selectedSpot) => {
-              setNearbySpots([]);
-              setDestination(selectedSpot.name);
-              const newDestination = {
-                latitude: selectedSpot.latitude,
-                longitude: selectedSpot.longitude,
-              };
-              setRoadPath([]);
-              const currentOrigin =
-                route.length > 0
-                  ? route[0]
-                  : { latitude: region.latitude, longitude: region.longitude };
-              setRoute([currentOrigin, newDestination]);
-              fetchRouteDetails(
-                newDestination.latitude,
-                newDestination.longitude,
-                selectedAlgorithm
-              );
-              setModalVisible(false);
-              setSelectedSpot(newDestination);
-            }}
-            onSpotView={(selectedSpot) => {
-              const js = `
+                webviewRef.current?.injectJavaScript(js);
+                setRestaurantModalVisible(false);
+              }}
+              onGoHere={(restaurant) => {
+                setDestination(restaurant.name);
+                const newDestination = {
+                  latitude: restaurant.latitude,
+                  longitude: restaurant.longitude,
+                };
+                setRoadPath([]);
+                const currentOrigin =
+                  route.length > 0
+                    ? route[0]
+                    : { latitude: region.latitude, longitude: region.longitude };
+                setRoute([currentOrigin, newDestination]);
+                fetchRouteDetails(
+                  newDestination.latitude,
+                  newDestination.longitude,
+                  selectedAlgorithm
+                );
+                setRestaurantModalVisible(false);
+              }}
+            />
+            <ReviewModal
+              visible={modalVisible}
+              onClose={() => setModalVisible(false)}
+              originCoords={route.length > 0 ? route[0] : undefined}
+              destinationCoords={route.length > 1 ? route[1] : undefined}
+              nearbySpots={nearbySpots}
+              scrollToSpot={scrollToSpot}
+              onSpotsFetched={(spots) => setNearbySpots(spots)}
+              onSpotSelect={(selectedSpot) => {
+                setNearbySpots([]);
+                setDestination(selectedSpot.name);
+                const newDestination = {
+                  latitude: selectedSpot.latitude,
+                  longitude: selectedSpot.longitude,
+                };
+                setRoadPath([]);
+                const currentOrigin =
+                  route.length > 0
+                    ? route[0]
+                    : { latitude: region.latitude, longitude: region.longitude };
+                setRoute([currentOrigin, newDestination]);
+                fetchRouteDetails(
+                  newDestination.latitude,
+                  newDestination.longitude,
+                  selectedAlgorithm
+                );
+                setModalVisible(false);
+                setSelectedSpot(newDestination);
+              }}
+              onSpotView={(selectedSpot) => {
+                const js = `
                 if (window.map) {
                   const targetLat = ${selectedSpot.latitude};
                   const targetLng = ${selectedSpot.longitude};
@@ -1261,16 +1285,15 @@ const RouteScreen: React.FC = () => {
                   });
                 }
               `;
-              webviewRef.current?.injectJavaScript(js);
-              setModalVisible(false);
-            }}
-          />
-        </ScrollView>
+                webviewRef.current?.injectJavaScript(js);
+                setModalVisible(false);
+              }}
+            />
+          </ScrollView>
+        </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
-
-
 };
 
 export default RouteScreen;

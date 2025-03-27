@@ -31,14 +31,10 @@ const SuggestionList: React.FC<SuggestionListProps> = ({ suggestions, onSelect }
 
 const styles = StyleSheet.create({
   suggestionList: {
-    position: "absolute",
-    top: 45,
-    left: 0,
-    right: 0,
     backgroundColor: "#FFFFFF",
-    zIndex: 10,
     borderRadius: 8,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#ddd",
     maxHeight: 250,
   },
   suggestionItem: {
