@@ -100,13 +100,19 @@ export interface SegmentPath {
   color: string;
 }
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
 export interface MapComponentProps {
   initialRegion: Region;
   route?: LatLng[];
   roadPath?: LatLng[] | string | LatLng[][] | SegmentPath[];
   style?: any;
-  mapResetKey?: number;
+  mapResetKey: number;
   polylineColor: string;
+  webviewRef: React.RefObject<WebView>;
   nearbySpots?: Array<{
     latitude: number;
     longitude: number;
@@ -115,8 +121,7 @@ export interface MapComponentProps {
   }>;
   selectedSpot?: LatLng | null;
   isLoading?: boolean;
-  webviewRef?: React.RefObject<WebView>;
-  onSpotClick?: (spotName: string) => void;
+  onSpotClick: (spotName: string) => void;
   nearbyRestaurants?: Array<{
     amenity: string;
     latitude: number;
@@ -125,7 +130,8 @@ export interface MapComponentProps {
     cuisine?: string;
     image_url?: string;
   }>;
-  onRestaurantClick?: (restaurantName: string) => void;
+  onRestaurantClick: (name: string) => void;
+  activeTab: string; // Added
 }
 
 export interface Restaurant {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import {
   View,
@@ -28,15 +28,17 @@ import ModalComponent from "../restaurantmodal";
 import { GestureHandlerRootView, } from 'react-native-gesture-handler';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Region, LatLng, MapComponentProps, Route, SegmentPath, RouteDetails, RouteMetrics, NearbySpot, LocationSuggestion, ApiResponse, Restaurant } from "../../src/types";
+import { Region, LatLng, MapComponentProps, Route, SegmentPath, RouteDetails, RouteMetrics, NearbySpot, LocationSuggestion, ApiResponse, Restaurant, Point } from "../../src/types";
 import { sleep, formatDuration, shortenAddress, getSegmentLabel } from "../../src/utils/helpers";
 import { getMapHTML } from "../../src/utils/getMapHTML";
-import MapComponent from "@/src/components/MapComponent";
+// import MapComponentMemo from "@/src/components/MapComponent";
 import { locationCacheRef } from "@/src/utils/locationsCache";
 import SuggestionList from "@/src/components/SuggestionList";
 import AttractionsList from "@/src/components/AttractionsList";
 import { addWhitelistedNativeProps } from "react-native-reanimated/lib/typescript/ConfigHelper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import MapComponentMemo from "@/src/components/MapComponentMemo";
+import simplify from 'simplify-js'; // Add this line if missing
 
 const polyline = require("@mapbox/polyline");
 interface TabButtonProps {
@@ -126,6 +128,9 @@ const RouteScreen: React.FC = () => {
   const saveToCache = async (cacheKey: string, data: any) => {
     await AsyncStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
   };
+
+  const memoizedSpots = useMemo(() => nearbySpots, [nearbySpots]);
+  const memoizedRestaurants = useMemo(() => nearbyRestaurants, [nearbyRestaurants]);
 
   const restaurantCache = useRef<{ [key: string]: Restaurant[] }>({});
   const attractionCache = useRef<{ [key: string]: NearbySpot[] }>({});
@@ -544,17 +549,17 @@ const RouteScreen: React.FC = () => {
     try {
       const response = await axios.get("https://comgu20-production.up.railway.app/api/routes/find", { params });
       const { route: routeData, posts } = response.data;
-      setRouteDetails({ route: routeData, posts: response.data.posts || [], });
+      setRouteDetails({ route: routeData, posts: response.data.posts || [] });
       if (routeData && routeData.summary) {
         const summary = routeData.summary;
-        const formattedDuration = formatDuration(summary.total_duration); // Keep this since API returns seconds
+        const formattedDuration = formatDuration(summary.total_duration);
         setRouteMetrics({
           duration: summary.total_duration || 0,
           distance: summary.total_distance_km || 0,
           fare: summary.total_fare || 0,
-          walkingTime: "", // Simplified for brevity; calculate if needed
-          carTime: formattedDuration, // Total formatted duration
-          busTime: "", // Add if needed
+          walkingTime: "",
+          carTime: formattedDuration,
+          busTime: "",
         });
       } else {
         setRouteMetrics(null);
@@ -566,24 +571,29 @@ const RouteScreen: React.FC = () => {
         setPolylineColor("#6366F1");
       }
       if (response.data.polyline && response.data.polyline.length > 0) {
-        setRoadPath(response.data.polyline);
-      } else if (
-        routeData &&
-        routeData.segments &&
-        routeData.segments.length > 0
-      ) {
+        const decodedPath: LatLng[] = polyline.decode(response.data.polyline).map((coord: number[]) => ({
+          latitude: coord[0],
+          longitude: coord[1],
+        }));
+        const points: Point[] = decodedPath.map(pt => ({ x: pt.longitude, y: pt.latitude }));
+        // Use type assertion to tell TypeScript that simplify returns Point[]
+        const simplifiedPoints = simplify(points, 0.00005, true) as unknown as Point[];
+        const simplifiedPath: LatLng[] = simplifiedPoints.map(pt => ({ latitude: pt.y, longitude: pt.x }));
+        setRoadPath(simplifiedPath);
+      } else if (routeData && routeData.segments && routeData.segments.length > 0) {
         const segmentsPaths: SegmentPath[] = routeData.segments
           .filter((segment: { geometry: any; }) => segment.geometry)
           .map((segment: { type: string; geometry: any; }) => {
-            const color =
-              segment.type.toLowerCase() === "walking" ? "#808080" : "#6366F1";
-            const coords = polyline
-              .decode(segment.geometry)
-              .map((coord: number[]) => ({
-                latitude: coord[0],
-                longitude: coord[1],
-              }));
-            return { coords, color };
+            const color = segment.type.toLowerCase() === "walking" ? "#808080" : "#6366F1";
+            const decodedCoords: LatLng[] = polyline.decode(segment.geometry).map((coord: number[]) => ({
+              latitude: coord[0],
+              longitude: coord[1],
+            }));
+            const points: Point[] = decodedCoords.map(pt => ({ x: pt.longitude, y: pt.latitude }));
+            // Use type assertion here as well
+            const simplifiedPoints = simplify(points, 0.00005, true) as unknown as Point[];
+            const simplifiedCoords: LatLng[] = simplifiedPoints.map(pt => ({ latitude: pt.y, longitude: pt.x }));
+            return { coords: simplifiedCoords, color };
           });
         setRoadPath(segmentsPaths);
       } else if (route.length === 2) {
@@ -592,12 +602,11 @@ const RouteScreen: React.FC = () => {
         setRoadPath([]);
       }
     } catch (error) {
-      // console.error("Error fetching route details:", error);
+      console.error("Error fetching route details:", error);
     } finally {
       setIsRouteLoading(false);
     }
   };
-
   const selectOriginSuggestion = useCallback(async (item: any) => {
     setOrigin(item.name);
     setOriginSuggestions([]);
@@ -1116,30 +1125,30 @@ const RouteScreen: React.FC = () => {
     <View style={{ flex: 1 }}>
       {/* Top Half: Map */}
       <View style={{ flex: 1 }}>
-        <MapComponent
-          key={`map-${mapResetKey}`}
+        <MapComponentMemo
           initialRegion={region}
           route={route}
           roadPath={roadPath}
           mapResetKey={mapResetKey}
-          style={styles.map} // Ensure this style doesn’t use absolute fill
+          style={styles.map}
           polylineColor={polylineColor}
           webviewRef={webviewRef}
-          nearbySpots={activeTab === 'Attractions' ? nearbySpots : []}
+          nearbySpots={memoizedSpots}
           selectedSpot={selectedSpot}
           isLoading={isRouteLoading}
-          nearbyRestaurants={activeTab === 'Dining' ? nearbyRestaurants : []}
-          onRestaurantClick={(name) => {
+          nearbyRestaurants={memoizedRestaurants}
+          onRestaurantClick={(name: string) => {
             const restaurant = nearbyRestaurants.find((r) => r.name === name);
             if (restaurant) {
               setSelectedRestaurant(restaurant);
               setRestaurantModalVisible(true);
             }
           }}
-          onSpotClick={(spotName) => {
+          onSpotClick={(spotName: React.SetStateAction<string | null>) => {
             setScrollToSpot(spotName);
             setModalVisible(true);
           }}
+          activeTab={activeTab}
         />
         {isRouteLoading && (
           <ActivityIndicator

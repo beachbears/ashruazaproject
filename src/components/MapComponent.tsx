@@ -4,7 +4,6 @@ import { WebView } from "react-native-webview";
 import { MapComponentProps, LatLng } from "../types";
 import { getMapHTML } from "../utils/getMapHTML";
 
-// Correctly memoize the component
 const MapComponent = memo(
   ({
     initialRegion,
@@ -20,12 +19,11 @@ const MapComponent = memo(
     onSpotClick,
     nearbyRestaurants,
     onRestaurantClick,
+    activeTab,
   }: MapComponentProps) => {
-    // Simplified key to reduce reloads
     const mapKey = JSON.stringify({ initialRegion, route, roadPath, mapResetKey });
     const [loading, setLoading] = useState(true);
     const fadeAnim = useRef(new Animated.Value(1)).current;
-    const internalWebViewRef = useRef<WebView>(null);
     const [isWebViewReady, setIsWebViewReady] = useState(false);
 
     const handleLoadEnd = () => {
@@ -35,7 +33,7 @@ const MapComponent = memo(
         useNativeDriver: true,
       }).start(() => {
         setLoading(false);
-        setIsWebViewReady(true); // Mark WebView as ready
+        setIsWebViewReady(true);
       });
     };
 
@@ -45,10 +43,10 @@ const MapComponent = memo(
         route,
         roadPath,
         polylineColor,
-        nearbySpots,
-        nearbyRestaurants,
+        nearbySpots: activeTab === "Attractions" ? nearbySpots : [],
+        nearbyRestaurants: activeTab === "Dining" ? nearbyRestaurants : [],
       });
-    }, [initialRegion, route, roadPath, polylineColor, nearbySpots, nearbyRestaurants]);
+    }, [initialRegion, route, roadPath, polylineColor, nearbySpots, nearbyRestaurants, activeTab]);
 
     useEffect(() => {
       if (isWebViewReady && selectedSpot) {
@@ -94,17 +92,17 @@ const MapComponent = memo(
             }, 500);
           }
         `;
-        (webviewRef || internalWebViewRef)?.current?.injectJavaScript(js);
+        webviewRef.current?.injectJavaScript(js);
       }
     }, [selectedSpot, isWebViewReady, webviewRef]);
 
     return (
       <View style={{ flex: 1 }}>
         <WebView
-          ref={webviewRef} // Use the passed ref directly
+          ref={webviewRef}
           source={{ html: mapHTML }}
           style={style}
-          onLoadEnd={() => setLoading(false)}
+          onLoadEnd={handleLoadEnd}
         />
         {(loading || isLoading) && (
           <Animated.View
