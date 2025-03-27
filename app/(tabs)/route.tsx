@@ -36,6 +36,7 @@ import { locationCacheRef } from "@/src/utils/locationsCache";
 import SuggestionList from "@/src/components/SuggestionList";
 import AttractionsList from "@/src/components/AttractionsList";
 import { addWhitelistedNativeProps } from "react-native-reanimated/lib/typescript/ConfigHelper";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const polyline = require("@mapbox/polyline");
 interface TabButtonProps {
@@ -110,6 +111,21 @@ const RouteScreen: React.FC = () => {
   const webviewRef = useRef<WebView>(null);
   const [activeTab, setActiveTab] = useState("Route");
   const [spotLimit, setSpotLimit] = useState(20);
+
+  const CACHE_EXPIRATION = 24 * 60 * 60 * 1000; // 24 hours
+
+  const loadCachedData = async (cacheKey: string) => {
+    const cached = await AsyncStorage.getItem(cacheKey);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_EXPIRATION) return data;
+    }
+    return null;
+  };
+
+  const saveToCache = async (cacheKey: string, data: any) => {
+    await AsyncStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+  };
 
   const restaurantCache = useRef<{ [key: string]: Restaurant[] }>({});
   const attractionCache = useRef<{ [key: string]: NearbySpot[] }>({});
@@ -290,10 +306,23 @@ const RouteScreen: React.FC = () => {
 
   const fetchRestaurants = async (lat: number, lon: number, limit: number) => {
     const cacheKey = `${lat},${lon},${limit}`;
+
+    // Step 1: Check in-memory cache first
     if (restaurantCache.current[cacheKey]) {
       setNearbyRestaurants(restaurantCache.current[cacheKey]);
       return;
     }
+
+    // Step 2: Check AsyncStorage cache
+    const cachedData = await loadCachedData(cacheKey);
+    if (cachedData) {
+      const restaurants: Restaurant[] = cachedData; // Type assertion, assuming data is Restaurant[]
+      restaurantCache.current[cacheKey] = restaurants; // Store in memory for future use
+      setNearbyRestaurants(restaurants);
+      return;
+    }
+
+    // Step 3: Fetch from API if no cached data is available
     try {
       const response = await axios.get("https://comgu20-production.up.railway.app/api/sustenance", {
         params: {
@@ -306,7 +335,7 @@ const RouteScreen: React.FC = () => {
           per_page: limit,
         },
       });
-      const mapped = response.data.results.map((item: any) => ({
+      const mapped: Restaurant[] = response.data.results.map((item: any) => ({
         name: item.name || "Unnamed Dining Spot",
         latitude: item.coordinates?.lat || 0,
         longitude: item.coordinates?.lon || 0,
@@ -319,14 +348,15 @@ const RouteScreen: React.FC = () => {
         image_url: "https://via.placeholder.com/150",
         distance: item.distance,
       }));
+      // Store in both caches
       restaurantCache.current[cacheKey] = mapped;
       setNearbyRestaurants(mapped);
+      await saveToCache(cacheKey, mapped); // Persist to AsyncStorage
     } catch (error) {
       console.error("Error fetching restaurants:", error);
       setNearbyRestaurants([]);
     }
   };
-
   const fetchAttractions = useCallback(async (lat: number, lon: number, limit: number) => {
     const cacheKey = `${lat},${lon},${limit}`;
     if (attractionCache.current[cacheKey]) {
