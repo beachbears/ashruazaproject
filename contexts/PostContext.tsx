@@ -2,7 +2,7 @@ import { ApiResponse } from '../src/types';
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 export type PostCategory = 'routes' | 'postsuggestions' | 'community';
 export interface Post {
-  id: number;
+  id?: number;
   content: string;
   location: string;
   destination: string;

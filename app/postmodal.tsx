@@ -30,7 +30,7 @@ async function geocodeAddress(address: string): Promise<LocationSuggestion[]> {
 interface PostModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (formData: Post) => void;
+  onSubmit: (formData: Post) => void; // Changed from Post to NewPost
   location: string;
   destination: string;
   origin_lat: number;
@@ -71,10 +71,10 @@ export default function PostModal({
     setCurrentOriginCoords({ lat: origin_lat, lon: origin_lon });
     setCurrentDestinationCoords({ lat: destination_lat, lon: destination_lon });
   }, [visible, initialLocation, initialDestination]);
- 
+
   useEffect(() => {
     if (!isFromCommunity) return; // Prevent fetching when not in community mode
-  
+
     let active = true;
     if (localLocation.length > 2) {
       geocodeAddress(localLocation).then(results => {
@@ -83,10 +83,10 @@ export default function PostModal({
     }
     return () => { active = false; };
   }, [localLocation, isFromCommunity]);
-  
+
   useEffect(() => {
     if (!isFromCommunity) return; // Prevent fetching when not in community mode
-  
+
     let active = true;
     if (localDestination.length > 2) {
       geocodeAddress(localDestination).then(results => {
@@ -95,7 +95,7 @@ export default function PostModal({
     }
     return () => { active = false; };
   }, [localDestination, isFromCommunity]);
-  
+
   const handleSubmit = () => {
     if (isSubmitting) return;
     if (!content.trim()) {
@@ -124,43 +124,43 @@ export default function PostModal({
       <View style={styles.modalContainer}>
         <View style={styles.postContainer}>
           <ScrollView>
-            {/* Location Section */} 
+            {/* Location Section */}
             <Text style={styles.label}>From:</Text>
             {isFromCommunity ? (
               <>
-              <View style={styles.inputContainer}> 
-                <TextInput
-                  placeholder="Type here..."
-                  value={localLocation}
-                  onChangeText={setLocalLocation}
-                  style={[styles.input, !isFromCommunity && styles.disabledInput]}
-                  editable={isFromCommunity}
-                  selectTextOnFocus={isFromCommunity} 
-                  multiline={true}
-                />
- 
-                {locationSuggestions.length > 0 && (
-                  <View style={styles.suggestionContainer}>
-                      <ScrollView 
-        contentContainerStyle={{ flexGrow: 1 }}
-        nestedScrollEnabled={true}
-      > 
-                    {locationSuggestions.map((s, i) => (
-                      <TouchableOpacity 
-                        key={i} 
-                        onPress={() => {
-                          setLocalLocation(s.name);
-                          setCurrentOriginCoords({ lat: s.lat, lon: s.lon });
-                          setLocationSuggestions([]);
-                        }} 
-                        style={styles.suggestionItem}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    placeholder="Type here..."
+                    value={localLocation}
+                    onChangeText={setLocalLocation}
+                    style={[styles.input, !isFromCommunity && styles.disabledInput]}
+                    editable={isFromCommunity}
+                    selectTextOnFocus={isFromCommunity}
+                    multiline={true}
+                  />
+
+                  {locationSuggestions.length > 0 && (
+                    <View style={styles.suggestionContainer}>
+                      <ScrollView
+                        contentContainerStyle={{ flexGrow: 1 }}
+                        nestedScrollEnabled={true}
                       >
-                        <Text>{s.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                    </ScrollView>
-                  </View>
-                )}
+                        {locationSuggestions.map((s, i) => (
+                          <TouchableOpacity
+                            key={i}
+                            onPress={() => {
+                              setLocalLocation(s.name);
+                              setCurrentOriginCoords({ lat: s.lat, lon: s.lon });
+                              setLocationSuggestions([]);
+                            }}
+                            style={styles.suggestionItem}
+                          >
+                            <Text>{s.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
               </>
             ) : (
@@ -171,7 +171,7 @@ export default function PostModal({
                 style={[styles.non]}
               />
             )}
-            
+
 
             {/* Destination Section */}
             <Text style={styles.label}>To:</Text>
@@ -183,33 +183,33 @@ export default function PostModal({
                   onChangeText={setLocalDestination}
                   style={[styles.input, !isFromCommunity && styles.disabledInput]}
                   editable={isFromCommunity}
-                  selectTextOnFocus={isFromCommunity} 
+                  selectTextOnFocus={isFromCommunity}
                   multiline={true}
                 />
-                 
+
                 {destinationSuggestions.length > 0 && (
                   <View style={styles.suggestionContainer}>
-                    <ScrollView 
-        contentContainerStyle={{ flexGrow: 1 }}
-        nestedScrollEnabled={true}
-      >
-                    {destinationSuggestions.map((s, i) => (
-                      <TouchableOpacity 
-                        key={i} 
-                        onPress={() => {
-                          setLocalDestination(s.name);
-                          setCurrentDestinationCoords({ lat: s.lat, lon: s.lon });
-                          setDestinationSuggestions([]);
-                        }} 
-                        style={styles.suggestionItem}
-                      >
-                        <Text>{s.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                       </ScrollView> 
+                    <ScrollView
+                      contentContainerStyle={{ flexGrow: 1 }}
+                      nestedScrollEnabled={true}
+                    >
+                      {destinationSuggestions.map((s, i) => (
+                        <TouchableOpacity
+                          key={i}
+                          onPress={() => {
+                            setLocalDestination(s.name);
+                            setCurrentDestinationCoords({ lat: s.lat, lon: s.lon });
+                            setDestinationSuggestions([]);
+                          }}
+                          style={styles.suggestionItem}
+                        >
+                          <Text>{s.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
                 )}
-                  
+
               </>
             ) : (
               <TextInput
@@ -217,7 +217,7 @@ export default function PostModal({
                 style={[styles.non]}
                 editable={false}
                 multiline={true}
-      
+
               />
             )}
 
@@ -251,9 +251,9 @@ export default function PostModal({
     </Modal>
   );
 }
- 
 
- 
+
+
 
 const styles = StyleSheet.create({
   modalContainer: {
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#44457D',
   },
-  exp:   {
+  exp: {
     fontSize: 14,
     fontWeight: '500',
     color: '#44457D',
@@ -299,12 +299,12 @@ const styles = StyleSheet.create({
     padding: 6,
     fontSize: 11,
     color: '#374151',
-   
+
     width: '100%',
     marginBottom: 10,
-    
+
   },
-  
+
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#22C55E',
     justifyContent: 'center',
   },
-  closeButton: {      
+  closeButton: {
     padding: 3,
     marginTop: 10,
     width: '20%',
@@ -337,14 +337,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  
+
   disabledInput: {
     backgroundColor: '#E5E7EB', // Gray out to indicate non-editable field
   },
   non: {
     padding: 6,
     backgroundColor: '#fff',
-    flexWrap: 'wrap',     
+    flexWrap: 'wrap',
     fontSize: 12,
     color: '#333',
     marginBottom: 6
@@ -357,29 +357,29 @@ const styles = StyleSheet.create({
     maxHeight: 150,
     marginBottom: 10,
     zIndex: 999, // Ensures it appears on top of other elements.
-    elevation: 1000,    
-  
+    elevation: 1000,
+
   },
   suggestionItem: {
     padding: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-     
+
   },
   inputContainer: {
     position: 'relative',   // Necessary for absolute positioning of the dropdown
     width: '100%',
     overflow: 'visible',     // Ensure the suggestion container is visible outside the bounds
-     
+
   },
 });
 
 
- 
 
 
 
- 
+
+
 
 
 
