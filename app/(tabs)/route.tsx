@@ -943,7 +943,7 @@ const RouteScreen: React.FC = () => {
       <Text style={styles.text}>Nearby Dining Spots</Text>
       <View style={styles.spotLimitContainer}>
         <Text style={styles.spotLimitHint}>Limit results to:</Text>
-        {[10, 20, 50].map((limit) => (
+        {[10, 20, 50, 100].map((limit) => (
           <TouchableOpacity
             key={limit}
             style={[styles.spotLimitButton, spotLimit === limit && styles.activeSpotLimitButton]}
@@ -1038,7 +1038,7 @@ const RouteScreen: React.FC = () => {
       <Text style={styles.text}>Nearby Attractions</Text>
       <View style={styles.spotLimitContainer}>
         <Text style={styles.spotLimitHint}>Limit results to:</Text>
-        {[10, 20, 50].map((limit) => (
+        {[10, 20, 50, 100].map((limit) => (
           <TouchableOpacity
             key={limit}
             style={[styles.spotLimitButton, spotLimit === limit && styles.activeSpotLimitButton]}
