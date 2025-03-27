@@ -56,7 +56,7 @@ export default function PostSuggestions() {
     try {
       return params.posts ? JSON.parse(params.posts as string) : [];
     } catch (error) {
-      console.error("Error parsing posts:", error);
+      // console.error("Error parsing posts:", error);
       return [];
     }
   }, [params.posts]);
@@ -69,6 +69,7 @@ export default function PostSuggestions() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const router = useRouter();
   const location = decodeURIComponent(params.location as string);
@@ -77,25 +78,30 @@ export default function PostSuggestions() {
   const origin_lon = Number(params.origin_lon);
   const destination_lat = Number(params.destination_lat);
   const destination_lon = Number(params.destination_lon);
-
   useEffect(() => {
-    if (params.source === 'community') {
-      setModalVisible(true);
-    }
-  }, [params.source]);
+    const votes: { [key: number]: VoteType } = {};
+    initialPosts.forEach((post: Post) => {
+      if (post.id !== undefined && post.user_vote !== undefined) {
+        if (post.user_vote === 1) votes[post.id] = 'upvote';
+        else if (post.user_vote === -1) votes[post.id] = 'downvote';
+      }
+    });
+    setSelectedVotes(votes);
+  }, [initialPosts]);
 
   useEffect(() => {
     const fetchPosts = async () => {
+      setIsLoading(true);
       try {
         const response = await fetch(
-          `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${origin_lat}&origin_lon=${origin_lon}&destination_lat=${destination_lat}&destination_lon=${destination_lon}`,
+          `https://comgu20-production.up.railway.app/api/route_posts/nearby?origin_lat=${origin_lat}&origin_lon=${origin_lon}&dest_lat=${destination_lat}&dest_lon=${destination_lon}`,
           {
             headers: { Authorization: `Bearer ${authToken}` },
           }
         );
         if (!response.ok) throw new Error('Failed to fetch posts');
-        const { posts } = await response.json();
-        setPosts(posts.map((p: { id: any; content: any; user: any; votes: any; status: any; comments_count: any; created_at: any; }) => ({
+        const postsData = await response.json();
+        setPosts(postsData.map((p: any) => ({
           id: p.id,
           content: p.content,
           user: p.user,
@@ -106,13 +112,50 @@ export default function PostSuggestions() {
         })));
       } catch (error) {
         console.error('Error fetching posts:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchPosts(); // Initial fetch
-    const interval = setInterval(fetchPosts, 5000); // Poll every 5 seconds
+    fetchPosts();
+    const interval = setInterval(fetchPosts, 5000);
     return () => clearInterval(interval);
   }, [origin_lat, origin_lon, destination_lat, destination_lon, authToken]);
+  // useEffect(() => {
+  //   if (params.source === 'community') {
+  //     setModalVisible(true);
+  //   }
+  // }, [params.source]);
+
+  // useEffect(() => {
+  //   const fetchPosts = async () => {
+  //     try {
+  //       const response = await fetch(
+  //         `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${origin_lat}&origin_lon=${origin_lon}&destination_lat=${destination_lat}&destination_lon=${destination_lon}`,
+  //         {
+  //           headers: { Authorization: `Bearer ${authToken}` },
+  //         }
+  //       );
+  //       if (!response.ok) throw new Error('Failed to fetch posts');
+  //       const { posts } = await response.json();
+  //       setPosts(posts.map((p: { id: any; content: any; user: any; votes: any; status: any; comments_count: any; created_at: any; }) => ({
+  //         id: p.id,
+  //         content: p.content,
+  //         user: p.user,
+  //         votes: p.votes ?? 0,
+  //         status: p.status,
+  //         comments_count: p.comments_count,
+  //         created_at: p.created_at,
+  //       })));
+  //     } catch (error) {
+  //       console.error('Error fetching posts:', error);
+  //     }
+  //   };
+
+  //   fetchPosts(); // Initial fetch
+  //   const interval = setInterval(fetchPosts, 5000); // Poll every 5 seconds
+  //   return () => clearInterval(interval);
+  // }, [origin_lat, origin_lon, destination_lat, destination_lon, authToken]);
 
   const handleVote = async (id: number, action: VoteType) => {
     if (!authToken) {
@@ -120,39 +163,24 @@ export default function PostSuggestions() {
       return;
     }
 
-    const currentPost = posts.find((p) => p.id === id);
-    if (!currentPost) return;
-
-    const previousVote = selectedVotes[id];
-    const previousVotes = currentPost.votes ?? 0;
-
-    setSelectedVotes((prev) => ({ ...prev, [id]: action }));
-    setPosts((prev) =>
-      prev.map((post) =>
-        post.id === id
-          ? { ...post, votes: previousVotes + (action === 'upvote' ? 1 : -1) }
-          : post
-      )
-    );
-
-    try {
-      const success = await sendVoteRequest(id.toString(), action);
-      if (!success) {
-        setSelectedVotes((prev) => ({ ...prev, [id]: previousVote }));
-        setPosts((prev) =>
-          prev.map((post) =>
-            post.id === id ? { ...post, votes: previousVotes } : post
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Vote error:', error);
-      setSelectedVotes((prev) => ({ ...prev, [id]: previousVote }));
+    const result = await sendVoteRequest(id.toString(), action);
+    if (result) {
       setPosts((prev) =>
         prev.map((post) =>
-          post.id === id ? { ...post, votes: previousVotes } : post
+          post.id === id ? { ...post, votes: result.votes, user_vote: result.user_vote ?? 0 } : post
         )
       );
+      setSelectedVotes((prev) => {
+        const newVotes = { ...prev };
+        if (result.user_vote === 1) {
+          newVotes[id] = 'upvote';
+        } else if (result.user_vote === -1) {
+          newVotes[id] = 'downvote';
+        } else {
+          delete newVotes[id]; // Remove vote if user_vote is 0 or undefined
+        }
+        return newVotes;
+      });
     }
   };
 
@@ -167,11 +195,11 @@ export default function PostSuggestions() {
         },
       });
       if (!response.ok) throw new Error('Failed to send vote');
-      await response.json();
-      return true;
+      const data = await response.json();
+      return data; // { id, votes, user_vote }
     } catch (error) {
       console.error('Vote error:', error);
-      return false;
+      return null;
     }
   };
 
@@ -213,12 +241,13 @@ export default function PostSuggestions() {
         origin_lat: 0,
         origin_lon: 0,
         destination_lat: 0,
-        destination_lon: 0
+        destination_lon: 0,
+        user_vote: responseData.user_vote ?? 0, // Default to 0 if undefined
       };
       setPosts((prevPosts) => [newPost, ...prevPosts]);
       setModalVisible(false);
     } catch (error) {
-      console.error('Post submission error:', error);
+      // console.error('Post submission error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -398,10 +427,16 @@ export default function PostSuggestions() {
         )}
         contentContainerStyle={{ paddingBottom: 200 }}
         ListEmptyComponent={
-          <View style={{ padding: 20 }}>
-            <ActivityIndicator size="large" color="#6366F1" />
-            <Text style={{ textAlign: 'center', marginTop: 10 }}>Loading posts...</Text>
-          </View>
+          isLoading ? (
+            <View style={{ padding: 20 }}>
+              <ActivityIndicator size="large" color="#6366F1" />
+              <Text style={{ textAlign: 'center', marginTop: 10 }}>Loading posts...</Text>
+            </View>
+          ) : (
+            <View style={{ padding: 20 }}>
+              <Text style={{ textAlign: 'center', marginTop: 10 }}>No posts found.</Text>
+            </View>
+          )
         }
       />
       <PostModal
