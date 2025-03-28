@@ -56,7 +56,6 @@ export default function PostSuggestions() {
     try {
       return params.posts ? JSON.parse(params.posts as string) : [];
     } catch (error) {
-      // console.error("Error parsing posts:", error);
       return [];
     }
   }, [params.posts]);
@@ -65,7 +64,6 @@ export default function PostSuggestions() {
   const [selectedOption, setSelectedOption] = useState<string>('Time');
   const { authToken } = useContext(AuthContext) as AuthContextType;
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: VoteType }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -78,16 +76,6 @@ export default function PostSuggestions() {
   const origin_lon = Number(params.origin_lon);
   const destination_lat = Number(params.destination_lat);
   const destination_lon = Number(params.destination_lon);
-  useEffect(() => {
-    const votes: { [key: number]: VoteType } = {};
-    initialPosts.forEach((post: Post) => {
-      if (post.id !== undefined && post.user_vote !== undefined) {
-        if (post.user_vote === 1) votes[post.id] = 'upvote';
-        else if (post.user_vote === -1) votes[post.id] = 'downvote';
-      }
-    });
-    setSelectedVotes(votes);
-  }, [initialPosts]);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -101,15 +89,26 @@ export default function PostSuggestions() {
         );
         if (!response.ok) throw new Error('Failed to fetch posts');
         const postsData = await response.json();
-        setPosts(postsData.map((p: any) => ({
-          id: p.id,
-          content: p.content,
-          user: p.user,
-          votes: p.votes ?? 0,
-          status: p.status,
-          comments_count: p.comments_count,
-          created_at: p.created_at,
-        })));
+        setPosts((prevPosts) => {
+          const updatedPosts = postsData.map((p: any) => {
+            const existingPost = prevPosts.find((ep) => ep.id === p.id);
+            if (existingPost && existingPost.pendingVote) {
+              return existingPost;
+            }
+            return {
+              id: p.id,
+              content: p.content,
+              user: p.user,
+              votes: p.votes ?? 0,
+              status: p.status,
+              comments_count: p.comments_count,
+              created_at: p.created_at,
+              user_vote: p.user_vote ?? 0,
+              pendingVote: false,
+            };
+          });
+          return updatedPosts;
+        });
       } catch (error) {
         console.error('Error fetching posts:', error);
       } finally {
@@ -121,41 +120,6 @@ export default function PostSuggestions() {
     const interval = setInterval(fetchPosts, 5000);
     return () => clearInterval(interval);
   }, [origin_lat, origin_lon, destination_lat, destination_lon, authToken]);
-  // useEffect(() => {
-  //   if (params.source === 'community') {
-  //     setModalVisible(true);
-  //   }
-  // }, [params.source]);
-
-  // useEffect(() => {
-  //   const fetchPosts = async () => {
-  //     try {
-  //       const response = await fetch(
-  //         `https://comgu20-production.up.railway.app/api/routes/find?origin_lat=${origin_lat}&origin_lon=${origin_lon}&destination_lat=${destination_lat}&destination_lon=${destination_lon}`,
-  //         {
-  //           headers: { Authorization: `Bearer ${authToken}` },
-  //         }
-  //       );
-  //       if (!response.ok) throw new Error('Failed to fetch posts');
-  //       const { posts } = await response.json();
-  //       setPosts(posts.map((p: { id: any; content: any; user: any; votes: any; status: any; comments_count: any; created_at: any; }) => ({
-  //         id: p.id,
-  //         content: p.content,
-  //         user: p.user,
-  //         votes: p.votes ?? 0,
-  //         status: p.status,
-  //         comments_count: p.comments_count,
-  //         created_at: p.created_at,
-  //       })));
-  //     } catch (error) {
-  //       console.error('Error fetching posts:', error);
-  //     }
-  //   };
-
-  //   fetchPosts(); // Initial fetch
-  //   const interval = setInterval(fetchPosts, 5000); // Poll every 5 seconds
-  //   return () => clearInterval(interval);
-  // }, [origin_lat, origin_lon, destination_lat, destination_lon, authToken]);
 
   const handleVote = async (id: number, action: VoteType) => {
     if (!authToken) {
@@ -163,24 +127,56 @@ export default function PostSuggestions() {
       return;
     }
 
-    const result = await sendVoteRequest(id.toString(), action);
-    if (result) {
+    const post = posts.find((p) => p.id === id);
+    if (!post || post.pendingVote) return;
+
+    const currentUserVote = post.user_vote || 0;
+    let newUserVote: number;
+    let voteDelta: number;
+
+    if (action === 'upvote') {
+      newUserVote = currentUserVote === 1 ? 0 : 1;
+    } else {
+      newUserVote = currentUserVote === -1 ? 0 : -1;
+    }
+    voteDelta = newUserVote - currentUserVote;
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, votes: (p.votes || 0) + voteDelta, user_vote: newUserVote, pendingVote: true }
+          : p
+      )
+    );
+
+    try {
+      const result = await sendVoteRequest(id.toString(), action);
+      if (result) {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === id
+              ? { ...p, votes: result.votes, user_vote: result.user_vote ?? 0, pendingVote: false }
+              : p
+          )
+        );
+      } else {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === id
+              ? { ...p, votes: (p.votes || 0) - voteDelta, user_vote: currentUserVote, pendingVote: false }
+              : p
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Vote sync error:', error);
       setPosts((prev) =>
-        prev.map((post) =>
-          post.id === id ? { ...post, votes: result.votes, user_vote: result.user_vote ?? 0 } : post
+        prev.map((p) =>
+          p.id === id
+            ? { ...p, votes: (p.votes || 0) - voteDelta, user_vote: currentUserVote, pendingVote: false }
+            : p
         )
       );
-      setSelectedVotes((prev) => {
-        const newVotes = { ...prev };
-        if (result.user_vote === 1) {
-          newVotes[id] = 'upvote';
-        } else if (result.user_vote === -1) {
-          newVotes[id] = 'downvote';
-        } else {
-          delete newVotes[id]; // Remove vote if user_vote is 0 or undefined
-        }
-        return newVotes;
-      });
     }
   };
 
@@ -196,7 +192,7 @@ export default function PostSuggestions() {
       });
       if (!response.ok) throw new Error('Failed to send vote');
       const data = await response.json();
-      return data; // { id, votes, user_vote }
+      return data;
     } catch (error) {
       console.error('Vote error:', error);
       return null;
@@ -242,12 +238,11 @@ export default function PostSuggestions() {
         origin_lon: 0,
         destination_lat: 0,
         destination_lon: 0,
-        user_vote: responseData.user_vote ?? 0, // Default to 0 if undefined
+        user_vote: responseData.user_vote ?? 0,
       };
       setPosts((prevPosts) => [newPost, ...prevPosts]);
       setModalVisible(false);
     } catch (error) {
-      // console.error('Post submission error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -273,7 +268,6 @@ export default function PostSuggestions() {
       return;
     }
     try {
-      console.log('Submitting report - Post ID:', selectedPostId, 'Reason:', reason);
       const response = await fetch('https://comgu20-production.up.railway.app/api/reports', {
         method: 'POST',
         headers: {
@@ -287,14 +281,8 @@ export default function PostSuggestions() {
           },
         }),
       });
-      console.log('Response status:', response.status);
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log('Error response:', errorData);
-        throw new Error('Failed to submit report');
-      }
+      if (!response.ok) throw new Error('Failed to submit report');
       const data = await response.json();
-      console.log('Success response:', data);
       Alert.alert('Success', data.message || 'Report submitted successfully');
       setIsModalVisible(false);
       setSelectedPostId(null);
@@ -411,28 +399,28 @@ export default function PostSuggestions() {
                 <TouchableOpacity
                   style={[
                     styles.arrowup,
-                    post.id && selectedVotes[post.id] === 'upvote' ? { backgroundColor: '#22C55E' } : undefined
+                    post.user_vote === 1 ? { backgroundColor: '#22C55E' } : undefined
                   ]}
                   onPress={() => post.id && handleVote(post.id, 'upvote')}
                 >
                   <AntDesign
                     name="arrowup"
                     size={13}
-                    color={post.id && selectedVotes[post.id] === 'upvote' ? '#fff' : '#22C55E'}
+                    color={post.user_vote === 1 ? '#fff' : '#22C55E'}
                   />
                 </TouchableOpacity>
                 <Text style={styles.arrowupnum}>{post.votes}</Text>
                 <TouchableOpacity
                   style={[
                     styles.arrowdown,
-                    post.id && selectedVotes[post.id] === 'downvote' ? { backgroundColor: '#C52222' } : undefined
+                    post.user_vote === -1 ? { backgroundColor: '#C52222' } : undefined
                   ]}
                   onPress={() => post.id && handleVote(post.id, 'downvote')}
                 >
                   <AntDesign
                     name="arrowdown"
                     size={13}
-                    color={post.id && selectedVotes[post.id] === 'downvote' ? '#fff' : '#C52222'}
+                    color={post.user_vote === -1 ? '#fff' : '#C52222'}
                   />
                 </TouchableOpacity>
               </View>
@@ -480,6 +468,7 @@ export default function PostSuggestions() {
   );
 }
 
+// Styles remain unchanged
 const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
