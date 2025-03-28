@@ -128,25 +128,25 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
   const { width, height } = Dimensions.get('window');
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'android' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.mainContainer}>
-          <View style={styles.headerImageContainer}>
-            <Image source={require('../assets/images/reg.png')} style={styles.headerImage} />
-            <View style={styles.textOverlay}>
-              <Text style={[styles.heading, { fontSize: width * 0.08 }]}>Kommutsera</Text>
-               <Text style={[styles.description, { fontSize: width * 0.03 }]}>
-                             Kommutsera is the perfect guide for exploring Metro Manila. With easy-to-follow routes, it helps you navigate the city’s cultural, historic, and modern attractions effortlessly. Whether you’re a tourist or a local, Kommutsera ensures a smooth, enjoyable, and efficient travel experience throughout Metro Manila.</Text>
-            </View>
-
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <View style={styles.mainContainer}>
+        <View style={styles.headerImageContainer}>
+          <Image source={require('../assets/images/reg.png')} style={styles.headerImage} />
+          <View style={styles.textOverlay}>
+            <Text style={[styles.heading, { fontSize: width * 0.08 }]}>Kommutsera</Text>
+            <Text style={[styles.description, { fontSize: width * 0.03 }]}>
+              Kommutsera is the perfect guide for exploring Metro Manila. With easy-to-follow routes, it helps you navigate the city’s cultural, historic, and modern attractions effortlessly. Whether you’re a tourist or a local, Kommutsera ensures a smooth, enjoyable, and efficient travel experience throughout Metro Manila.</Text>
           </View>
 
-          <View style={styles.formContainer}>
-            <Image source={require('../assets/images/logo.png')} style={styles.logo} />
-            <Text style={[styles.formTitle, { fontSize: width * 0.06 }]}>Welcome to Kommutsera!</Text>
-            <Text style={[styles.subtitle, ]}>Please enter your credentials</Text>
+        </View>
 
-            <Text style={[styles.inputnameEmail, ]}>Email</Text>
+        <View style={styles.formContainer}>
+          <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+          <Text style={[styles.formTitle, { fontSize: width * 0.06 }]}>Welcome to Kommutsera!</Text>
+          <Text style={[styles.subtitle,]}>Please enter your credentials</Text>
+          <KeyboardAvoidingView behavior={Platform.OS === 'android' ? 'padding' : 'height'} style={{ flex: 1 }}>
+
+            <Text style={[styles.inputnameEmail,]}>Email</Text>
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
                 <Ionicons name="mail-outline" size={20} color="#6366F1" style={styles.icon} />
@@ -161,7 +161,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
-            <Text style={[styles.inputnamePassword,  ]}>Password</Text>
+            <Text style={[styles.inputnamePassword,]}>Password</Text>
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
                 <Ionicons name="lock-closed-outline" size={20} color="#6366F1" style={styles.icon} />
@@ -177,46 +177,46 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
             </View>
 
             {errors.form && <Text style={styles.formErrorText}>{errors.form}</Text>}
+          </KeyboardAvoidingView>
 
-            <View style={styles.row}>
-              <TouchableOpacity style={styles.checkboxContainer} onPress={() => setRememberMe(!rememberMe)}>
-                <View style={[styles.checkbox, rememberMe && styles.checkedBox]}>
-                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={[styles.checkboxLabel, ]}>Remember me?</Text>
-              </TouchableOpacity>
-            
-            </View>
-
-            <TouchableOpacity
-              style={[styles.submitButton, loading && styles.disabledButton, { paddingHorizontal: width * 0.1 }]}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              <Text style={styles.submitButtonText}>{loading ? 'Logging in...' : 'Login'}</Text>
+          <View style={styles.row}>
+            <TouchableOpacity style={styles.checkboxContainer} onPress={() => setRememberMe(!rememberMe)}>
+              <View style={[styles.checkbox, rememberMe && styles.checkedBox]}>
+                {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={[styles.checkboxLabel,]}>Remember me?</Text>
             </TouchableOpacity>
 
-            <View style={styles.footer}>
-              <Text style={[styles.footerText]}>Don't have an account?</Text>
-              <TouchableOpacity onPress={() => router.push("/signup")}>
-                <Text style={[styles.linkText]}>Create account</Text>
-              </TouchableOpacity>
-            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.disabledButton, { paddingHorizontal: width * 0.1 }]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            <Text style={styles.submitButtonText}>{loading ? 'Logging in...' : 'Login'}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.footer}>
+            <Text style={[styles.footerText]}>Don't have an account?</Text>
+            <TouchableOpacity onPress={() => router.push("/signup")}>
+              <Text style={[styles.linkText]}>Create account</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  
+
   container: {
     flexGrow: 1,
     backgroundColor: '#F9FAFB',
     alignItems: 'center',
     padding: 16,
-     
+
   },
   mainContainer: {
     backgroundColor: '#FFFFFF',
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  
+
   textOverlay: {
     position: 'absolute',
     bottom: 10,
@@ -283,13 +283,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#C7D2FE',
     paddingHorizontal: 10,
+    width: '100%'
   },
   input: {
     flex: 1,
     padding: 10,
     fontSize: 13,
     color: '#2D3748',
-    
+
   },
   inputError: {
     borderColor: '#F56565',
@@ -361,7 +362,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     width: '100%',
-    maxWidth: 300,
     marginBottom: 16,
   },
   errorText: {
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     color: '#44457D',
     fontSize: 15,
   },
-  
+
 });
 
 export default LoginScreen;
