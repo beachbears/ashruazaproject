@@ -405,7 +405,6 @@ const getStyles = (width: number) =>
       marginBottom: 16,
     },
     inputLabel: {
-      marginLeft: 20,
       marginBottom: 6,
       color: '#44457D',
       fontSize: 15,
@@ -415,12 +414,11 @@ const getStyles = (width: number) =>
       borderRadius: 10,
       paddingVertical: 9,
       paddingHorizontal: 10,
-      width: '90%',
+      width: '100%',
       fontSize: 12,
       color: '#2D3436',
       borderWidth: 1,
       borderColor: '#C7D2FE',
-      marginLeft: 15,
     },
     inputError: {
       borderColor: '#FF3B30',
