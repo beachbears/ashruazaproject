@@ -81,51 +81,54 @@ export default function TabLayout() {
         headerStyle: styles.headerStyle,
         header: () => (
           <View style={styles.header}>
-            <View style={styles.headerContainer}>
-              <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
-              <Text style={styles.headerTitle}>{APP_NAME}</Text>
+            <View style={styles.brandContainer}>
+              <Image
+                source={require('../../assets/images/logo.png')}
+                style={styles.logo}
+              />
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {APP_NAME}
+              </Text>
             </View>
             <View style={styles.authContainer}>
               {isLoggedIn ? (
                 <View style={styles.dropdownContainer}>
-                  <View
-                    style={{
-                      width: 41,
-                      height: 41,
-                      backgroundColor: '#EEF2FF',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      borderRadius: 15,
-                    }}
+                  <TouchableOpacity
+                    onPress={() => setShowDropdown(!showDropdown)}
+                    style={styles.accountButton}
                   >
-                    <TouchableOpacity
-                      onPress={() => setShowDropdown(!showDropdown)}
-                      style={styles.account}
-                    >
+                    <View style={styles.account}>
                       <Text style={styles.accountText}>{userInitial}</Text>
-                    </TouchableOpacity>
-                  </View>
+                    </View>
+                  </TouchableOpacity>
+
                   {showDropdown && (
                     <View style={styles.dropdown}>
-                      <TouchableOpacity onPress={logout} style={styles.dropdown}>
-                        <Ionicons
-                          name="log-out-outline"
-                          size={18}
-                          color="#fff"
-                          style={styles.dropdownIcon}
-                        />
-                        <Text style={styles.dropdownText}>Logout</Text>
+                      <View style={styles.dropdownArrow} />
+                      <TouchableOpacity
+                        onPress={logout}
+                        style={styles.dropdownItem}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="log-out-outline" size={20} color="#64748b" />
+                        <Text style={styles.dropdownText}>Log Out</Text>
                       </TouchableOpacity>
                     </View>
                   )}
                 </View>
               ) : (
                 <View style={styles.authButtonsContainer}>
-                  <TouchableOpacity onPress={() => router.push('/login')} style={styles.authButton}>
-                    <Text style={styles.authButtonText}>Login</Text>
+                  <TouchableOpacity
+                    onPress={() => router.push('/login')}
+                    style={styles.textButton}
+                  >
+                    <Text style={styles.textButtonLabel}>Login</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => router.push('/signup')} style={styles.authButton}>
-                    <Text style={styles.authButtonText}>Sign Up</Text>
+                  <TouchableOpacity
+                    onPress={() => router.push('/signup')}
+                    style={styles.containedButton}
+                  >
+                    <Text style={styles.containedButtonLabel}>Sign Up</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -211,6 +214,127 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 16,
+    height: 60,
+    backgroundColor: '#F9FAFB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    maxWidth: '60%',
+  },
+  logo: {
+    width: 36,
+    height: 36,
+    marginRight: 12,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#424368',
+    flexShrink: 1,
+  },
+  controlsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flexShrink: 0,
+  },
+  authButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  textButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  textButtonLabel: {
+    color: '#6366F1',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  containedButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#6366F1',
+    borderRadius: 8,
+    elevation: 2,
+  },
+  containedButtonLabel: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  accountButton: {
+    padding: 8,
+  },
+  account: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+  },
+  accountText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  dropdownContainer: {
+    position: 'relative',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 55,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 160,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  dropdownArrow: {
+    position: 'absolute',
+    top: -8,
+    right: 12,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#fff',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  dropdownText: {
+    color: '#1e293b',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 12,
+  },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -239,14 +363,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
 
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 10,
-    elevation: 1
-  },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -255,16 +371,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     gap: 100,
   },
-  logo: {
-    width: 36,
-    height: 36,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#424368',
-    left: -90,
-  },
   authContainer: {
     position: 'relative',
   },
@@ -272,11 +378,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginVertical: 10,
-  },
-  authButtonsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    right: 20
   },
   authButton: {
     marginHorizontal: 5,
@@ -290,42 +391,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  dropdownContainer: {
-    position: 'relative',
-
-  },
-  account: {
-    width: 31,
-    height: 31,
-    borderRadius: 15,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  accountText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  dropdown: {
-    position: 'absolute',
-    top: 20,
-    right: 1,
-    backgroundColor: 'red',
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 1,
-  },
   dropdownIcon: {
     marginRight: 4,
-  },
-  dropdownText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
   },
   tabBar: {
     position: 'absolute',
