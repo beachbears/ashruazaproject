@@ -232,13 +232,13 @@ const RegisterScreen = () => {
               <View style={styles.textOverlay}>
                 <Text style={[styles.heading, { fontSize: width * 0.08 }]}>Kommutsera</Text>
                 <Text style={[styles.description, { fontSize: width * 0.03 }]}>
-                Kommutsera is the perfect guide for exploring Metro Manila. With easy-to-follow routes, it helps you navigate the city’s cultural, historic, and modern attractions effortlessly. Whether you’re a tourist or a local, Kommutsera ensures a smooth, enjoyable, and efficient travel experience throughout Metro Manila.</Text>
+                  Kommutsera is the perfect guide for exploring Metro Manila. With easy-to-follow routes, it helps you navigate the city’s cultural, historic, and modern attractions effortlessly. Whether you’re a tourist or a local, Kommutsera ensures a smooth, enjoyable, and efficient travel experience throughout Metro Manila.</Text>
               </View>
             </View>
 
             <View style={styles.formContainer}>
               <Image source={require('../assets/images/logo.png')} style={styles.logo} />
-              <Text style={[styles.formTitle, ]}>Register to Kommutsera!</Text>
+              <Text style={[styles.formTitle,]}>Register to Kommutsera!</Text>
               <Text style={styles.subtitle}>Please enter your credentials</Text>
 
               {/* Display general error message if exists */}
@@ -253,10 +253,10 @@ const RegisterScreen = () => {
                 const key = field as keyof SignupForm;
                 return (
                   <View key={field} style={styles.inputContainer}>
-                    
+
                     <Text style={styles.inputLabel}>
-  {field.replace(/([A-Z])/g, ' $1').trim().replace(/\b\w/g, (char) => char.toUpperCase())}
-</Text>
+                      {field.replace(/([A-Z])/g, ' $1').trim().replace(/\b\w/g, (char) => char.toUpperCase())}
+                    </Text>
 
 
                     <TextInput
@@ -336,7 +336,7 @@ const getStyles = (width: number) =>
       height: 260,
       position: 'relative',
       borderRadius: 8
-      
+
     },
     headerImage: {
       width: '100%',
@@ -344,7 +344,7 @@ const getStyles = (width: number) =>
       resizeMode: 'cover',
       borderTopLeftRadius: 8,
       borderTopRightRadius: 8
-    },    
+    },
     textOverlay: {
       position: 'absolute',
       bottom: 10,
