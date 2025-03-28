@@ -227,23 +227,30 @@ export default function CommunityPage() {
       });
       if (!response.ok) return;
       const data = await response.json();
-      const transformedPosts = data.map((post: any) => ({
-        ...post,
-        location: post.origin_address || routeDetails?.location || location,
-        destination: post.destination_address || routeDetails?.destination || destination,
-        origin_lat: post.origin_lat,
-        origin_lon: post.origin_lon,
-        destination_lat: post.dest_lat,
-        destination_lon: post.dest_lon,
-        created_at: post.created_at,
-        timestamp: new Date(post.created_at).getTime(),
-        user_vote: post.user_vote, // Ensure this is included
-      }));
+      const transformedPosts = data.map((post: any) => {
+        const existingPost = contextPosts.find(p => p.id === post.id);
+        if (existingPost && existingPost.pendingVote) {
+          return existingPost; // Preserve local state if vote is pending
+        }
+        return {
+          ...post,
+          location: post.origin_address || routeDetails?.location || location,
+          destination: post.destination_address || routeDetails?.destination || destination,
+          origin_lat: post.origin_lat,
+          origin_lon: post.origin_lon,
+          destination_lat: post.dest_lat,
+          destination_lon: post.dest_lon,
+          created_at: post.created_at,
+          timestamp: new Date(post.created_at).getTime(),
+          user_vote: post.user_vote,
+          pendingVote: false, // Reset for new posts
+        };
+      });
       setPosts(transformedPosts);
     } catch (error) {
       console.error('Fetch error:', error);
     } finally {
-      setIsLoading(false); // Set loading to false after fetching
+      setIsLoading(false);
     }
   };
 
