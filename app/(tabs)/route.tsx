@@ -761,11 +761,19 @@ const RouteScreen: React.FC = () => {
                     {/* Walking Details */}
                     {segment.type === 'walking' ? (
                       <>
-                        <View style={styles.detailRow}>
+                        {/* <View style={styles.detailRow}>
                           <Feather name="map" size={14} color="#64748B" />
                           <Text style={styles.detailText}>
-                            {(segment.distance / 1000).toFixed(1)} km
+                            {(segment.distance / 1000).toFixed(2)} km
                           </Text>
+                        </View> */}
+                        <View style={styles.detailGrid}>
+                          <View style={styles.detailColumn}>
+                            <Text style={styles.detailLabel}>Distance</Text>
+                            <Text style={styles.detailValue}>
+                              {(segment.distance / 1000).toFixed(2)} km
+                            </Text>
+                          </View>
                         </View>
 
                         <Text style={styles.sectionHeading}>Directions</Text>
@@ -789,9 +797,9 @@ const RouteScreen: React.FC = () => {
                             </Text>
                           </View>
                           <View style={styles.detailColumn}>
-                            <Text style={styles.detailLabel}>Duration</Text>
+                            <Text style={styles.detailLabel}>Distance</Text>
                             <Text style={styles.detailValue}>
-                              {formatDuration(segment.duration)}
+                              {(segment.distance / 1000).toFixed(2)} km
                             </Text>
                           </View>
                         </View>
