@@ -1189,7 +1189,7 @@ const RouteScreen: React.FC = () => {
         </View>
 
         {/* Bottom Half: Details and Modals */}
-        <View style={[styles.normalViewContainer, { flex: 1 }]}>
+        <View style={[styles.normalViewContainer, { flex: 1.5 }]}>
           <ScrollView
             nestedScrollEnabled
             contentContainerStyle={{ flexGrow: 1, paddingVertical: 10 }}
