@@ -22,7 +22,7 @@ import {
 import axios from "axios";
 import { WebView } from "react-native-webview";
 import * as Location from "expo-location";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import ReviewModal from "../reviewmodal";
 import ModalComponent from "../restaurantmodal";
@@ -680,8 +680,14 @@ const RouteScreen: React.FC = () => {
     }
     return primary;
   };
+
   const renderRouteOverview = useCallback(() => {
-    if (!routeDetails.route) return <Text style={styles.overviewText}>No route available</Text>;
+    if (!routeDetails.route) return (
+      <Text style={styles.overviewText}>
+        No route available. Please try a different search.
+      </Text>
+    );
+
     const { segments } = routeDetails.route;
     return (
       <View style={styles.timelineContainer}>
@@ -689,41 +695,57 @@ const RouteScreen: React.FC = () => {
         {segments.map((segment: any, idx: number) => {
           const iconName = segment.type === 'walking' ? 'walking' : segment.type === 'bus' ? 'bus' : 'car';
           const isExpanded = expandedSegments[idx];
-          const segmentColor = segment.type === 'walking' ? '#808080' : '#6366F1';
+          const segmentColor = segment.type === 'walking' ? '#64748B' : '#6366F1';
+
           return (
             <View key={idx} style={styles.timelineItem}>
               <View style={[styles.timelineDot, { backgroundColor: segmentColor }]} />
+
               <View style={styles.segmentCard}>
+                {/* Segment Header */}
                 <View style={styles.segmentHeader}>
-                  <View style={styles.timelineIconContainer}>
-                    <FontAwesome5 name={iconName} size={16} color={segmentColor} />
-                  </View>
                   <TouchableOpacity
-                    style={styles.segmentHeaderRow}
+                    style={styles.segmentHeaderContent}
                     onPress={() => handleToggleSegment(idx)}
-                    activeOpacity={0.7}
+                    activeOpacity={0.8}
                   >
-                    <View style={styles.segmentTitleContainer}>
-                      <Text style={styles.segmentTitle}>
-                        {segment.type === 'walking' ? 'Walk' : segment.type.toUpperCase()}
-                      </Text>
-                      {segment.type === "walking" && (
+                    <FontAwesome5
+                      name={iconName}
+                      size={20}
+                      color={segmentColor}
+                      style={styles.segmentIcon}
+                    />
+
+                    <View style={styles.segmentTextContainer}>
+                      <View style={styles.segmentTitleRow}>
+                        <Text style={styles.segmentTitle}>
+                          {segment.type === 'walking' ? 'Walk' : segment.type.toUpperCase()}
+                        </Text>
+                        <Text style={styles.segmentDuration}>
+                          {formatDuration(segment.duration)}
+                        </Text>
+                      </View>
+
+                      {segment.type === 'walking' ? (
                         <Text style={styles.segmentSubtitle}>
-                          {`towards ${shortenStopName(segment.to_stop?.name)}`}
+                          {segment.to_stop?.name && `To ${shortenStopName(segment.to_stop.name)}`}
+                        </Text>
+                      ) : (
+                        <Text style={styles.segmentSubtitle}>
+                          {segment.route_name}
                         </Text>
                       )}
-                      <Text style={styles.segmentSubtitle}>
-                        {segment.type === 'walking'
-                          ? `${segment.to_stop ? (segment.distance / 1000).toFixed(2) + ' km' : ''} (${formatDuration(segment.duration)})`
-                          : `${segment.route_name} (${formatDuration(segment.duration)})`}
-                      </Text>
                     </View>
+
                     <Ionicons
                       name={isExpanded ? 'chevron-down' : 'chevron-forward'}
-                      size={18}
-                      color='#6366F1'
+                      size={20}
+                      color="#64748B"
+                      style={styles.chevronIcon}
                     />
                   </TouchableOpacity>
+
+                  {/* View Button */}
                   <TouchableOpacity
                     style={styles.viewButton}
                     onPress={() => handleViewSegment(idx)}
@@ -732,43 +754,89 @@ const RouteScreen: React.FC = () => {
                     <Text style={styles.viewButtonText}>View</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* Expanded Details */}
                 {isExpanded && (
                   <View style={styles.segmentDetails}>
+                    {/* Walking Details */}
                     {segment.type === 'walking' ? (
                       <>
-                        <Text style={styles.segmentText}>
-                          Distance: {segment.distance ? (segment.distance / 1000).toFixed(2) : 'N/A'} km
-                        </Text>
-                        <Text style={styles.segmentText}>
-                          Duration: {segment.duration ? formatDuration(segment.duration) : 'N/A'}
-                        </Text>
+                        <View style={styles.detailRow}>
+                          <Feather name="map" size={14} color="#64748B" />
+                          <Text style={styles.detailText}>
+                            {(segment.distance / 1000).toFixed(1)} km
+                          </Text>
+                        </View>
+
+                        <Text style={styles.sectionHeading}>Directions</Text>
                         {segment.steps?.map((step: any, stepIdx: number) => (
-                          <Text key={stepIdx} style={styles.stepText}>{stepIdx + 1}. {step.instruction}</Text>
+                          <View key={stepIdx} style={styles.stepRow}>
+                            <Text style={styles.stepBullet}>{stepIdx + 1}.</Text>
+                            <Text style={styles.stepText}>
+                              {step.instruction}
+                            </Text>
+                          </View>
                         ))}
                       </>
                     ) : (
+                      /* Transit Details */
                       <>
-                        <View style={styles.getOnOffContainer}>
-                          <Text style={styles.onOffTitle}>Get On</Text>
-                          <Text style={styles.onOffInstruction}>
-                            {segment.boarding || segment.from_stop?.name || 'Start'}
-                          </Text>
-                          <Text style={styles.onOffTitle}>Get Off</Text>
-                          <Text style={styles.onOffInstruction}>
-                            {segment.alighting || segment.to_stop?.name || 'End'}
-                          </Text>
+                        <View style={styles.detailGrid}>
+                          <View style={styles.detailColumn}>
+                            <Text style={styles.detailLabel}>Fare</Text>
+                            <Text style={styles.detailValue}>
+                              ₱{segment.fare || 'Free'}
+                            </Text>
+                          </View>
+                          <View style={styles.detailColumn}>
+                            <Text style={styles.detailLabel}>Duration</Text>
+                            <Text style={styles.detailValue}>
+                              {formatDuration(segment.duration)}
+                            </Text>
+                          </View>
                         </View>
-                        <Text style={styles.segmentText}>Fare: ₱{segment.fare || 'N/A'}</Text>
-                        <Text style={styles.segmentText}>
-                          Duration: {segment.duration ? formatDuration(segment.duration) : 'N/A'}
-                        </Text>
+
+                        <View style={styles.boardingSection}>
+                          <View style={styles.boardingRow}>
+                            <MaterialCommunityIcons
+                              name="arrow-up-circle"
+                              size={16}
+                              color="#10B981"
+                            />
+                            <View style={styles.boardingTextContainer}>
+                              <Text style={styles.boardingLabel}>Board at</Text>
+                              <Text style={styles.boardingValue}>
+                                {segment.from_stop?.name || 'Current location'}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={styles.boardingRow}>
+                            <MaterialCommunityIcons
+                              name="arrow-down-circle"
+                              size={16}
+                              color="#EF4444"
+                            />
+                            <View style={styles.boardingTextContainer}>
+                              <Text style={styles.boardingLabel}>Alight at</Text>
+                              <Text style={styles.boardingValue}>
+                                {segment.to_stop?.name || 'Destination'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+
                         {segment.alternatives?.length > 0 && (
                           <View style={styles.alternativesContainer}>
-                            <Text style={styles.alternativeHeader}>Alternatives</Text>
+                            <Text style={styles.sectionHeading}>
+                              Alternative Options
+                            </Text>
                             {segment.alternatives.map((alt: any, altIdx: number) => (
-                              <Text key={altIdx} style={styles.alternativeText}>
-                                • {alt.type} - {alt.route_name}
-                              </Text>
+                              <View key={altIdx} style={styles.alternativeOption}>
+                                <Text style={styles.alternativeText}>
+                                  {alt.type} - {alt.route_name}
+                                </Text>
+                              </View>
                             ))}
                           </View>
                         )}
@@ -784,6 +852,7 @@ const RouteScreen: React.FC = () => {
     );
   }, [routeDetails.route, expandedSegments, handleToggleSegment, handleViewSegment]);
 
+
   const metricsData = routeMetrics
     ? [
       { icon: 'map-marker-alt', text: `Distance: ${routeMetrics.distance} km` },
@@ -798,12 +867,14 @@ const RouteScreen: React.FC = () => {
 
   const renderRouteTab = useCallback(() => (
     <View style={styles.tabContent}>
-      <Text style={styles.text}>Route Details</Text>
+      <Text style={styles.headerText}>Route Details</Text>
+
       <View style={styles.routeTypeContainer}>
         <Text style={styles.subHeader}>Select Route Type</Text>
         <TouchableOpacity
           style={styles.algorithmDropdownButton}
           onPress={() => setShowAlgorithmDropdown(!showAlgorithmDropdown)}
+          activeOpacity={0.7}
         >
           <Text style={styles.algorithmDropdownButtonText}>
             {algorithmOptions.find((opt) => opt.value === selectedAlgorithm)?.label || 'Select Algorithm'}
@@ -828,8 +899,11 @@ const RouteScreen: React.FC = () => {
                   onPress={() => {
                     setSelectedAlgorithm(item.value);
                     setShowAlgorithmDropdown(false);
-                    if (route.length >= 2) fetchRouteDetails(route[1].latitude, route[1].longitude, item.value);
+                    if (route.length >= 2) {
+                      fetchRouteDetails(route[1].latitude, route[1].longitude, item.value);
+                    }
                   }}
+                  activeOpacity={0.7}
                 >
                   <Text
                     style={[
@@ -846,6 +920,7 @@ const RouteScreen: React.FC = () => {
           </View>
         )}
       </View>
+
       <View style={styles.locationsContainer}>
         <Text style={styles.label}>From</Text>
         <View style={styles.inputContainer}>
@@ -865,6 +940,7 @@ const RouteScreen: React.FC = () => {
           )}
           <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
         </View>
+
         <Text style={styles.label}>To</Text>
         <View style={styles.inputContainer}>
           <TextInput
@@ -884,7 +960,9 @@ const RouteScreen: React.FC = () => {
           <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
         </View>
       </View>
+
       {isRouteLoading && <ActivityIndicator size='small' color='#6366F1' style={{ marginVertical: 12 }} />}
+
       {route.length >= 2 && routeMetrics && !isRouteLoading && (
         <View style={styles.routeMetricsContainer}>
           <Text style={styles.subHeader}>Route Metrics</Text>
@@ -902,11 +980,12 @@ const RouteScreen: React.FC = () => {
           />
         </View>
       )}
+
       {route.length >= 2 && !isRouteLoading ? (
         <View style={styles.routeOverviewContainer}>
           <Text style={styles.subHeader}>Route Overview</Text>
           {renderRouteOverview()}
-          <TouchableOpacity style={styles.experiencesButton} onPress={handleExperiencesPress}>
+          <TouchableOpacity style={styles.experiencesButton} onPress={handleExperiencesPress} activeOpacity={0.7}>
             <Text style={styles.experiencesButtonText}>Experiences</Text>
           </TouchableOpacity>
         </View>
@@ -935,33 +1014,48 @@ const RouteScreen: React.FC = () => {
     renderRouteOverview,
     handleExperiencesPress,
   ]);
+
   // Memoize the preview data at the top level
   const previewRestaurants = useMemo(() => nearbyRestaurants.slice(0, 5), [nearbyRestaurants]);
 
   const renderRestaurantsTab = () => (
     <View style={styles.tabContent}>
-      <Text style={styles.text}>Nearby Dining Spots</Text>
+      <Text style={styles.headerText}>Nearby Dining Spots</Text>
+
       <View style={styles.spotLimitContainer}>
         <Text style={styles.spotLimitHint}>Limit results to:</Text>
         {[10, 20, 50, 100].map((limit) => (
           <TouchableOpacity
             key={limit}
-            style={[styles.spotLimitButton, spotLimit === limit && styles.activeSpotLimitButton]}
+            style={[
+              styles.spotLimitButton,
+              spotLimit === limit && styles.activeSpotLimitButton
+            ]}
             onPress={() => setSpotLimit(limit)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.spotLimitButtonText, spotLimit === limit && styles.activeSpotLimitButtonText]}>
+            <Text
+              style={[
+                styles.spotLimitButtonText,
+                spotLimit === limit && styles.activeSpotLimitButtonText
+              ]}
+            >
               {limit}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
+
       {(route[0] || route[1]) && (
         <View style={styles.locationTypeContainer}>
           <Text style={styles.locationTypeLabel}>Show dining spots near:</Text>
           <View style={styles.segmentedControl}>
             <TouchableOpacity
-              style={[styles.segmentButton, selectedLocationType === 'origin' && styles.activeSegment]}
+              style={[
+                styles.segmentButton,
+                selectedLocationType === 'origin' && styles.activeSegment,
+                !route[0] && styles.disabledSegment
+              ]}
               onPress={() => setSelectedLocationType('origin')}
               disabled={!route[0]}
             >
@@ -969,14 +1063,18 @@ const RouteScreen: React.FC = () => {
                 style={[
                   styles.segmentText,
                   selectedLocationType === 'origin' && styles.activeSegmentText,
-                  !route[0] && styles.disabledSegmentText,
+                  !route[0] && styles.disabledSegmentText
                 ]}
               >
                 Origin
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.segmentButton, selectedLocationType === 'destination' && styles.activeSegment]}
+              style={[
+                styles.segmentButton,
+                selectedLocationType === 'destination' && styles.activeSegment,
+                !route[1] && styles.disabledSegment
+              ]}
               onPress={() => setSelectedLocationType('destination')}
               disabled={!route[1]}
             >
@@ -984,7 +1082,7 @@ const RouteScreen: React.FC = () => {
                 style={[
                   styles.segmentText,
                   selectedLocationType === 'destination' && styles.activeSegmentText,
-                  !route[1] && styles.disabledSegmentText,
+                  !route[1] && styles.disabledSegmentText
                 ]}
               >
                 Destination
@@ -993,6 +1091,7 @@ const RouteScreen: React.FC = () => {
           </View>
         </View>
       )}
+
       {selectedLocationCoords ? (
         <View style={styles.restaurantsPreview}>
           <Text style={styles.subHeader}>Top Nearby Dining Spots</Text>
@@ -1005,6 +1104,7 @@ const RouteScreen: React.FC = () => {
                 <TouchableOpacity
                   style={styles.restaurantCard}
                   onPress={() => setRestaurantModalVisible(true)}
+                  activeOpacity={0.7}
                 >
                   <Text style={styles.restaurantName} numberOfLines={1}>
                     {item.name}
@@ -1020,39 +1120,55 @@ const RouteScreen: React.FC = () => {
               showsHorizontalScrollIndicator={false}
             />
           ) : (
-            <Text style={styles.noResultsText}>No dining spots found near {selectedLocationType}</Text>
+            <Text style={styles.noResultsText}>
+              No dining spots found near {selectedLocationType}
+            </Text>
           )}
-          <TouchableOpacity style={styles.seeAllButton} onPress={() => setRestaurantModalVisible(true)}>
+          <TouchableOpacity
+            style={styles.seeAllButton}
+            onPress={() => setRestaurantModalVisible(true)}
+          >
             <Text style={styles.seeAllText}>See All Dining Spots</Text>
             <Ionicons name="chevron-forward" size={16} color="#6366F1" />
           </TouchableOpacity>
         </View>
       ) : (
-        <Text style={styles.promptText}>Enter an origin/destination to view nearby dining spots</Text>
+        <Text style={styles.promptText}>
+          Enter an origin/destination to view nearby dining spots
+        </Text>
       )}
     </View>
   );
 
+
   const renderAttractionsTab = useCallback(() => (
     <View style={styles.tabContent}>
-      <Text style={styles.text}>Nearby Attractions</Text>
+      <Text style={styles.headerText}>Nearby Attractions</Text>
+
       <View style={styles.spotLimitContainer}>
         <Text style={styles.spotLimitHint}>Limit results to:</Text>
         {[10, 20, 50, 100].map((limit) => (
           <TouchableOpacity
             key={limit}
-            style={[styles.spotLimitButton, spotLimit === limit && styles.activeSpotLimitButton]}
+            style={[
+              styles.spotLimitButton,
+              spotLimit === limit && styles.activeSpotLimitButton
+            ]}
             onPress={() => setSpotLimit(limit)}
             activeOpacity={0.7}
           >
             <Text
-              style={[styles.spotLimitButtonText, spotLimit === limit && styles.activeSpotLimitButtonText]}
+              style={[
+                styles.spotLimitButtonText,
+                spotLimit === limit && styles.activeSpotLimitButtonText
+              ]}
             >
               {limit}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
+
       {(route[0] || route[1]) && (
         <View style={styles.locationTypeContainer}>
           <Text style={styles.locationTypeLabel}>Show attractions near:</Text>
@@ -1097,8 +1213,8 @@ const RouteScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
-
       )}
+
       {selectedLocationCoords ? (
         nearbySpots.length > 0 ? (
           <View style={styles.attractionsPreview}>
@@ -1114,7 +1230,9 @@ const RouteScreen: React.FC = () => {
                   activeOpacity={0.7}
                 >
                   <Image
-                    source={{ uri: item.image_url || 'https://via.placeholder.com/150.png?text=No+Image' }}
+                    source={{
+                      uri: item.image_url || 'https://via.placeholder.com/150.png?text=No+Image'
+                    }}
                     style={styles.attractionImagePreview}
                   />
                   <Text style={styles.attractionNamePreview} numberOfLines={1}>
@@ -1133,10 +1251,14 @@ const RouteScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         ) : (
-          <Text style={styles.noResultsText}>No attractions found near {selectedLocationType}</Text>
+          <Text style={styles.noResultsText}>
+            No attractions found near {selectedLocationType}
+          </Text>
         )
       ) : (
-        <Text style={styles.promptText}>Enter an origin/destination to view nearby attractions</Text>
+        <Text style={styles.promptText}>
+          Enter an origin/destination to view nearby attractions
+        </Text>
       )}
     </View>
   ), [route, selectedLocationType, nearbySpots, spotLimit]);
@@ -1320,6 +1442,312 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  timelineItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  segmentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginLeft: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  segmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  segmentHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  segmentIcon: {
+    marginRight: 12,
+  },
+  segmentTextContainer: {
+    flex: 1,
+  },
+  segmentTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 4,
+  },
+  segmentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  segmentDuration: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  segmentSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+  },
+  chevronIcon: {
+    marginLeft: 12,
+  },
+  segmentDetails: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  detailText: {
+    fontSize: 14,
+    color: '#1F2937',
+    marginLeft: 8,
+  },
+  sectionHeading: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginTop: 16,
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  stepBullet: {
+    color: '#64748B',
+    marginRight: 8,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 20,
+  },
+  detailGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  detailColumn: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  boardingSection: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+  },
+  boardingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  boardingTextContainer: {
+    marginLeft: 12,
+  },
+  boardingLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    textTransform: 'uppercase',
+  },
+  boardingValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    marginTop: 2,
+  },
+  alternativesContainer: {
+    marginTop: 16,
+  },
+  alternativeOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  alternativeText: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 20,
+  },
+  tabContent: {
+    paddingTop: 0,
+    paddingLeft: 16,
+    paddingRight: 16,
+  },
+  headerText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#44457D',
+    marginBottom: 16,
+  },
+  spotLimitContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  spotLimitHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginRight: 8,
+  },
+  spotLimitButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    marginRight: 8,
+  },
+  activeSpotLimitButton: {
+    backgroundColor: '#6366F1',
+  },
+  spotLimitButtonText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  activeSpotLimitButtonText: {
+    color: '#FFFFFF',
+  },
+  locationTypeContainer: {
+    marginVertical: 12,
+    padding: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  locationTypeLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    padding: 2,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 6,
+    justifyContent: 'center',
+  },
+  activeSegment: {
+    backgroundColor: '#6366F1',
+    borderWidth: 1,
+    borderColor: '#6366F1',
+  },
+  activeSegmentText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  segmentText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  disabledSegment: {
+    backgroundColor: '#F3F4F6',
+  },
+  disabledSegmentText: {
+    color: '#9CA3AF',
+  },
+  attractionsPreview: {
+    marginVertical: 12,
+  },
+  subHeader: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  attractionCardPreview: {
+    width: 180,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  attractionImagePreview: {
+    width: '100%',
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  attractionNamePreview: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  attractionDistance: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingVertical: 8,
+  },
+  seeAllText: {
+    color: '#6366F1',
+    fontSize: 12,
+    marginRight: 4,
+  },
+  noResultsText: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  promptText: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginVertical: 12,
+  },
   normalViewContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -1359,16 +1787,11 @@ const styles = StyleSheet.create({
   },
   timelineLine: {
     position: "absolute",
-    left: 15,
+    left: 5,
     top: 0,
     bottom: 0,
     width: 2,
     backgroundColor: "#6366F1",
-  },
-  timelineItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 16,
   },
   timelineDot: {
     width: 10,
@@ -1376,26 +1799,9 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "#6366F1", // Overridden per segment
     position: "absolute",
-    left: 11,
+    left: 1,
     top: 10,
     zIndex: 1,
-  },
-  segmentCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 12,
-    marginLeft: 24, // Space for timeline
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    elevation: 2,
-  },
-  segmentHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
   },
   timelineIconContainer: {
     marginRight: 8,
@@ -1410,38 +1816,17 @@ const styles = StyleSheet.create({
   segmentTitleContainer: {
     flexDirection: "column",
   },
-  segmentTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  segmentSubtitle: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
-  },
   viewButton: {
     backgroundColor: "#6366F1",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 4,
-    marginLeft: 8,
+    borderRadius: 6,
+    marginLeft: 12,
   },
   viewButtonText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "500",
-  },
-  segmentDetails: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
-  stepText: {
-    fontSize: 12,
-    color: "#374151",
-    marginBottom: 4,
   },
   getOnOffContainer: {
     marginBottom: 8,
@@ -1457,22 +1842,11 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginTop: 2,
   },
-  alternativesContainer: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 6,
-  },
   alternativeHeader: {
     fontSize: 13,
     fontWeight: "700",
     color: "#111827",
     marginBottom: 6,
-  },
-  alternativeText: {
-    fontSize: 12,
-    color: "#374151",
-    lineHeight: 18,
   },
   overviewText: {
     fontSize: 12,
@@ -1480,7 +1854,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginVertical: 8,
   },
-  tabContent: { paddingTop: 0, paddingLeft: 16, paddingRight: 16 },
   sectionHeader: {
     fontSize: 16,
     fontWeight: "600",
@@ -1488,12 +1861,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   routeTypeContainer: { marginBottom: 8 },
-  subHeader: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#6B7280",
-    marginBottom: 4,
-  },
   algorithmDropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1538,11 +1905,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#44457D",
     marginTop: 2,
-  },
-  attractionDistance: {
-    fontSize: 10,
-    color: "#6B7280",
-    marginTop: 4,
   },
   bottomSheetContent: {
     padding: 16,
@@ -1642,7 +2004,6 @@ const styles = StyleSheet.create({
   segmentCardHeaderText: { fontSize: 12, fontWeight: "bold", color: "#111827" },
   segmentCardBody: { padding: 10 },
   stepsContainer: { marginTop: 6, marginLeft: 6 },
-  stepRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4 },
   bulletIcon: {
     marginRight: 6,
     fontSize: 14,
@@ -1722,57 +2083,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF', // White text when selected
     fontWeight: '600', // Bolder for emphasis
   },
-  locationTypeContainer: {
-    marginVertical: 12,
-    padding: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    // Subtle shadow to lift the container
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  locationTypeLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    padding: 2,
-  },
-  segmentButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 6,
-    justifyContent: 'center',
-  },
-  activeSegment: {
-    backgroundColor: '#6366F1',
-    borderWidth: 1,
-    borderColor: '#6366F1',
-  },
-  activeSegmentText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  segmentText: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  disabledSegment: {
-    // Optional: add a subtle background tint for disabled states
-    backgroundColor: '#F3F4F6',
-  },
-  disabledSegmentText: {
-    color: '#9CA3AF',
-  },
   restaurantsPreview: {
     marginVertical: 12,
   },
@@ -1814,62 +2124,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6B7280',
   },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingVertical: 8,
-  },
-  seeAllText: {
-    color: '#6366F1',
-    fontSize: 12,
-    marginRight: 4,
-  },
-  noResultsText: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-    paddingVertical: 8,
-  },
-  promptText: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginVertical: 12,
-  },
   tabContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 16 },
   tabButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: "#F3F4F6" },
   activeTab: { backgroundColor: "#6366F1" },
   tabText: { color: "#6B7280", fontWeight: "500" },
   activeTabText: { color: "#FFFFFF" },
-  spotLimitContainer: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   spotLimitLabel: {
     fontSize: 14,
     fontWeight: '500',
     color: '#44457D', // Match PostModal label color
     marginRight: 8,
-  },
-  spotLimitHint: {
-    fontSize: 12,
-    color: '#6B7280', // Subtle gray for hint text
-    marginRight: 8,
-  },
-  spotLimitButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
-    marginRight: 8,
-  },
-  activeSpotLimitButton: {
-    backgroundColor: '#6366F1',
-  },
-  spotLimitButtonText: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  activeSpotLimitButtonText: {
-    color: '#FFFFFF',
   },
   attractionCard: { marginBottom: 20, borderWidth: 1, borderColor: "#C7D2FE", borderRadius: 8, padding: 10, backgroundColor: "#FBFCFF" },
   attractionImage: { height: 200, width: "100%", borderRadius: 10, marginBottom: 10 },
@@ -1880,35 +2144,7 @@ const styles = StyleSheet.create({
   goHereButton: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, backgroundColor: "#EFF6FF", borderRadius: 8, flex: 1 },
   goHereText: { color: "#3B82F6", fontWeight: "500" },
   scrollContent: { paddingBottom: 20 },
-  attractionsPreview: {
-    marginVertical: 12,
-  },
   attractionsScroll: {
     paddingRight: 16,
-  },
-  attractionCardPreview: {
-    width: 180,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  attractionImagePreview: {
-    width: '100%',
-    height: 100,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  attractionNamePreview: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#111827',
   },
 });
