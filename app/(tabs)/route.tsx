@@ -1058,7 +1058,11 @@ const RouteScreen: React.FC = () => {
           <Text style={styles.locationTypeLabel}>Show attractions near:</Text>
           <View style={styles.segmentedControl}>
             <TouchableOpacity
-              style={[styles.segmentButton, selectedLocationType === 'origin' && styles.activeSegment]}
+              style={[
+                styles.segmentButton,
+                selectedLocationType === 'origin' && styles.activeSegment,
+                !route[0] && styles.disabledSegment
+              ]}
               onPress={() => setSelectedLocationType('origin')}
               disabled={!route[0]}
             >
@@ -1066,14 +1070,18 @@ const RouteScreen: React.FC = () => {
                 style={[
                   styles.segmentText,
                   selectedLocationType === 'origin' && styles.activeSegmentText,
-                  !route[0] && styles.disabledSegmentText,
+                  !route[0] && styles.disabledSegmentText
                 ]}
               >
                 Origin
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.segmentButton, selectedLocationType === 'destination' && styles.activeSegment]}
+              style={[
+                styles.segmentButton,
+                selectedLocationType === 'destination' && styles.activeSegment,
+                !route[1] && styles.disabledSegment
+              ]}
               onPress={() => setSelectedLocationType('destination')}
               disabled={!route[1]}
             >
@@ -1081,7 +1089,7 @@ const RouteScreen: React.FC = () => {
                 style={[
                   styles.segmentText,
                   selectedLocationType === 'destination' && styles.activeSegmentText,
-                  !route[1] && styles.disabledSegmentText,
+                  !route[1] && styles.disabledSegmentText
                 ]}
               >
                 Destination
@@ -1089,6 +1097,7 @@ const RouteScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
+
       )}
       {selectedLocationCoords ? (
         nearbySpots.length > 0 ? (
@@ -1179,13 +1188,13 @@ const RouteScreen: React.FC = () => {
             }}
             activeTab={activeTab}
           />
-          {isRouteLoading && (
+          {/* {isRouteLoading && (
             <ActivityIndicator
               style={styles.loadingIndicator}
               size="large"
               color="#6366F1"
             />
-          )}
+          )} */}
         </View>
 
         {/* Bottom Half: Details and Modals */}
@@ -1428,11 +1437,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
-  },
-  segmentText: {
-    fontSize: 12,
-    color: "#374151",
-    marginBottom: 4,
   },
   stepText: {
     fontSize: 12,
@@ -1720,37 +1724,54 @@ const styles = StyleSheet.create({
   },
   locationTypeContainer: {
     marginVertical: 12,
+    padding: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    // Subtle shadow to lift the container
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   locationTypeLabel: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
     marginBottom: 8,
   },
   segmentedControl: {
     flexDirection: 'row',
     borderRadius: 8,
     backgroundColor: '#F3F4F6',
-    padding: 4,
+    padding: 2,
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 12,
     alignItems: 'center',
+    borderRadius: 6,
+    justifyContent: 'center',
   },
   activeSegment: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    backgroundColor: '#6366F1',
+    borderWidth: 1,
+    borderColor: '#6366F1',
   },
   activeSegmentText: {
-    color: '#6366F1',
-    fontWeight: '500',
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  segmentText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  disabledSegment: {
+    // Optional: add a subtle background tint for disabled states
+    backgroundColor: '#F3F4F6',
   },
   disabledSegmentText: {
-    color: '#D1D5DB',
+    color: '#9CA3AF',
   },
   restaurantsPreview: {
     marginVertical: 12,
