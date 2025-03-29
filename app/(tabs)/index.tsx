@@ -233,7 +233,7 @@ const Home = () => {
                 </Text>
               </View>
               <Text style={styles.title}>
-                Simply Travel with <Text style={styles.highlight}>kommutsera</Text>
+                Simply Travel with <Text style={styles.highlight}>Kommutsera</Text>
               </Text>
               <Text style={styles.description}>
                 Conquer the Metro with ease! <Text style={styles.boldText}>Kommutsera: Gabay ko, Byahe mo!!! </Text> your companion for hassle-free commuting, offering clear routes and navigation.
