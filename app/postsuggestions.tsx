@@ -200,6 +200,10 @@ export default function PostSuggestions() {
   };
 
   const handlePostSubmit = async (formData: Post) => {
+    if (!authToken) {
+      router.push('/login');
+      return;
+    }
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -243,6 +247,7 @@ export default function PostSuggestions() {
       setPosts((prevPosts) => [newPost, ...prevPosts]);
       setModalVisible(false);
     } catch (error) {
+      console.error('Error creating post:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -346,7 +351,16 @@ export default function PostSuggestions() {
             <Text style={styles.sectionTitle}>Discover Experiences</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
               <Dropdown options={dropdownOptions} onSelect={setSelectedOption} />
-              <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.postbutton}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!authToken) {
+                    router.push('/login');
+                  } else {
+                    setModalVisible(true);
+                  }
+                }}
+                style={styles.postbutton}
+              >
                 <Text style={styles.postButtonText}>Post</Text>
               </TouchableOpacity>
             </View>
