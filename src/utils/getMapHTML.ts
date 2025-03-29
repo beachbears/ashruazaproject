@@ -85,10 +85,10 @@ export const getMapHTML = ({
   if (nearbySpots && nearbySpots.length > 0) {
     markersJS.push(`
       var touristIcon = L.divIcon({
-        html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #28a745; font-size: 16px;"></i></div>',
+        html: '<div style="background-color: #fff; border: 2px solid #28a745; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-mountain-sun" style="color: #28a745; font-size: 8px;"></i></div>',
         className: 'custom-icon',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32]
+        iconSize: [28, 28],
+        iconAnchor: [14, 28]
       });
     `);
     nearbySpots.forEach((spot) => {
