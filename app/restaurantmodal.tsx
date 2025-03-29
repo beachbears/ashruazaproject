@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Restaurant } from "@/src/types";
+import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 const formatCuisine = (cuisine: string | undefined) => {
   if (!cuisine) return "Not specified";
@@ -20,6 +21,70 @@ const formatCuisine = (cuisine: string | undefined) => {
     .split(/[_;]/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(", ");
+};
+
+const paymentIconMapping: { [key: string]: { icon: keyof typeof MaterialIcons.glyphMap; color: string } } = {
+  'credit cards': { icon: 'credit-card', color: '#4a5568' },
+  'cash': { icon: 'attach-money', color: '#48bb78' },
+  'cryptocurrency': { icon: 'currency-bitcoin', color: '#f6ad55' },
+  'contactless': { icon: 'contactless', color: '#4299e1' },
+};
+
+const getPaymentIcons = (paymentData: string): JSX.Element[] => {
+  try {
+    const paymentObj = JSON.parse(paymentData);
+    const icons: JSX.Element[] = [];
+
+    Object.entries(paymentObj).forEach(([key, value]) => {
+      const cleanKey = key.replace(/^payment:/, "").replace(/_/g, " ").toLowerCase(); // e.g., "credit cards"
+      const paymentValue = value?.toString().trim().toLowerCase();
+      if (paymentValue && ["yes", "only"].includes(paymentValue)) {
+        // Look for a known mapping; if not, use a generic "payment" icon.
+        const mapping = paymentIconMapping[cleanKey];
+        const iconName = mapping ? mapping.icon : 'payment';
+        const iconColor = mapping ? mapping.color : '#4a5568';
+        icons.push(
+          <MaterialIcons
+            key={cleanKey}
+            name={iconName}
+            size={20}
+            color={iconColor}
+            style={styles.paymentIcon}
+          />
+        );
+      }
+    });
+    return icons;
+  } catch (error) {
+    console.error("Error in getPaymentIcons:", error);
+    return [];
+  }
+};
+
+const getAcceptedPaymentMethodsText = (paymentData: string): string => {
+  try {
+    const paymentObj = JSON.parse(paymentData);
+    const accepted = Object.entries(paymentObj)
+      .filter(([_, value]) =>
+        value && ["yes", "only"].includes(value.toString().toLowerCase())
+      )
+      .map(([key]) =>
+        key.replace(/^payment:/, "").replace(/_/g, " ").trim()
+      );
+    // Capitalize each method and join with commas
+    const formatted = accepted
+      .map(method => method.charAt(0).toUpperCase() + method.slice(1))
+      .join(', ');
+    return formatted ? `${formatted}` : "";
+  } catch (error) {
+    console.error("Error in getAcceptedPaymentMethodsText:", error);
+    return "";
+  }
+};
+
+const parseOpeningHours = (hours?: string): string => {
+  if (!hours || hours === "Hours not specified") return "Not available";
+  return hours.replace(/;/g, '\n').replace(/,/g, ', ');
 };
 
 const getAcceptedPaymentMethods = (paymentData: string): string => {
@@ -52,164 +117,193 @@ interface RestaurantItemProps {
 }
 
 const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere }) => {
-  const handleWebsitePress = (url: string) => {
-    Linking.canOpenURL(url).then((supported) => {
-      if (supported) Linking.openURL(url);
-    });
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section);
   };
 
-  const handlePhonePress = (phone: string) => {
-    Linking.openURL(`tel:${phone}`);
-  };
+  const renderDetailSection = (title: string, icon: React.ReactNode, content: React.ReactNode) => (
+    <View style={styles.sectionContainer}>
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => toggleSection(title)}
+      >
+        {icon}
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <MaterialIcons
+          name={expandedSection === title ? 'expand-less' : 'expand-more'}
+          size={20}
+          color="#4a5568"
+        />
+      </TouchableOpacity>
+      {expandedSection === title && (
+        <View style={styles.sectionContent}>
+          {content}
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.spotCard}>
-      {onView && (
-        <View style={styles.restaurantHeader}>
-          <View style={styles.restaurantInfo}>
-            <Text style={styles.restaurantName}>{item.name}</Text>
-            <Text style={styles.restaurantCuisine}>
-              {formatCuisine(item.cuisine)}
-            </Text>
-            {item.distance !== undefined && (
+      {/* Header Section */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.restaurantName}>{item.name}</Text>
+          {item.brand?.brand && (
+            <Text style={styles.brandText}>{item.brand.brand}</Text>
+          )}
+          <View style={styles.ratingDistanceContainer}>
+            <View style={styles.distanceBadge}>
+              <MaterialIcons name="location-on" size={14} color="#fff" />
               <Text style={styles.distanceText}>
-                {item.distance.toFixed(2)} km away
+                {item.distance.toFixed(2)} km
               </Text>
+            </View>
+            {item.metadata?.internet_access && (
+              <View style={styles.wifiBadge}>
+                <Ionicons name="wifi" size={14} color="#fff" />
+                <Text style={styles.wifiText}>
+                  {item.metadata.internet_access}
+                </Text>
+              </View>
             )}
           </View>
-          <View style={styles.buttonGroup}>
-            <TouchableOpacity
-              style={styles.viewButton}
-              onPress={() =>
-                onView({
-                  latitude: item.latitude,
-                  longitude: item.longitude,
-                  name: item.name,
-                })
-              }
-            >
-              <Text style={styles.viewButtonText}>View</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.goHereButton}
-              onPress={() => onGoHere?.(item)}
-            >
-              <Text style={styles.goHereButtonText}>Go Here</Text>
-            </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Quick Info Row */}
+      <View style={styles.quickInfoContainer}>
+        <View style={styles.infoPill}>
+          <Ionicons name="restaurant" size={14} color="#4a5568" />
+          <Text style={styles.infoPillText}>
+            {item.amenity || 'Dining'}
+          </Text>
+        </View>
+        <View style={styles.infoPill}>
+          <MaterialCommunityIcons name="food-fork-drink" size={14} color="#4a5568" />
+          <Text style={styles.infoPillText}>
+            {formatCuisine(item.metadata?.cuisine)}
+          </Text>
+        </View>
+      </View>
+
+      {/* Expandable Sections */}
+      {renderDetailSection(
+        'Location & Hours',
+        <MaterialIcons name="schedule" size={20} color="#4a5568" />,
+        <>
+          <View style={styles.detailRow}>
+            <MaterialIcons name="place" size={18} color="#4a5568" />
+            <Text style={styles.detailText}>
+              {item.reverse_geocoded_address || 'Address not available'}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <MaterialIcons name="access-time" size={18} color="#4a5568" />
+            <Text style={styles.detailText}>
+              {item.metadata?.opening_hours || 'Opening hours not available'}
+            </Text>
+          </View>
+        </>
+      )}
+
+      {renderDetailSection(
+        'Services & Facilities',
+        <MaterialIcons name="miscellaneous-services" size={20} color="#4a5568" />,
+        <View style={styles.gridContainer}>
+          <View style={styles.gridRow}>
+            <ServiceBadge
+              icon="takeout-dining"
+              label="Takeaway"
+              value={item.metadata?.takeaway ? 'Yes' : 'No'}
+            />
+            <ServiceBadge
+              icon="delivery-dining"
+              label="Delivery"
+              value={item.metadata?.delivery || 'No'}
+            />
+            <ServiceBadge
+              icon="directions-car"
+              label="Drive-through"
+              value={item.metadata?.drive_through || 'No'}
+            />
+            <ServiceBadge
+              icon="accessible"
+              label="Accessibility"
+              value={item.metadata?.wheelchair || 'No'}
+            />
           </View>
         </View>
       )}
-      <View style={styles.detailsContainer}>
-        {!onView && (
-          <>
-            <Text style={styles.spotName}>{item.name}</Text>
-            {item.distance !== undefined && (
-              <Text style={styles.distanceText}>
-                {item.distance.toFixed(2)} km away
-              </Text>
-            )}
-          </>
-        )}
-        <View style={styles.amenityPill}>
-          <Text style={styles.amenityText}>
-            {item.amenity
-              ? item.amenity.charAt(0).toUpperCase() + item.amenity.slice(1)
-              : "Unknown"}
-          </Text>
+
+      {renderDetailSection(
+        'Payment Options',
+        <MaterialIcons name="payment" size={20} color="#4a5568" />,
+        <View style={[styles.paymentContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+          {(() => {
+            const icons = getPaymentIcons(item.metadata?.payment || '{}');
+            const acceptedText = getAcceptedPaymentMethodsText(item.metadata?.payment || '{}');
+            if (icons.length > 0) {
+              return (
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {icons}
+                  {acceptedText ? (
+                    <Text style={styles.paymentText}> {acceptedText}</Text>
+                  ) : null}
+                </View>
+              );
+            } else {
+              return <Text style={styles.noPaymentText}>Payment methods not specified</Text>;
+            }
+          })()}
         </View>
-        {item.address && (
-          <View style={styles.infoRow}>
-            <Ionicons name="location-outline" size={16} color="#44457D" />
-            <Text style={styles.sectionValue}>{item.address}</Text>
-          </View>
-        )}
-        {item.cuisine && (
-          <View style={styles.infoRow}>
-            <Ionicons name="restaurant-outline" size={16} color="#44457D" />
-            <Text style={styles.sectionValue}>{formatCuisine(item.cuisine)}</Text>
-          </View>
-        )}
-        {item.opening_hours && (
-          <View style={styles.infoRow}>
-            <Ionicons name="time-outline" size={16} color="#44457D" />
-            <Text style={styles.sectionValue}>
-              {item.opening_hours === "Hours not specified"
-                ? "Not available"
-                : item.opening_hours}
-            </Text>
-          </View>
-        )}
-        {item.brand && (
-          <View style={styles.infoRow}>
-            <Ionicons name="business-outline" size={16} color="#44457D" />
-            <Text style={styles.sectionValue}>Brand: {item.brand}</Text>
-          </View>
-        )}
-        {item.takeaway !== null && item.takeaway !== undefined && (
-          <View style={styles.infoRow}>
-            <Ionicons name="bag-handle-outline" size={16} color="#44457D" />
-            <Text style={styles.sectionValue}>
-              Takeaway: {item.takeaway ? "Yes" : "No"}
-            </Text>
-          </View>
-        )}
-        {item.delivery && (
-          <View style={styles.infoRow}>
-            <Ionicons name="bicycle-outline" size={16} color="#44457D" />
-            <Text style={styles.sectionValue}>Delivery: {item.delivery}</Text>
-          </View>
-        )}
-        {item.payment && item.payment !== "{}" && (
-          <View style={styles.infoRow}>
-            <Ionicons name="card-outline" size={16} color="#44457D" />
-            <Text style={styles.sectionValue}>
-              Payment: {getAcceptedPaymentMethods(item.payment) || "Not specified"}
-            </Text>
-          </View>
-        )}
-        {item.wheelchair && (
-          <View style={styles.infoRow}>
-            <Ionicons name="accessibility-outline" size={16} color="#44457D" />
-            <Text style={styles.sectionValue}>Wheelchair: {item.wheelchair}</Text>
-          </View>
-        )}
-        {(item.phone || item.website || item.facebook || item.email) && (
-          <View style={styles.contactSection}>
-            <Text style={styles.sectionTitle}>
-              <Ionicons name="call-outline" size={16} color="#44457D" /> Contact
-            </Text>
-            {item.phone && (
-              <TouchableOpacity
-                onPress={() => item.phone && handlePhonePress(item.phone)}
-              >
-                <Text style={styles.websiteText}>{item.phone}</Text>
-              </TouchableOpacity>
-            )}
-            {item.website && (
-              <TouchableOpacity
-                onPress={() => item.website && handleWebsitePress(item.website)}
-              >
-                <Text style={styles.websiteText}>Visit Website</Text>
-              </TouchableOpacity>
-            )}
-            {item.facebook && (
-              <TouchableOpacity
-                onPress={() => item.facebook && handleWebsitePress(item.facebook)}
-              >
-                <Text style={styles.websiteText}>Facebook</Text>
-              </TouchableOpacity>
-            )}
-            {item.email && (
-              <TouchableOpacity onPress={() => Linking.openURL(`mailto:${item.email}`)}>
-                <Text style={styles.websiteText}>{item.email}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+      )}
+
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtonContainer}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onGoHere?.(item)}
+        >
+          <MaterialIcons name="directions" size={20} color="#fff" />
+          <Text style={styles.actionButtonText}>Directions</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, styles.secondaryButton]}
+          onPress={() => onView?.({
+            latitude: item.latitude,
+            longitude: item.longitude,
+            name: item.name
+          })}
+        >
+          <MaterialIcons name="map" size={20} color="#fff" />
+          <Text style={styles.actionButtonText}>View on Map</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 });
+interface ServiceBadgeProps {
+  icon: React.ComponentProps<typeof MaterialIcons>['name'] | React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  label: string;
+  value: string;
+  iconSet?: 'material' | 'materialCommunity';
+}
+const ServiceBadge = ({ icon, label, value, iconSet = 'material' }: ServiceBadgeProps) => (
+  <View style={styles.serviceBadge}>
+    {iconSet === 'material' ? (
+      <MaterialIcons name={icon as React.ComponentProps<typeof MaterialIcons>['name']} size={18} color="#4a5568" />
+    ) : (
+      <MaterialCommunityIcons name={icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']} size={18} color="#4a5568" />
+    )}
+    <Text style={styles.serviceLabel}>{label}</Text>
+    <Text style={styles.serviceValue}>{value}</Text>
+  </View>
+);
 
 const ModalComponent: React.FC<ModalProps> = ({
   visible,
@@ -355,6 +449,176 @@ const ModalComponent: React.FC<ModalProps> = ({
 export default ModalComponent;
 
 const styles = StyleSheet.create({
+  paymentText: {
+    fontSize: 12,
+    color: '#4a5568',
+    marginLeft: 8,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  restaurantImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  brandText: {
+    fontSize: 12,
+    color: '#718096',
+    marginBottom: 4,
+  },
+  ratingDistanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  distanceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4a5568',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  distanceText: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  wifiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#38a169',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  wifiText: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  quickInfoContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  infoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#edf2f7',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 6,
+  },
+  infoPillText: {
+    fontSize: 12,
+    color: '#4a5568',
+  },
+  sectionContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    marginBottom: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2d3748',
+    flex: 1,
+  },
+  sectionContent: {
+    paddingBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 8,
+  },
+  detailText: {
+    fontSize: 12,
+    color: '#4a5568',
+    flex: 1,
+    lineHeight: 18,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+  },
+  noPaymentText: {
+    color: '#718096',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  serviceBadge: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#f7fafc',
+    padding: 8,
+    borderRadius: 8,
+    minWidth: '48%',
+  },
+  serviceLabel: {
+    fontSize: 10,
+    color: '#718096',
+    marginTop: 4,
+  },
+  serviceValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+  paymentContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    alignItems: 'center',
+  },
+  paymentIcon: {
+    marginRight: 8,
+  },
+  actionButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4a5568',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  secondaryButton: {
+    backgroundColor: '#718096',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: '500',
+  },
   modalBackground: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -440,12 +704,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  restaurantImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
-  },
   restaurantInfo: {
     flex: 1,
   },
@@ -457,11 +715,6 @@ const styles = StyleSheet.create({
   restaurantCuisine: {
     fontSize: 12,
     color: "#6B7280",
-  },
-  distanceText: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
   },
   buttonGroup: {
     flexDirection: "row",
@@ -514,12 +767,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#44457D",
-    marginBottom: 4,
   },
   sectionValue: {
     fontSize: 12,

@@ -121,39 +121,70 @@ export interface MapComponentProps {
   }>;
   selectedSpot?: LatLng | null;
   isLoading?: boolean;
-  onSpotClick: (spotName: string) => void;
-  nearbyRestaurants?: Array<{
-    amenity: string;
-    latitude: number;
-    longitude: number;
-    name: string;
-    cuisine?: string;
-    image_url?: string;
-  }>;
+  nearbyRestaurants?: Restaurant[]; // Changed to use Restaurant interface
   onRestaurantClick: (name: string) => void;
-  activeTab: string; // Added
-  selectedRestaurant?: { latitude: number; longitude: number; name: string; };
+  onSpotClick: (spotName: string) => void;
+  activeTab: string;
+  selectedRestaurant?: { latitude: number; longitude: number; name: string };
 }
 
 export interface Restaurant {
+  id: number;
+  osm_id: number;
   name: string;
+  alt_name?: string;
+  amenity: string;
+  address: {
+    housenumber?: string;
+    housename?: string;
+    street?: string;
+    barangay?: string;
+    city?: string;
+    province?: string;
+    postcode?: string;
+    full_address?: string;
+  };
+  brand?: {
+    brand?: string;
+    brand_wikidata?: string;
+  };
+  metadata?: {
+    cuisine?: string;
+    drive_through?: string;
+    takeaway?: boolean | string;
+    smoking?: string;
+    opening_hours?: string;
+    payment?: string;
+    delivery?: string;
+    street_vendor?: string;
+    operator?: string;
+    website_orders?: string;
+    website_booking?: string;
+    diet?: string;
+    internet_access?: string;
+    wheelchair?: string;
+  };
+  contacts?: {
+    phone?: string;
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    pinterest?: string;
+    email?: string;
+  };
+  building?: string;
+  landuse?: string;
+  coordinates: {
+    lat: number;
+    lon: number;
+  };
   latitude: number;
   longitude: number;
-  amenity: string;
-  cuisine?: string;
-  address?: string;
-  opening_hours?: string;
-  phone?: string;
-  website?: string;
-  image_url?: string;
-  distance: number;
-  brand?: string;
-  takeaway?: string;
-  delivery?: string;
-  payment?: string;
-  wheelchair?: string;
-  facebook?: string;
-  email?: string;
+  reverse_geocoded_address?: string;
+  created_at: string;
+  updated_at: string;
+  distance: number; // in kilometers
 }
 
 export interface RouteDetails {

@@ -360,17 +360,24 @@ const RouteScreen: React.FC = () => {
         },
       });
       const mapped: Restaurant[] = response.data.results.map((item: any) => ({
+        id: item.id,
+        osm_id: item.osm_id,
         name: item.name || "Unnamed Dining Spot",
         latitude: item.coordinates?.lat || 0,
         longitude: item.coordinates?.lon || 0,
+        alt_name: item.alt_name,
         amenity: item.amenity || "Dining Spot",
-        cuisine: item.metadata?.cuisine || "Various",
-        address: item.address?.full_address || "Address not available",
-        opening_hours: item.metadata?.opening_hours || "Hours not specified",
-        phone: item.contacts?.phone,
-        website: item.contacts?.website,
-        image_url: "https://via.placeholder.com/150",
-        distance: item.distance,
+        address: item.address || {},
+        brand: item.brand || {},
+        metadata: item.metadata || {},
+        contacts: item.contacts || {},
+        building: item.building,
+        landuse: item.landuse,
+        coordinates: item.coordinates || { lat: 0, lon: 0 },
+        reverse_geocoded_address: item.reverse_geocoded_address,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        distance: item.distance || 0,
       }));
       // Store in both caches
       restaurantCache.current[cacheKey] = mapped;
@@ -381,6 +388,7 @@ const RouteScreen: React.FC = () => {
       setNearbyRestaurants([]);
     }
   };
+
   const fetchAttractions = useCallback(async (lat: number, lon: number, limit: number) => {
     const cacheKey = `${lat},${lon},${limit}`;
     if (attractionCache.current[cacheKey]) {
@@ -1029,7 +1037,7 @@ const RouteScreen: React.FC = () => {
   const renderRestaurantsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.headerText}>Nearby Dining Spots</Text>
-
+      <ClearCacheButton />
       <View style={styles.spotLimitContainer}>
         <Text style={styles.spotLimitHint}>Limit results to:</Text>
         {[10, 20, 50, 100].map((limit) => (
@@ -1118,7 +1126,7 @@ const RouteScreen: React.FC = () => {
                     {item.name}
                   </Text>
                   <Text style={styles.restaurantCuisine} numberOfLines={1}>
-                    {formatCuisine(item.cuisine) || 'Unknown'}
+                    {formatCuisine(item.metadata?.cuisine) || 'Unknown'}
                   </Text>
                   <Text style={styles.restaurantDistance}>
                     {item.distance?.toFixed(2) || 'N/A'} km
@@ -1148,6 +1156,34 @@ const RouteScreen: React.FC = () => {
     </View>
   );
 
+  const clearCaches = async () => {
+    // Clear in-memory caches
+    restaurantCache.current = {};
+    attractionCache.current = {};
+
+    try {
+      // Clear all items in AsyncStorage (use removeItem for specific keys if needed)
+      await AsyncStorage.clear();
+      console.log("AsyncStorage cache cleared.");
+    } catch (error) {
+      console.error("Error clearing AsyncStorage:", error);
+    }
+  };
+
+  const ClearCacheButton = () => {
+    const handlePress = async () => {
+      await clearCaches();
+      // You could also trigger a refetch here if needed
+    };
+
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.button} onPress={handlePress}>
+          <Text style={styles.buttonText}>Clear Cache</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const renderAttractionsTab = useCallback(() => (
     <View style={styles.tabContent}>
