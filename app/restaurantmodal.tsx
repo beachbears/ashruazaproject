@@ -133,6 +133,22 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
       return 'Not specified';
     }
   };
+
+  const amenityDisplayMapping: { [key: string]: string } = {
+    restaurant: "Restaurant",
+    cafe: "Cafe",
+    fast_food: "Fast Food",
+    pub: "Pub",
+    bar: "Bar",
+    ice_cream: "Ice Cream",
+    food_court: "Food Court",
+    biergarten: "Biergarten",
+  };
+
+  const amenityDisplay = item.amenity
+    ? (amenityDisplayMapping[item.amenity.toLowerCase()] || item.amenity)
+    : 'Dining';
+
   return (
     <View style={styles.spotCard}>
       {/* Header Section */}
@@ -149,7 +165,7 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
         <View style={styles.quickInfoContainer}>
           <View style={styles.infoPill}>
             <Ionicons name="restaurant" size={14} color="#6366F1" />
-            <Text style={styles.infoPillText}>{item.amenity || 'Dining'}</Text>
+            <Text style={styles.infoPillText}>{amenityDisplay}</Text>
           </View>
           <View style={styles.infoPill}>
             <MaterialCommunityIcons name="food-fork-drink" size={14} color="#6366F1" />
