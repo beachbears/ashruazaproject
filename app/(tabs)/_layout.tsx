@@ -106,6 +106,14 @@ export default function TabLayout() {
                     <View style={styles.dropdown}>
                       <View style={styles.dropdownArrow} />
                       <TouchableOpacity
+                        onPress={() => router.push('../profile')}
+                        style={styles.dropdownItem}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="person-outline" size={20} color="#64748b" />
+                        <Text style={styles.dropdownText}>Profile</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
                         onPress={logout}
                         style={styles.dropdownItem}
                         activeOpacity={0.7}
