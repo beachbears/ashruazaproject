@@ -1,12 +1,12 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
- 
+
 
 export interface AuthContextType {
   isLoggedIn: boolean;
   authToken: string;
-  userName: string; 
+  userName: string;
   userHandle: string;
   userInitials: string;
   login: (name: string, token: string) => void; // ✅ Accepts both name and token
@@ -20,9 +20,9 @@ const defaultAuthContext: AuthContextType = {
   authToken: "",
   userName: "",
   userHandle: "",
-  userInitials: "", 
-  login: () => {},
-  logout: () => {},
+  userInitials: "",
+  login: () => { },
+  logout: () => { },
 };
 
 // ✅ Use a default value instead of `null`
@@ -33,45 +33,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authToken, setAuthToken] = useState("");
   const [userName, setUserName] = useState("");
   const [userHandle, setUserHandle] = useState("");
-  const [userInitials, setUserInitials] = useState(""); 
+  const [userInitials, setUserInitials] = useState("");
 
 
   const login = async (name: string, token: string) => {
     setIsLoggedIn(true);
     setUserName(name);
     setAuthToken(token);
-  
+
     await AsyncStorage.setItem("authToken", token);
     await AsyncStorage.setItem("userName", name); // ✅ Store userName
   };
-  
+
   const logout = async () => {
     setIsLoggedIn(false);
     setUserName("");
     setAuthToken("");
     setUserHandle("");
-    setUserInitials(""); 
-  
+    setUserInitials("");
+
     await AsyncStorage.removeItem("authToken");
     await AsyncStorage.removeItem("userName"); // ✅ Remove userName as well
   };
-  
+
 
   useEffect(() => {
     const loadAuthData = async () => {
       const storedToken = await AsyncStorage.getItem("authToken");
       const storedName = await AsyncStorage.getItem("userName");
-      
+
       if (storedToken && storedName) { // Ensure both are available
         setAuthToken(storedToken);
         setUserName(storedName);
         setIsLoggedIn(true);
       }
     };
-  
+
     loadAuthData();
   }, []);
-  
+
 
   return (
     <AuthContext.Provider value={{ isLoggedIn, authToken, userName, userHandle, userInitials, login, logout }}>
