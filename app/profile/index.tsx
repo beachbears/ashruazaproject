@@ -23,11 +23,11 @@ interface Profile {
 }
 
 type RootStackParamList = {
-  UserProfile: undefined;
-  ChangePassword: undefined;
+  userProfile: undefined;
+  changePassword: undefined;
 };
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'UserProfile'>;
+type NavigationProp = StackNavigationProp<RootStackParamList, 'userProfile'>;
 
 const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
   const { authToken } = useContext(AuthContext);
@@ -35,6 +35,7 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     firstname: '',
     lastname: '',
@@ -50,11 +51,12 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
   useEffect(() => {
     if (profile) {
       setFormData({
-        firstname: profile.firstname,
-        lastname: profile.lastname,
+        firstname: profile.firstname || '',
+        lastname: profile.lastname || '',
         username: profile.username,
         email: profile.email,
       });
+      setSuccessMessage(null); // Clear success message when profile updates
     }
   }, [profile]);
 
@@ -65,8 +67,8 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
         <Text style={styles.avatarText}>{initial}</Text>
       </View>
     );
-
   };
+
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -83,26 +85,48 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
   };
 
   const saveProfile = async () => {
+    // Client-side validation
+    if (!formData.username.trim()) {
+      setError('Username is required');
+      return;
+    }
+    if (!formData.email.trim()) {
+      setError('Email is required');
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setError('Invalid email format');
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
-      const response = await axiosInstance.patch('/api/profile', {
-        user: {
-          firstname: formData.firstname,
-          lastname: formData.lastname,
-          username: formData.username,
-          email: formData.email,
+      const response = await axiosInstance.patch(
+        '/api/profile',
+        {
+          user: {
+            firstname: formData.firstname,
+            lastname: formData.lastname,
+            username: formData.username,
+            email: formData.email,
+          },
         },
-      }, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
+        {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }
+      );
       setProfile(response.data);
       setIsEditing(false);
-    } catch (err) {
+      setSuccessMessage('Profile updated successfully');
+      setTimeout(() => setSuccessMessage(null), 3000); // Clear after 3 seconds
+    } catch (err: any) {
       console.error('Save error:', err);
-      setError('Failed to update profile.');
+      if (err.response?.data?.detailed_errors) {
+        setError(err.response.data.detailed_errors.join(', '));
+      } else {
+        setError('Failed to update profile.');
+      }
     } finally {
       setSaving(false);
     }
@@ -126,44 +150,54 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
 
   if (isEditing) {
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.formContainer}>
-          <View style={styles.avatarContainer}>
-            {renderAvatar()}
-          </View>
+          <View style={styles.avatarContainer}>{renderAvatar()}</View>
           <Text style={styles.label}>Username</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.username}
-            onChangeText={(text) => setFormData({ ...formData, username: text })}
-            placeholder="Enter username"
-            accessibilityLabel="Username"
-          />
+          <View style={styles.inputContainer}>
+            <Ionicons name="person-outline" size={20} color="#6366F1" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={formData.username}
+              onChangeText={(text) => setFormData({ ...formData, username: text })}
+              placeholder="Enter username"
+              accessibilityLabel="Username"
+            />
+          </View>
           <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.email}
-            onChangeText={(text) => setFormData({ ...formData, email: text })}
-            placeholder="Enter email"
-            keyboardType="email-address"
-            accessibilityLabel="Email"
-          />
+          <View style={styles.inputContainer}>
+            <Ionicons name="mail-outline" size={20} color="#6366F1" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={formData.email}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              placeholder="Enter email"
+              keyboardType="email-address"
+              accessibilityLabel="Email"
+            />
+          </View>
           <Text style={styles.label}>First Name</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.firstname}
-            onChangeText={(text) => setFormData({ ...formData, firstname: text })}
-            placeholder="Enter first name"
-            accessibilityLabel="First Name"
-          />
+          <View style={styles.inputContainer}>
+            <Ionicons name="text-outline" size={20} color="#6366F1" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={formData.firstname}
+              onChangeText={(text) => setFormData({ ...formData, firstname: text })}
+              placeholder="Enter first name"
+              accessibilityLabel="First Name"
+            />
+          </View>
           <Text style={styles.label}>Last Name</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.lastname}
-            onChangeText={(text) => setFormData({ ...formData, lastname: text })}
-            placeholder="Enter last name"
-            accessibilityLabel="Last Name"
-          />
+          <View style={styles.inputContainer}>
+            <Ionicons name="text-outline" size={20} color="#6366F1" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={formData.lastname}
+              onChangeText={(text) => setFormData({ ...formData, lastname: text })}
+              placeholder="Enter last name"
+              accessibilityLabel="Last Name"
+            />
+          </View>
           {error && <Text style={styles.errorText}>{error}</Text>}
           <TouchableOpacity
             style={[styles.saveButton, saving && styles.disabledButton]}
@@ -171,7 +205,11 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
             disabled={saving}
             accessibilityLabel="Save Changes"
           >
-            <Text style={styles.buttonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Save Changes</Text>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.cancelButton}
@@ -187,15 +225,14 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
     return (
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.profileContainer}>
-          <View style={styles.avatarContainer}>
-            {renderAvatar()}
-          </View>
+          <View style={styles.avatarContainer}>{renderAvatar()}</View>
           <Text style={styles.userName}>{profile?.username}</Text>
           <Text style={styles.userEmail}>{profile?.email}</Text>
+          {successMessage && <Text style={styles.successText}>{successMessage}</Text>}
           <View style={styles.profileContent}>
             <Text style={styles.sectionTitle}>Personal Information</Text>
-            <Text style={styles.infoText}>First Name: {profile?.firstname}</Text>
-            <Text style={styles.infoText}>Last Name: {profile?.lastname}</Text>
+            <Text style={styles.infoText}>First Name: {profile?.firstname || 'Not set'}</Text>
+            <Text style={styles.infoText}>Last Name: {profile?.lastname || 'Not set'}</Text>
           </View>
           <TouchableOpacity
             style={styles.editButton}
@@ -206,7 +243,7 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('ChangePassword')}
+            onPress={() => navigation.navigate('changePassword')}
             accessibilityLabel="Change Password"
           >
             <Text style={styles.buttonText}>Change Password</Text>
@@ -218,8 +255,20 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    backgroundColor: '#F9FAFB',
+    padding: 20,
+    alignItems: 'center',
+  },
+  profileContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  formContainer: {
+    width: '100%',
+  },
   avatarContainer: {
-    position: 'relative',
     marginBottom: 20,
     alignItems: 'center',
   },
@@ -236,29 +285,22 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: 'bold',
   },
-  container: {
-    flexGrow: 1,
-    backgroundColor: '#F9FAFB',
-    padding: 20,
-    alignItems: 'center',
-  },
-  profileContainer: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  formContainer: {
-    width: '100%',
-  },
   userName: {
     fontSize: 24,
     color: '#1F2937',
-    fontWeight: 'bold',
-    marginTop: 10,
+    fontWeight: '700',
+    marginBottom: 5,
   },
   userEmail: {
     fontSize: 16,
     color: '#718096',
     marginBottom: 20,
+  },
+  successText: {
+    color: '#10B981',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 15,
   },
   profileContent: {
     width: '100%',
@@ -289,15 +331,27 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 5,
   },
-  input: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
-    borderColor: '#D1D5DB',
-    borderWidth: 1,
-    padding: 10,
+    borderRadius: 10,
+    paddingHorizontal: 15,
     marginBottom: 15,
-    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    height: 50,
+    color: '#1F2937',
     fontSize: 16,
-    width: '100%',
   },
   saveButton: {
     backgroundColor: '#6366F1',
@@ -318,21 +372,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 20,
     width: '100%',
+    marginTop: 20,
   },
   actionButton: {
     backgroundColor: '#10B981',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
     width: '100%',
+    marginTop: 10,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   errorText: {
     color: '#EF4444',
