@@ -903,36 +903,32 @@ const RouteScreen: React.FC = () => {
         </TouchableOpacity>
         {showAlgorithmDropdown && (
           <View style={styles.algorithmDropdownOverlay}>
-            <FlatList
-              data={algorithmOptions}
-              keyExtractor={(item, index) => `${item.value}-${index}`}
-              renderItem={({ item }) => (
-                <TouchableOpacity
+            {algorithmOptions.map((item, index) => (
+              <TouchableOpacity
+                key={`${item.value}-${index}`}
+                style={[
+                  styles.algorithmDropdownItem,
+                  selectedAlgorithm === item.value && styles.algorithmDropdownItemSelected,
+                ]}
+                onPress={() => {
+                  setSelectedAlgorithm(item.value);
+                  setShowAlgorithmDropdown(false);
+                  if (route.length >= 2) {
+                    fetchRouteDetails(route[1].latitude, route[1].longitude, item.value);
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Text
                   style={[
-                    styles.algorithmDropdownItem,
-                    selectedAlgorithm === item.value && styles.algorithmDropdownItemSelected,
+                    styles.algorithmDropdownItemText,
+                    selectedAlgorithm === item.value && styles.algorithmDropdownItemTextSelected,
                   ]}
-                  onPress={() => {
-                    setSelectedAlgorithm(item.value);
-                    setShowAlgorithmDropdown(false);
-                    if (route.length >= 2) {
-                      fetchRouteDetails(route[1].latitude, route[1].longitude, item.value);
-                    }
-                  }}
-                  activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.algorithmDropdownItemText,
-                      selectedAlgorithm === item.value && styles.algorithmDropdownItemTextSelected,
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              style={{ maxHeight: 160 }}
-            />
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         )}
       </View>
@@ -2099,7 +2095,7 @@ const styles = StyleSheet.create({
   },
   algorithmDropdownOverlay: {
     position: 'absolute',
-    top: 60, // Adjusted to sit nicely below the button
+    top: 65, // Adjusted to sit nicely below the button
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
@@ -2107,8 +2103,8 @@ const styles = StyleSheet.create({
     borderColor: '#6366F1', // Purple border to match
     borderRadius: 8,
     maxHeight: 160,
-    paddingVertical: 4, // Reduced padding for tighter layout
     zIndex: 1000,
+    overflow: 'hidden'
   },
   algorithmDropdownItem: {
     paddingVertical: 10, // Increased for better touch area
