@@ -149,19 +149,26 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
     ? (amenityDisplayMapping[item.amenity.toLowerCase()] || item.amenity)
     : 'Dining';
 
+  // Check if there are any payment methods
+  const paymentIcons = getPaymentIcons(item.metadata?.payment || '{}');
+  const hasPaymentMethods = paymentIcons.length > 0;
+
+  // Check if there are any specified services
+  const hasServices = [
+    item.metadata?.takeaway,
+    item.metadata?.delivery,
+    item.metadata?.drive_through,
+    item.metadata?.wheelchair,
+  ].some(service => getServiceValue(service) !== 'Not specified');
+
   return (
     <View style={styles.spotCard}>
       {/* Header Section */}
       <View style={styles.headerContainer}>
-        {/* Restaurant Name */}
         <Text style={styles.restaurantName}>{item.name}</Text>
-
-        {/* Brand Name - Only show if different from restaurant name */}
         {item.brand?.brand && item.brand.brand !== item.name && (
           <Text style={styles.brandText}>{item.brand.brand}</Text>
         )}
-
-        {/* Quick Info Row: Amenity, Cuisine, and Optional Diet */}
         <View style={styles.quickInfoContainer}>
           <View style={styles.infoPill}>
             <Ionicons name="restaurant" size={14} color="#6366F1" />
@@ -180,8 +187,6 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
             </View>
           )}
         </View>
-
-        {/* Distance and Wi-Fi Badges */}
         <View style={styles.ratingDistanceContainer}>
           <View style={styles.distanceBadge}>
             <MaterialIcons name="location-on" size={14} color="#fff" />
@@ -199,7 +204,8 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
           )}
         </View>
       </View>
-      {/* Details Sections Always Expanded */}
+
+      {/* Location & Hours */}
       <View style={styles.detailSection}>
         <View style={styles.sectionHeaderStatic}>
           <MaterialIcons name="schedule" size={20} color="#6366F1" />
@@ -212,86 +218,105 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
               {item.reverse_geocoded_address || 'Address not available'}
             </Text>
           </View>
-          <View style={styles.detailRow}>
-            <MaterialIcons name="access-time" size={18} color="#6366F1" />
-            <Text style={styles.detailText}>
-              {item.metadata?.opening_hours || 'Opening hours not available'}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.detailSection}>
-        <View style={styles.sectionHeaderStatic}>
-          <MaterialIcons name="miscellaneous-services" size={20} color="#6366F1" />
-          <Text style={styles.sectionTitleStatic}>Services & Facilities</Text>
-        </View>
-        <View style={styles.sectionContentStatic}>
-          <View style={styles.gridContainer}>
-            <View style={styles.gridRow}>
-              <ServiceBadge
-                icon="takeout-dining"
-                label="Takeaway"
-                value={getServiceValue(item.metadata?.takeaway)}
-              />
-              <ServiceBadge
-                icon="delivery-dining"
-                label="Delivery"
-                value={getServiceValue(item.metadata?.delivery)}
-              />
+          {item.metadata?.opening_hours && (
+            <View style={styles.detailRow}>
+              <MaterialIcons name="access-time" size={18} color="#6366F1" />
+              <Text style={styles.detailText}>
+                {item.metadata.opening_hours}
+              </Text>
             </View>
-            <View style={styles.gridRow}>
-              <ServiceBadge
-                icon="directions-car"
-                label="Drive-through"
-                value={getServiceValue(item.metadata?.drive_through)}
-              />
-              <ServiceBadge
-                icon="wheelchair-accessibility"
-                label="Accessibility"
-                value={getServiceValue(item.metadata?.wheelchair)}
-                iconSet="materialCommunity"
-              />
+          )}
+        </View>
+      </View>
+
+      {/* Services & Facilities */}
+      {hasServices && (
+        <View style={styles.detailSection}>
+          <View style={styles.sectionHeaderStatic}>
+            <MaterialIcons name="miscellaneous-services" size={20} color="#6366F1" />
+            <Text style={styles.sectionTitleStatic}>Services & Facilities</Text>
+          </View>
+          <View style={styles.sectionContentStatic}>
+            <View style={styles.gridContainer}>
+              <View style={styles.gridRow}>
+                {(() => {
+                  const takeawayValue = getServiceValue(item.metadata?.takeaway);
+                  return takeawayValue !== 'Not specified' ? (
+                    <ServiceBadge
+                      icon="takeout-dining"
+                      label="Takeaway"
+                      value={takeawayValue}
+                    />
+                  ) : null;
+                })()}
+                {(() => {
+                  const deliveryValue = getServiceValue(item.metadata?.delivery);
+                  return deliveryValue !== 'Not specified' ? (
+                    <ServiceBadge
+                      icon="delivery-dining"
+                      label="Delivery"
+                      value={deliveryValue}
+                    />
+                  ) : null;
+                })()}
+              </View>
+              <View style={styles.gridRow}>
+                {(() => {
+                  const driveThroughValue = getServiceValue(item.metadata?.drive_through);
+                  return driveThroughValue !== 'Not specified' ? (
+                    <ServiceBadge
+                      icon="directions-car"
+                      label="Drive-through"
+                      value={driveThroughValue}
+                    />
+                  ) : null;
+                })()}
+                {(() => {
+                  const wheelchairValue = getServiceValue(item.metadata?.wheelchair);
+                  return wheelchairValue !== 'Not specified' ? (
+                    <ServiceBadge
+                      icon="wheelchair-accessibility"
+                      label="Accessibility"
+                      value={wheelchairValue}
+                      iconSet="materialCommunity"
+                    />
+                  ) : null;
+                })()}
+              </View>
             </View>
-            {/* Removed redundant Chair badge */}
           </View>
         </View>
-      </View>
+      )}
 
-      <View style={styles.detailSection}>
-        <View style={styles.sectionHeaderStatic}>
-          <MaterialIcons name="payment" size={20} color="#6366F1" />
-          <Text style={styles.sectionTitleStatic}>Payment Options</Text>
-        </View>
-        <View style={styles.sectionContentStatic}>
-          <View style={[styles.paymentContainer, { flexDirection: 'row', alignItems: 'center' }]}>
-            {(() => {
-              const icons = getPaymentIcons(item.metadata?.payment || '{}');
-              const acceptedText = getAcceptedPaymentMethodsText(item.metadata?.payment || '{}');
-              if (icons.length > 0) {
-                return (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {icons}
-                    {acceptedText ? (
-                      <Text style={styles.paymentText}> {acceptedText}</Text>
-                    ) : null}
-                  </View>
-                );
-              } else {
-                return <Text style={styles.noPaymentText}>Payment methods not specified</Text>;
-              }
-            })()}
+      {/* Payment Options */}
+      {hasPaymentMethods && (
+        <View style={styles.detailSection}>
+          <View style={styles.sectionHeaderStatic}>
+            <MaterialIcons name="payment" size={20} color="#6366F1" />
+            <Text style={styles.sectionTitleStatic}>Payment Options</Text>
+          </View>
+          <View style={styles.sectionContentStatic}>
+            <View style={[styles.paymentContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                {paymentIcons}
+                {getAcceptedPaymentMethodsText(item.metadata?.payment || '{}') && (
+                  <Text style={styles.paymentText}>
+                    {' '}{getAcceptedPaymentMethodsText(item.metadata?.payment || '{}')}
+                  </Text>
+                )}
+              </View>
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
+      {/* Contacts */}
       {(item.contacts && (item.contacts.phone || item.contacts.website)) && (
         <View style={styles.detailSection}>
           <View style={styles.sectionHeaderStatic}>
             <MaterialIcons name="contact-page" size={20} color="#6366F1" />
             <Text style={styles.sectionTitleStatic}>Contacts</Text>
           </View>
-
           {item.contacts.phone && (
             <View style={styles.detailRow}>
               <MaterialIcons name="phone" size={18} color="#6366F1" />
@@ -324,7 +349,6 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
           <MaterialIcons name="directions" size={20} color="#fff" />
           <Text style={styles.actionButtonText}>Directions</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.actionButton, styles.secondaryButton]}
           onPress={() =>
