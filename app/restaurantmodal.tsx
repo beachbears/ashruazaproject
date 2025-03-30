@@ -12,8 +12,8 @@ import {
   FlatList,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Restaurant } from "@/src/types";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Restaurant } from "@/src/types";
 
 const formatCuisine = (cuisine: string | undefined) => {
   if (!cuisine) return "Not specified";
@@ -34,12 +34,10 @@ const getPaymentIcons = (paymentData: string): JSX.Element[] => {
   try {
     const paymentObj = JSON.parse(paymentData);
     const icons: JSX.Element[] = [];
-
     Object.entries(paymentObj).forEach(([key, value]) => {
-      const cleanKey = key.replace(/^payment:/, "").replace(/_/g, " ").toLowerCase(); // e.g., "credit cards"
+      const cleanKey = key.replace(/^payment:/, "").replace(/_/g, " ").toLowerCase();
       const paymentValue = value?.toString().trim().toLowerCase();
       if (paymentValue && ["yes", "only"].includes(paymentValue)) {
-        // Look for a known mapping; if not, use a generic "payment" icon.
         const mapping = paymentIconMapping[cleanKey];
         const iconName = mapping ? mapping.icon : 'payment';
         const iconColor = mapping ? mapping.color : '#4a5568';
@@ -71,11 +69,9 @@ const getAcceptedPaymentMethodsText = (paymentData: string): string => {
       .map(([key]) =>
         key.replace(/^payment:/, "").replace(/_/g, " ").trim()
       );
-    // Capitalize each method and join with commas
-    const formatted = accepted
+    return accepted
       .map(method => method.charAt(0).toUpperCase() + method.slice(1))
       .join(', ');
-    return formatted ? `${formatted}` : "";
   } catch (error) {
     console.error("Error in getAcceptedPaymentMethodsText:", error);
     return "";
@@ -85,21 +81,6 @@ const getAcceptedPaymentMethodsText = (paymentData: string): string => {
 const parseOpeningHours = (hours?: string): string => {
   if (!hours || hours === "Hours not specified") return "Not available";
   return hours.replace(/;/g, '\n').replace(/,/g, ', ');
-};
-
-const getAcceptedPaymentMethods = (paymentData: string): string => {
-  try {
-    const paymentObj = JSON.parse(paymentData);
-    const accepted = Object.entries(paymentObj)
-      .filter(([_, value]) =>
-        value && ["yes", "only"].includes(value.toString().toLowerCase())
-      )
-      .map(([key]) => key.replace(/^payment:/, ""));
-    return accepted.join(", ");
-  } catch (error) {
-    console.error("Error parsing payment data:", error);
-    return "";
-  }
 };
 
 interface ModalProps {
@@ -116,151 +97,207 @@ interface RestaurantItemProps {
   onGoHere?: (restaurant: Restaurant) => void;
 }
 
+// Updated ServiceBadge now accepts a prop for iconSet, and for accessibility we use MaterialCommunityIcons.
+interface ServiceBadgeProps {
+  icon: React.ComponentProps<typeof MaterialIcons>['name'] | React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  label: string;
+  value: string;
+  iconSet?: 'material' | 'materialCommunity';
+}
+const ServiceBadge = ({ icon, label, value, iconSet = 'material' }: ServiceBadgeProps) => (
+  <View style={styles.serviceBadge}>
+    {iconSet === 'material' ? (
+      <MaterialIcons name={icon as any} size={18} color="#6366F1" />
+    ) : (
+      <MaterialCommunityIcons name={icon as any} size={18} color="#6366F1" />
+    )}
+    <Text style={styles.serviceLabel}>{label}</Text>
+    <Text style={styles.serviceValue}>{value}</Text>
+  </View>
+);
+
+// RestaurantItem now renders all details expanded.
 const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere }) => {
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
-
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
+  const getServiceValue = (value: boolean | string | undefined): string => {
+    if (value === undefined || value === null) {
+      return 'Not specified';
+    } else if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    } else if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        return 'Not specified';
+      }
+      return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    } else {
+      return 'Not specified';
+    }
   };
-
-  const renderDetailSection = (title: string, icon: React.ReactNode, content: React.ReactNode) => (
-    <View style={styles.sectionContainer}>
-      <TouchableOpacity
-        style={styles.sectionHeader}
-        onPress={() => toggleSection(title)}
-      >
-        {icon}
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <MaterialIcons
-          name={expandedSection === title ? 'expand-less' : 'expand-more'}
-          size={20}
-          color="#4a5568"
-        />
-      </TouchableOpacity>
-      {expandedSection === title && (
-        <View style={styles.sectionContent}>
-          {content}
-        </View>
-      )}
-    </View>
-  );
-
   return (
     <View style={styles.spotCard}>
       {/* Header Section */}
       <View style={styles.headerContainer}>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.restaurantName}>{item.name}</Text>
-          {item.brand?.brand && (
-            <Text style={styles.brandText}>{item.brand.brand}</Text>
+        {/* Restaurant Name */}
+        <Text style={styles.restaurantName}>{item.name}</Text>
+
+        {/* Brand Name - Only show if different from restaurant name */}
+        {item.brand?.brand && item.brand.brand !== item.name && (
+          <Text style={styles.brandText}>{item.brand.brand}</Text>
+        )}
+
+        {/* Quick Info Row: Amenity, Cuisine, and Optional Diet */}
+        <View style={styles.quickInfoContainer}>
+          <View style={styles.infoPill}>
+            <Ionicons name="restaurant" size={14} color="#6366F1" />
+            <Text style={styles.infoPillText}>{item.amenity || 'Dining'}</Text>
+          </View>
+          <View style={styles.infoPill}>
+            <MaterialCommunityIcons name="food-fork-drink" size={14} color="#6366F1" />
+            <Text style={styles.infoPillText}>
+              {formatCuisine(item.metadata?.cuisine) || 'Not specified'}
+            </Text>
+          </View>
+          {item.metadata?.diet && (
+            <View style={styles.infoPill}>
+              <MaterialCommunityIcons name="leaf" size={14} color="#6366F1" />
+              <Text style={styles.infoPillText}>{item.metadata.diet}</Text>
+            </View>
           )}
-          <View style={styles.ratingDistanceContainer}>
-            <View style={styles.distanceBadge}>
-              <MaterialIcons name="location-on" size={14} color="#fff" />
-              <Text style={styles.distanceText}>
-                {item.distance.toFixed(2)} km
+        </View>
+
+        {/* Distance and Wi-Fi Badges */}
+        <View style={styles.ratingDistanceContainer}>
+          <View style={styles.distanceBadge}>
+            <MaterialIcons name="location-on" size={14} color="#fff" />
+            <Text style={styles.distanceText}>
+              {item.distance.toFixed(2)} km
+            </Text>
+          </View>
+          {item.metadata?.internet_access && (
+            <View style={styles.wifiBadge}>
+              <Ionicons name="wifi" size={14} color="#fff" />
+              <Text style={styles.wifiText}>
+                {item.metadata.internet_access}
               </Text>
             </View>
-            {item.metadata?.internet_access && (
-              <View style={styles.wifiBadge}>
-                <Ionicons name="wifi" size={14} color="#fff" />
-                <Text style={styles.wifiText}>
-                  {item.metadata.internet_access}
-                </Text>
-              </View>
-            )}
-          </View>
+          )}
         </View>
       </View>
-
-      {/* Quick Info Row */}
-      <View style={styles.quickInfoContainer}>
-        <View style={styles.infoPill}>
-          <Ionicons name="restaurant" size={14} color="#4a5568" />
-          <Text style={styles.infoPillText}>
-            {item.amenity || 'Dining'}
-          </Text>
+      {/* Details Sections Always Expanded */}
+      <View style={styles.detailSection}>
+        <View style={styles.sectionHeaderStatic}>
+          <MaterialIcons name="schedule" size={20} color="#6366F1" />
+          <Text style={styles.sectionTitleStatic}>Location & Hours</Text>
         </View>
-        <View style={styles.infoPill}>
-          <MaterialCommunityIcons name="food-fork-drink" size={14} color="#4a5568" />
-          <Text style={styles.infoPillText}>
-            {formatCuisine(item.metadata?.cuisine)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Expandable Sections */}
-      {renderDetailSection(
-        'Location & Hours',
-        <MaterialIcons name="schedule" size={20} color="#4a5568" />,
-        <>
+        <View style={styles.sectionContentStatic}>
           <View style={styles.detailRow}>
-            <MaterialIcons name="place" size={18} color="#4a5568" />
+            <MaterialIcons name="place" size={18} color="#6366F1" />
             <Text style={styles.detailText}>
               {item.reverse_geocoded_address || 'Address not available'}
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <MaterialIcons name="access-time" size={18} color="#4a5568" />
+            <MaterialIcons name="access-time" size={18} color="#6366F1" />
             <Text style={styles.detailText}>
               {item.metadata?.opening_hours || 'Opening hours not available'}
             </Text>
           </View>
-        </>
-      )}
+        </View>
+      </View>
 
-      {renderDetailSection(
-        'Services & Facilities',
-        <MaterialIcons name="miscellaneous-services" size={20} color="#4a5568" />,
-        <View style={styles.gridContainer}>
-          <View style={styles.gridRow}>
-            <ServiceBadge
-              icon="takeout-dining"
-              label="Takeaway"
-              value={item.metadata?.takeaway ? 'Yes' : 'No'}
-            />
-            <ServiceBadge
-              icon="delivery-dining"
-              label="Delivery"
-              value={item.metadata?.delivery || 'No'}
-            />
-            <ServiceBadge
-              icon="directions-car"
-              label="Drive-through"
-              value={item.metadata?.drive_through || 'No'}
-            />
-            <ServiceBadge
-              icon="accessible"
-              label="Accessibility"
-              value={item.metadata?.wheelchair || 'No'}
-            />
+      <View style={styles.detailSection}>
+        <View style={styles.sectionHeaderStatic}>
+          <MaterialIcons name="miscellaneous-services" size={20} color="#6366F1" />
+          <Text style={styles.sectionTitleStatic}>Services & Facilities</Text>
+        </View>
+        <View style={styles.sectionContentStatic}>
+          <View style={styles.gridContainer}>
+            <View style={styles.gridRow}>
+              <ServiceBadge
+                icon="takeout-dining"
+                label="Takeaway"
+                value={getServiceValue(item.metadata?.takeaway)}
+              />
+              <ServiceBadge
+                icon="delivery-dining"
+                label="Delivery"
+                value={getServiceValue(item.metadata?.delivery)}
+              />
+            </View>
+            <View style={styles.gridRow}>
+              <ServiceBadge
+                icon="directions-car"
+                label="Drive-through"
+                value={getServiceValue(item.metadata?.drive_through)}
+              />
+              <ServiceBadge
+                icon="wheelchair-accessibility"
+                label="Accessibility"
+                value={getServiceValue(item.metadata?.wheelchair)}
+                iconSet="materialCommunity"
+              />
+            </View>
+            {/* Removed redundant Chair badge */}
           </View>
         </View>
-      )}
+      </View>
 
-      {renderDetailSection(
-        'Payment Options',
-        <MaterialIcons name="payment" size={20} color="#4a5568" />,
-        <View style={[styles.paymentContainer, { flexDirection: 'row', alignItems: 'center' }]}>
-          {(() => {
-            const icons = getPaymentIcons(item.metadata?.payment || '{}');
-            const acceptedText = getAcceptedPaymentMethodsText(item.metadata?.payment || '{}');
-            if (icons.length > 0) {
-              return (
-                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                  {icons}
-                  {acceptedText ? (
-                    <Text style={styles.paymentText}> {acceptedText}</Text>
-                  ) : null}
-                </View>
-              );
-            } else {
-              return <Text style={styles.noPaymentText}>Payment methods not specified</Text>;
-            }
-          })()}
+      <View style={styles.detailSection}>
+        <View style={styles.sectionHeaderStatic}>
+          <MaterialIcons name="payment" size={20} color="#6366F1" />
+          <Text style={styles.sectionTitleStatic}>Payment Options</Text>
+        </View>
+        <View style={styles.sectionContentStatic}>
+          <View style={[styles.paymentContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+            {(() => {
+              const icons = getPaymentIcons(item.metadata?.payment || '{}');
+              const acceptedText = getAcceptedPaymentMethodsText(item.metadata?.payment || '{}');
+              if (icons.length > 0) {
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {icons}
+                    {acceptedText ? (
+                      <Text style={styles.paymentText}> {acceptedText}</Text>
+                    ) : null}
+                  </View>
+                );
+              } else {
+                return <Text style={styles.noPaymentText}>Payment methods not specified</Text>;
+              }
+            })()}
+          </View>
+        </View>
+      </View>
+
+      {(item.contacts && (item.contacts.phone || item.contacts.website)) && (
+        <View style={styles.detailSection}>
+          <View style={styles.sectionHeaderStatic}>
+            <MaterialIcons name="contact-page" size={20} color="#6366F1" />
+            <Text style={styles.sectionTitleStatic}>Contacts</Text>
+          </View>
+
+          {item.contacts.phone && (
+            <View style={styles.detailRow}>
+              <MaterialIcons name="phone" size={18} color="#6366F1" />
+              <TouchableOpacity onPress={() => Linking.openURL(`tel:${item.contacts?.phone}`)}>
+                <Text style={[styles.detailText, styles.clickableText]}>
+                  {item.contacts.phone}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {item.contacts.website && (
+            <View style={styles.detailRow}>
+              <MaterialIcons name="public" size={18} color="#6366F1" />
+              <TouchableOpacity onPress={() => Linking.openURL(item.contacts!.website!)}>
+                <Text style={[styles.detailText, styles.clickableText]}>
+                  {item.contacts.website}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
-
 
       {/* Action Buttons */}
       <View style={styles.actionButtonContainer}>
@@ -274,11 +311,13 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
 
         <TouchableOpacity
           style={[styles.actionButton, styles.secondaryButton]}
-          onPress={() => onView?.({
-            latitude: item.latitude,
-            longitude: item.longitude,
-            name: item.name
-          })}
+          onPress={() =>
+            onView?.({
+              latitude: item.latitude,
+              longitude: item.longitude,
+              name: item.name,
+            })
+          }
         >
           <MaterialIcons name="map" size={20} color="#fff" />
           <Text style={styles.actionButtonText}>View on Map</Text>
@@ -287,23 +326,6 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
     </View>
   );
 });
-interface ServiceBadgeProps {
-  icon: React.ComponentProps<typeof MaterialIcons>['name'] | React.ComponentProps<typeof MaterialCommunityIcons>['name'];
-  label: string;
-  value: string;
-  iconSet?: 'material' | 'materialCommunity';
-}
-const ServiceBadge = ({ icon, label, value, iconSet = 'material' }: ServiceBadgeProps) => (
-  <View style={styles.serviceBadge}>
-    {iconSet === 'material' ? (
-      <MaterialIcons name={icon as React.ComponentProps<typeof MaterialIcons>['name']} size={18} color="#4a5568" />
-    ) : (
-      <MaterialCommunityIcons name={icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']} size={18} color="#4a5568" />
-    )}
-    <Text style={styles.serviceLabel}>{label}</Text>
-    <Text style={styles.serviceValue}>{value}</Text>
-  </View>
-);
 
 const ModalComponent: React.FC<ModalProps> = ({
   visible,
@@ -449,39 +471,44 @@ const ModalComponent: React.FC<ModalProps> = ({
 export default ModalComponent;
 
 const styles = StyleSheet.create({
+  clickableText: {
+    fontSize: 12,
+    color: '#6366F1', // Purple for clickable text
+    textDecorationLine: 'underline',
+  },
+  noResultsText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  // Payment and header styles
   paymentText: {
     fontSize: 12,
-    color: '#4a5568',
+    color: '#6366F1',
     marginLeft: 8,
   },
   headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  restaurantImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 12,
+    padding: 4,
+    backgroundColor: '#FFFFFF',
   },
   headerTextContainer: {
     flex: 1,
   },
   brandText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#718096',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   ratingDistanceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 8, // Note: Replace with marginRight if gap isn't supported
   },
   distanceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4a5568',
+    backgroundColor: '#6366F1',
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 12,
@@ -507,41 +534,41 @@ const styles = StyleSheet.create({
   quickInfoContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    gap: 8, // Note: If your RN version doesn't support gap, use marginRight on infoPill instead
+    marginBottom: 8,
   },
   infoPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#edf2f7',
+    backgroundColor: '#F5F7FF',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
-    gap: 6,
+    gap: 6, // Note: If gap isn't supported, use marginRight on the icon
   },
   infoPillText: {
     fontSize: 12,
-    color: '#4a5568',
+    color: '#1F2937',
   },
-  sectionContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+  // Static (always expanded) section header and content
+  detailSection: {
+    backgroundColor: '#F9FAFB', // Very light grey
+    borderRadius: 8,
+    padding: 8,
     marginBottom: 12,
   },
-  sectionHeader: {
+  sectionHeaderStatic: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    gap: 8,
+    marginBottom: 4,
   },
-  sectionTitle: {
+  sectionTitleStatic: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2d3748',
-    flex: 1,
+    color: '#1F2937', // Dark grey for headers
+    marginLeft: 8,
   },
-  sectionContent: {
-    paddingBottom: 12,
+  sectionContentStatic: {
   },
   detailRow: {
     flexDirection: 'row',
@@ -551,42 +578,25 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: '#4a5568',
+    color: '#4B5563', // Medium grey for details
     flex: 1,
     lineHeight: 18,
   },
+  // Grid for service badges
   gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
     gap: 8,
   },
   gridRow: {
     flexDirection: 'row',
     gap: 8,
-    width: '100%',
+    justifyContent: 'space-between',
   },
+  // Payment container styles
   noPaymentText: {
     color: '#718096',
     fontSize: 12,
     fontStyle: 'italic',
-  },
-  serviceBadge: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#f7fafc',
-    padding: 8,
-    borderRadius: 8,
-    minWidth: '48%',
-  },
-  serviceLabel: {
-    fontSize: 10,
-    color: '#718096',
-    marginTop: 4,
-  },
-  serviceValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2d3748',
   },
   paymentContainer: {
     flexDirection: 'row',
@@ -597,6 +607,25 @@ const styles = StyleSheet.create({
   paymentIcon: {
     marginRight: 8,
   },
+  // Service badge styles
+  serviceBadge: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#F5F7FF',
+    padding: 8,
+    borderRadius: 8,
+    minWidth: '48%',
+  },
+  serviceLabel: {
+    fontSize: 10,
+    color: '#718096', // Light grey for secondary text
+  },
+  serviceValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937', // Dark grey for primary values
+  },
+  // Action buttons
   actionButtonContainer: {
     flexDirection: 'row',
     gap: 12,
@@ -607,7 +636,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4a5568',
+    backgroundColor: '#6366F1',
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
@@ -619,6 +648,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '500',
   },
+  // Modal styles
   modalBackground: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -683,7 +713,7 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 12,
-    color: "#374151",
+    color: "#1F2937",
   },
   dropdownItemTextSelected: {
     color: "#fff",
@@ -693,101 +723,21 @@ const styles = StyleSheet.create({
   },
   spotCard: {
     backgroundColor: "#fff",
-    borderColor: "#ddd",
+    borderColor: "#E2E8F0",
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
-  restaurantHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  restaurantInfo: {
-    flex: 1,
-  },
   restaurantName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1F2937",
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
   },
   restaurantCuisine: {
     fontSize: 12,
-    color: "#6B7280",
-  },
-  buttonGroup: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  viewButton: {
-    backgroundColor: "#6366F1",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
-  viewButtonText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  goHereButton: {
-    backgroundColor: "#10B981",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
-  goHereButtonText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  detailsContainer: {
-    marginTop: 8,
-  },
-  spotName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1F2937",
-    marginBottom: 4,
-  },
-  amenityPill: {
-    backgroundColor: "#E0E7FF",
-    borderRadius: 16,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    alignSelf: "flex-start",
-    marginBottom: 8,
-  },
-  amenityText: {
-    fontSize: 11,
-    color: "#44457D",
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  sectionValue: {
-    fontSize: 12,
-    color: "#374151",
-    marginLeft: 8,
-    flex: 1,
-  },
-  contactSection: {
-    marginTop: 8,
-  },
-  websiteText: {
-    color: "#6366F1",
-    textDecorationLine: "underline",
-    fontSize: 12,
-    marginTop: 4,
-  },
-  noResultsText: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    marginTop: 20,
+    color: "#718096",
   },
   modalFooter: {
     flexDirection: "row",

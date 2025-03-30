@@ -150,7 +150,7 @@ export interface Restaurant {
   };
   metadata?: {
     cuisine?: string;
-    drive_through?: string;
+    drive_through?: boolean;
     takeaway?: boolean | string;
     smoking?: string;
     opening_hours?: string;
