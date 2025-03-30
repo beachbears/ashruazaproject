@@ -6,11 +6,24 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../contexts/AuthContext';
-import axiosInstance from '../../axiosConfig'; // Ensure your axios instance is configured
+import axios from 'axios';
+import axiosInstance from '@/axiosConfig';
+
+// For testing locally, create a separate axios instance.
+// In production, you may use your production axios instance.
+const localAxios = axios.create({
+  baseURL: 'http://10.0.2.2:3000', // For Android emulator; replace with your IP if needed.
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+});
 
 interface Profile {
   id: number;
@@ -22,13 +35,19 @@ interface Profile {
 }
 
 const UserProfile = () => {
-  // Only use minimal auth data from context (token, logout)
   const { authToken, logout } = useContext(AuthContext);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    firstname: '',
+    lastname: '',
+    username: '',
+    email: '',
+  });
 
-  // Fetch the full profile data from the API
+  // Fetch profile from the API
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -46,11 +65,47 @@ const UserProfile = () => {
     }
   };
 
+  // When the component mounts, load the profile
   useEffect(() => {
     fetchProfile();
   }, []);
 
-  // Render avatar from API data (profile_picture_url), or fallback to first letter of username.
+  // When profile data is loaded, populate the formData
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstname: profile.firstname,
+        lastname: profile.lastname,
+        username: profile.username,
+        email: profile.email,
+      });
+    }
+  }, [profile]);
+
+  // Save the updated profile data
+  const saveProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.patch(
+        '/api/profile',
+        { user: formData },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
+      setProfile(response.data);
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setError('Failed to update profile.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Render the user's avatar
   const renderAvatar = () => {
     if (profile?.profile_picture_url) {
       return (
@@ -88,23 +143,63 @@ const UserProfile = () => {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.profileHeader}>
         {renderAvatar()}
-        <Text style={styles.userName}>{profile?.username || 'User Name'}</Text>
-        <Text style={styles.userEmail}>{profile?.email || 'user@example.com'}</Text>
+        {isEditing ? (
+          <>
+            <TextInput
+              style={styles.input}
+              value={formData.username}
+              onChangeText={(text) => setFormData({ ...formData, username: text })}
+              placeholder="Username"
+            />
+            <TextInput
+              style={styles.input}
+              value={formData.email}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              placeholder="Email"
+            />
+          </>
+        ) : (
+          <>
+            <Text style={styles.userName}>{profile?.username || 'User Name'}</Text>
+            <Text style={styles.userEmail}>{profile?.email || 'user@example.com'}</Text>
+          </>
+        )}
       </View>
       <View style={styles.profileContent}>
-        <Text style={styles.sectionTitle}>About Me</Text>
-        <Text style={styles.aboutText}>
-          This is a brief bio about you. You can share your interests, travel experiences,
-          or any personal details you'd like to display.
-        </Text>
-        <TouchableOpacity style={styles.editProfileButton}>
-          <Text style={styles.editProfileButtonText}>Edit Profile</Text>
-        </TouchableOpacity>
+        {isEditing ? (
+          <>
+            <TextInput
+              style={styles.input}
+              value={formData.firstname}
+              onChangeText={(text) => setFormData({ ...formData, firstname: text })}
+              placeholder="First Name"
+            />
+            <TextInput
+              style={styles.input}
+              value={formData.lastname}
+              onChangeText={(text) => setFormData({ ...formData, lastname: text })}
+              placeholder="Last Name"
+            />
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>About Me</Text>
+            <Text style={styles.aboutText}>
+              This is a brief bio about you. You can share your interests, travel experiences,
+              or any personal details you'd like to display.
+            </Text>
+          </>
+        )}
+        {isEditing ? (
+          <TouchableOpacity style={styles.saveProfileButton} onPress={saveProfile}>
+            <Text style={styles.saveProfileButtonText}>Save Profile</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.editProfileButton} onPress={() => setIsEditing(true)}>
+            <Text style={styles.editProfileButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-        <Ionicons name="log-out-outline" size={20} color="#fff" />
-        <Text style={styles.logoutButtonText}>Log Out</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -186,6 +281,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  saveProfileButton: {
+    backgroundColor: '#3182CE',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  saveProfileButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,5 +306,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 10,
+  },
+  input: {
+    borderColor: '#ccc',
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 10,
+    borderRadius: 5,
+    width: '80%',
+    fontSize: 16,
   },
 });
