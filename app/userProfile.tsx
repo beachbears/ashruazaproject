@@ -14,6 +14,11 @@ import axiosInstance from '@/axiosConfig';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { router } from 'expo-router';
 
+type RootStackParamList = {
+  userProfile: undefined;
+  changePassword: undefined;
+};
+
 interface Profile {
   id: number;
   email: string;
@@ -23,10 +28,29 @@ interface Profile {
   profile_picture_url: string | null;
 }
 
-type RootStackParamList = {
-  userProfile: undefined;
-  changePassword: undefined;
-};
+interface RoutePost {
+  id: number;
+  content: string;
+  origin_lat: number;
+  origin_lon: number;
+  dest_lat: number;
+  dest_lon: number;
+  status: string;
+  // Optionally include user details if needed
+  user: {
+    id: number;
+    username: string;
+  };
+  created_at: string;
+}
+
+interface Feedback {
+  id: number;
+  rating: number;
+  content: string;
+  user_id: number;
+  created_at: string;
+}
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'userProfile'>;
 
@@ -44,11 +68,15 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
     email: '',
   });
   const [saving, setSaving] = useState(false);
+  const [routePosts, setRoutePosts] = useState<RoutePost[]>([]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
 
+  // Fetch profile, route posts, and feedbacks concurrently on mount
   useEffect(() => {
     fetchProfile();
   }, []);
 
+  // When profile is loaded, populate the formData for editing
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -61,6 +89,7 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
     }
   }, [profile]);
 
+  // Renders the avatar placeholder (first letter of username)
   const renderAvatar = () => {
     const initial = profile?.username ? profile.username.charAt(0).toUpperCase() : 'U';
     return (
@@ -70,23 +99,34 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
     );
   };
 
+  // Fetch the complete profile data from the API endpoints
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get('/api/profile', {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      setProfile(response.data);
+      const [profileResponse, routePostsResponse, feedbacksResponse] = await Promise.all([
+        axiosInstance.get('/api/profile', {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }),
+        axiosInstance.get('/api/profile/route_posts', {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }),
+        axiosInstance.get('/api/profile/feedbacks', {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }),
+      ]);
+      setProfile(profileResponse.data);
+      setRoutePosts(routePostsResponse.data);
+      setFeedbacks(feedbacksResponse.data);
     } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError('Failed to load profile.');
+      console.error('Error fetching profile data:', err);
+      setError('Failed to load profile data.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Save profile updates by sending a PATCH request to the API
   const saveProfile = async () => {
-    // Client-side validation
     if (!formData.username.trim()) {
       setError('Username is required');
       return;
@@ -120,7 +160,7 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
       setProfile(response.data);
       setIsEditing(false);
       setSuccessMessage('Profile updated successfully');
-      setTimeout(() => setSuccessMessage(null), 3000); // Clear after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
       console.error('Save error:', err);
       if (err.response?.data?.detailed_errors) {
@@ -149,6 +189,7 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
     );
   }
 
+  // Edit mode - display form for editing profile data
   if (isEditing) {
     return (
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -223,6 +264,7 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
       </ScrollView>
     );
   } else {
+    // Display mode - show profile data, route posts, and feedbacks
     return (
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.profileContainer}>
@@ -249,13 +291,73 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
           >
             <Text style={styles.buttonText}>Change Password</Text>
           </TouchableOpacity>
+
+          {/* My Experiences Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>My Experiences</Text>
+            {routePosts.length > 0 ? (
+              routePosts.map((post) => (
+                <View key={post.id} style={styles.itemContainer}>
+                  <Text style={styles.itemText}>{post.content || 'No content'}</Text>
+                  <Text style={styles.itemDescription}>Status: {post.status}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noDataText}>You haven't posted any experiences yet.</Text>
+            )}
+          </View>
+
+          {/* My Feedbacks Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>My Feedbacks</Text>
+            {feedbacks.length > 0 ? (
+              feedbacks.map((feedback) => (
+                <View key={feedback.id} style={styles.itemContainer}>
+                  <Text style={styles.itemText}>Rating: {feedback.rating}</Text>
+                  <Text style={styles.itemDescription}>{feedback.content || 'No comment'}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noDataText}>You haven't posted any feedbacks yet.</Text>
+            )}
+          </View>
         </View>
-      </ScrollView >
+      </ScrollView>
     );
   }
 };
 
 const styles = StyleSheet.create({
+  section: {
+    width: '100%',
+    marginTop: 20,
+  },
+  itemContainer: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  itemText: {
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  itemDescription: {
+    fontSize: 14,
+    color: '#718096',
+    marginTop: 5,
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#718096',
+    textAlign: 'center',
+  },
   container: {
     flexGrow: 1,
     backgroundColor: '#F9FAFB',
