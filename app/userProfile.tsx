@@ -44,7 +44,7 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
   return (
     <View style={styles.dropdowncontainer}>
       <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
-        <Text style={styles.buttonText}>{selectedOption}</Text>
+        <Text style={styles.dropdownButtonText}>{selectedOption}</Text>
         <Entypo name="chevron-down" size={20} color="#44457D" />
       </TouchableOpacity>
       {isOpen && (
@@ -434,7 +434,8 @@ const UserProfile = () => {
   // Update sortedPosts calculation
   const sortedPosts = useMemo(() => {
     const userPosts = contextPosts.filter((p: Post) => userPostIds.includes(p.id));
-    return userPosts.sort((a, b) => {
+    const postsToSort = [...userPosts];
+    return postsToSort.sort((a, b) => {
       const aDate = new Date(a.created_at || 0).getTime();
       const bDate = new Date(b.created_at || 0).getTime();
       switch (selectedOption) {
@@ -900,6 +901,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 6,
+  },
+  dropdownButtonText: {
+    color: '#44457D',
+    fontSize: 12,
+    fontWeight: '400',
   },
   dropdownList: {
     position: 'absolute',
