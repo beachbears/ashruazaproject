@@ -601,26 +601,30 @@ const UserProfile = () => {
   return (
     <View style={styles.container}>
       <View style={styles.profileHeader}>
-        {renderAvatar()}
-        <Text style={styles.userName}>{profile?.username || 'Username not set'}</Text>
-        <Text style={styles.userEmail}>{profile?.email || 'Email not set'}</Text>
-        {successMessage && <Text style={styles.successText}>{successMessage}</Text>}
-        <View style={styles.profileActions}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => setIsEditing(true)}
-            accessibilityLabel="Edit Profile"
-          >
-            <MaterialIcons name="edit" size={24} color="#6366F1" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push('/changePassword')}
-            accessibilityLabel="Change Password"
-          >
-            <MaterialIcons name="lock" size={24} color="#6366F1" />
-          </TouchableOpacity>
+        <View style={styles.profileRow}>
+          {renderAvatar()}
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{profile?.username || 'Username not set'}</Text>
+            <Text style={styles.userEmail}>{profile?.email || 'Email not set'}</Text>
+          </View>
+          <View style={styles.profileActions}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => setIsEditing(true)}
+              accessibilityLabel="Edit Profile"
+            >
+              <MaterialIcons name="edit" size={24} color="#6366F1" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => router.push('/changePassword')}
+              accessibilityLabel="Change Password"
+            >
+              <MaterialIcons name="lock" size={24} color="#6366F1" />
+            </TouchableOpacity>
+          </View>
         </View>
+        {successMessage && <Text style={styles.successText}>{successMessage}</Text>}
       </View>
       <UserProfileTabs
         sortedPosts={sortedPosts}
@@ -677,18 +681,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userInfo: {
+    marginLeft: 12,
+    alignItems: 'flex-start',
+  },
   avatarPlaceholder: {
-    width: 64,
-    height: 64,
+    width: 48,
+    height: 48,
     borderRadius: 32,
     backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
   },
   avatarText: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   userName: {
@@ -705,6 +717,7 @@ const styles = StyleSheet.create({
   profileActions: {
     flexDirection: 'row',
     gap: 12,
+    marginLeft: 16
   },
   iconButton: {
     padding: 8,
