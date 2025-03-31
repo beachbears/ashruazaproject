@@ -542,6 +542,41 @@ const ModalComponent: React.FC<ModalProps> = ({
 export default ModalComponent;
 
 const styles = StyleSheet.create({
+  searchContainer: {
+    position: "relative",
+    width: "100%",
+    overflow: "visible", // Make sure the icons are not clipped
+  },
+  searchInput: {
+    height: 42,
+    borderWidth: 1,
+    borderColor: "#6366F1",
+    borderRadius: 10,
+    paddingLeft: 35,  // Space for the search icon
+    paddingRight: 35, // Space for the clear button
+    color: "black",
+    backgroundColor: "#F5F7FF",
+    marginVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",  },
+  searchIcon: {
+    position: "absolute",
+    left: 10,
+    top: "50%",
+    transform: [{ translateY: -10 }],
+    zIndex: 2, // Higher zIndex to stay on top
+  },
+  clearButton: {
+    position: "absolute",
+    right: 10,
+    top: "50%",
+    transform: [{ translateY: -10 }],
+    zIndex: 2, // Ensure it's above the text input
+  },
+  clearButtonText: {
+    color: '#6366F1',
+    fontSize: 16,
+  },
   clickableText: {
     fontSize: 12,
     color: '#6366F1', // Purple for clickable text
