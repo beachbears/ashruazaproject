@@ -168,7 +168,9 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
       tabBarStyle: { backgroundColor: '#FFFFFF', elevation: 2 },
     }}
   >
-    <Tab.Screen name="Experiences">
+    <Tab.Screen
+      name="Experiences"
+    >
       {() => (
         <ProfileSection<Post>
           data={sortedPosts}
@@ -186,7 +188,9 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
         />
       )}
     </Tab.Screen>
-    <Tab.Screen name="Feedbacks">
+    <Tab.Screen
+      name="Feedbacks"
+    >
       {() => (
         <ProfileSection<any>
           data={feedbacks}
