@@ -262,15 +262,15 @@ const PostItem = React.memo<PostItemProps>(
           <View style={styles.suggestorInfo}>
             <View style={styles.profile}>
               <Text style={styles.initial}>
-                {post.user?.firstname && post.user?.lastname
-                  ? `${post.user.firstname[0].toUpperCase()}${post.user.lastname[0].toUpperCase()}`
+                {post.user?.username
+                  ? `${post.user.username[0].toUpperCase()}`
                   : 'G'}
               </Text>
             </View>
             <View>
               <Text style={styles.suggestorName}>
-                {post.user?.firstname && post.user?.lastname
-                  ? `${post.user.firstname} ${post.user.lastname}`
+                {post.user?.username
+                  ? `${post.user.username}`
                   : 'Guest'}
               </Text>
               <Text style={styles.suggestorUsername}>{post.user?.email}</Text>
@@ -506,11 +506,12 @@ const UserProfile = () => {
   }, [contextPosts, userPostIds, selectedOption]);
 
   const renderAvatar = () => {
+    const initialUserName = profile?.username ? profile.username.charAt(0).toUpperCase() : 'U';
     const initialFirstName = profile?.firstname ? profile.firstname.charAt(0).toUpperCase() : 'U';
     const initialLastName = profile?.lastname ? profile.lastname.charAt(0).toUpperCase() : 'U';
     return (
       <View style={styles.avatarPlaceholder}>
-        <Text style={styles.avatarText}>{initialFirstName}{initialLastName}</Text>
+        <Text style={styles.avatarText}>{initialUserName}</Text>
       </View>
     );
   };
