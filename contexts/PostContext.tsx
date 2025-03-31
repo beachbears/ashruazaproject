@@ -2,7 +2,7 @@ import { ApiResponse } from '../src/types';
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 export type PostCategory = 'routes' | 'postsuggestions' | 'community';
 export interface Post {
-  id?: number;
+  id: number;
   content: string;
   location: string;
   destination: string;
@@ -43,7 +43,7 @@ interface PostContextType {
   experienceOnly: boolean;
   setExperienceOnly: (value: boolean) => void;
   updatePost: (updatedPost: Post) => void; // <-- Add this line
-  setPosts: (posts: Post[]) => void;
+  setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
   currentRouteData: ApiResponse | null;
   setCurrentRouteData: (data: ApiResponse | null) => void;
 }

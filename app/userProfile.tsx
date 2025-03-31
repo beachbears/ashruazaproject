@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,54 +7,205 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import Entypo from '@expo/vector-icons/Entypo';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { AuthContext } from '../contexts/AuthContext';
 import axiosInstance from '@/axiosConfig';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { router } from 'expo-router';
+import { Post, usePostContext } from '@/contexts/PostContext';
 
-type RootStackParamList = {
-  userProfile: undefined;
-  changePassword: undefined;
+interface DropdownProps {
+  options: string[];
+  onSelect?: (option: string) => void;
+  defaultValue?: string;
+}
+
+interface PostItemProps {
+  post: Post;
+  onVote: (id: number, action: VoteType) => void;
+  onReport: (id: number) => void;
+}
+
+const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(defaultValue);
+
+  const toggleDropdown = () => setIsOpen(!isOpen);
+  const selectOption = (option: string) => {
+    setSelectedOption(option);
+    setIsOpen(false);
+    if (onSelect) onSelect(option);
+  };
+
+  return (
+    <View style={styles.dropdowncontainer}>
+      <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
+        <Text style={styles.buttonText}>{selectedOption}</Text>
+        <Entypo name="chevron-down" size={20} color="#44457D" />
+      </TouchableOpacity>
+      {isOpen && (
+        <View style={styles.dropdownList}>
+          {options.map((option, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => selectOption(option)}
+              style={styles.option}
+            >
+              <Text style={styles.optionText}>{option}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 };
+
+type VoteType = 'upvote' | 'downvote';
 
 interface Profile {
   id: number;
-  email: string;
   username: string;
-  firstname: string;
-  lastname: string;
-  profile_picture_url: string | null;
+  email: string;
+  firstname?: string;
+  lastname?: string;
 }
 
-interface RoutePost {
-  id: number;
-  content: string;
-  origin_lat: number;
-  origin_lon: number;
-  dest_lat: number;
-  dest_lon: number;
-  status: string;
-  // Optionally include user details if needed
-  user: {
-    id: number;
-    username: string;
-  };
-  created_at: string;
-}
+const PostItem = React.memo<PostItemProps>(
+  ({ post, onVote, onReport }) => {
+    const timeAgo = (timestamp: number): string => {
+      const now = Date.now();
+      const diff = now - timestamp;
+      const minute = 60 * 1000;
+      const hour = 60 * minute;
+      const day = 24 * hour;
+      if (diff < minute) return 'Just now';
+      if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+      if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+      return `${Math.floor(diff / day)}d ago`;
+    };
 
-interface Feedback {
-  id: number;
-  rating: number;
-  content: string;
-  user_id: number;
-  created_at: string;
-}
+    const getStatusStyle = (status: string) => {
+      switch (status.toLowerCase()) {
+        case 'pending review':
+          return { backgroundColor: '#fef9c3', borderColor: '#fef9c3' };
+        case 'community approved':
+          return { backgroundColor: '#dbeafe', borderColor: '#dbeafe' };
+        case 'flagged':
+          return { backgroundColor: '#fee2e2', borderColor: '#fee2e2' };
+        case 'admin approved':
+          return { backgroundColor: '#dcfce7', borderColor: '#dcfce7' };
+        default:
+          return {};
+      }
+    };
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'userProfile'>;
+    const getStatusTextColor = (status: string) => {
+      switch (status.toLowerCase()) {
+        case 'flagged':
+          return { color: '#b31b1b' };
+        case 'admin approved':
+          return { color: '#166534' };
+        case 'pending review':
+          return { color: '#a44d0e' };
+        case 'community approved':
+          return { color: '#4f40af' };
+        default:
+          return {};
+      }
+    };
 
-const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
+    const voteStatus: VoteType | undefined =
+      post.user_vote === 1 ? 'upvote' : post.user_vote === -1 ? 'downvote' : undefined;
+
+    const selectedVote = post.user_vote === 1 ? 'upvote' : post.user_vote === -1 ? 'downvote' : undefined;
+    return (
+      <View style={styles.containerpost}>
+        <View style={styles.suggestordetails}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+            <View style={styles.profile}>
+              <Text style={styles.initial}>
+                {post.user?.firstname && post.user?.lastname
+                  ? `${post.user.firstname[0].toUpperCase()}${post.user.lastname[0].toUpperCase()}`
+                  : 'G'}
+              </Text>
+            </View>
+            <View style={styles.suggestor}>
+              <Text style={styles.suggestorname}>
+                {post.user?.firstname && post.user?.lastname
+                  ? `${post.user.firstname} ${post.user.lastname}`
+                  : 'Guest'}
+              </Text>
+              <Text style={styles.suggestorusername}>{post.user?.email}</Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={styles.postTimestamp}>
+              {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.postLocation}>
+          <Text style={styles.boldText}>From:</Text> {post.location || 'Unknown Location'}
+        </Text>
+        <Text style={styles.postDestination}>
+          <Text style={styles.boldText}>To:</Text> {post.destination || 'Unknown Destination'}
+        </Text>
+        <View style={{ flexDirection: 'column', gap: 8 }}>
+          <Text style={styles.label}>Experiences</Text>
+          <Text style={styles.experience}>{post.content}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={styles.content}>
+            <View style={[styles.badge, getStatusStyle(post.status || '')]}>
+              <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
+            </View>
+          </View>
+          <View style={styles.arrowcontainer}>
+            <TouchableOpacity
+              style={[
+                styles.arrowup,
+                selectedVote === 'upvote' ? { backgroundColor: '#22C55E' } : undefined,
+              ]}
+              onPress={() => post.id && onVote(post.id, 'upvote')}
+            >
+              <AntDesign
+                name="arrowup"
+                size={13}
+                color={selectedVote === 'upvote' ? '#fff' : '#22C55E'}
+              />
+            </TouchableOpacity>
+            <Text style={styles.arrowupnum}>{post.votes}</Text>
+            <TouchableOpacity
+              style={[
+                styles.arrowdown,
+                selectedVote === 'downvote' ? { backgroundColor: '#C52222' } : undefined,
+              ]}
+              onPress={() => post.id && onVote(post.id, 'downvote')}
+            >
+              <AntDesign
+                name="arrowdown"
+                size={13}
+                color={selectedVote === 'downvote' ? '#fff' : '#C52222'}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  },
+  (prevProps, nextProps) =>
+    prevProps.post === nextProps.post &&
+    // prevProps.selectedVote === nextProps.selectedVote &&
+    prevProps.onVote === nextProps.onVote &&
+    prevProps.onReport === nextProps.onReport
+);
+
+const UserProfile = () => {
+  const [userPostIds, setUserPostIds] = useState<number[]>([]);
   const { authToken } = useContext(AuthContext);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,54 +219,79 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
     email: '',
   });
   const [saving, setSaving] = useState(false);
-  const [routePosts, setRoutePosts] = useState<RoutePost[]>([]);
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [routePosts, setRoutePosts] = useState<Post[]>([]);
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [selectedOption, setSelectedOption] = useState('Time');
+  const { posts: contextPosts, updatePost, handleUpvote, handleDownvote, setPosts } = usePostContext();
 
-  // Fetch profile, route posts, and feedbacks concurrently on mount
+  const dropdownOptions = ['Popularity', 'Time'];
+  // const profilePosts = useMemo(() =>
+  //   contextPosts.filter(post => post.user?.email === profile?.email),
+  //   [contextPosts, profile]
+  // );
+
   useEffect(() => {
     fetchProfile();
   }, []);
 
-  // When profile is loaded, populate the formData for editing
   useEffect(() => {
     if (profile) {
       setFormData({
         firstname: profile.firstname || '',
         lastname: profile.lastname || '',
-        username: profile.username,
-        email: profile.email,
+        username: profile.username || '',
+        email: profile.email || '',
       });
-      setSuccessMessage(null); // Clear success message when profile updates
+      setSuccessMessage(null);
     }
   }, [profile]);
 
-  // Renders the avatar placeholder (first letter of username)
   const renderAvatar = () => {
-    const initial = profile?.username ? profile.username.charAt(0).toUpperCase() : 'U';
+    const initialFirstName = profile?.firstname ? profile.firstname.charAt(0).toUpperCase() : 'U';
+    const initialLastName = profile?.lastname ? profile.lastname.charAt(0).toUpperCase() : 'U';
     return (
       <View style={styles.avatarPlaceholder}>
-        <Text style={styles.avatarText}>{initial}</Text>
+        <Text style={styles.avatarText}>{initialFirstName}{initialLastName}</Text>
       </View>
     );
   };
 
-  // Fetch the complete profile data from the API endpoints
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const [profileResponse, routePostsResponse, feedbacksResponse] = await Promise.all([
-        axiosInstance.get('/api/profile', {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }),
-        axiosInstance.get('/api/profile/route_posts', {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }),
-        axiosInstance.get('/api/profile/feedbacks', {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }),
-      ]);
+
+      // Fetch profile data
+      const profileResponse = await axiosInstance.get('/api/profile', {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       setProfile(profileResponse.data);
-      setRoutePosts(routePostsResponse.data);
+
+      // Fetch user's route posts
+      const routePostsResponse = await axiosInstance.get('/api/profile/route_posts', {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const fetchedPosts: Post[] = routePostsResponse.data.map((post: any) => ({
+        ...post,
+        pendingVote: false,
+      }));
+      setRoutePosts(fetchedPosts);
+      setUserPostIds(fetchedPosts.map((p) => p.id));
+
+      // Merge fetchedPosts into contextPosts
+      setPosts((prevPosts) => {
+        const existingIds = new Set(prevPosts.map((p) => p.id));
+        const newPosts = fetchedPosts.filter((p) => !existingIds.has(p.id));
+        const updatedPosts = prevPosts.map((p) => {
+          const fetchedPost = fetchedPosts.find((fp) => fp.id === p.id);
+          return fetchedPost ? { ...p, ...fetchedPost } : p;
+        });
+        return [...updatedPosts, ...newPosts];
+      });
+
+      // Fetch feedbacks
+      const feedbacksResponse = await axiosInstance.get('/api/profile/feedbacks', {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       setFeedbacks(feedbacksResponse.data);
     } catch (err) {
       console.error('Error fetching profile data:', err);
@@ -125,7 +301,6 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
     }
   };
 
-  // Save profile updates by sending a PATCH request to the API
   const saveProfile = async () => {
     if (!formData.username.trim()) {
       setError('Username is required');
@@ -153,9 +328,7 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
             email: formData.email,
           },
         },
-        {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }
+        { headers: { Authorization: `Bearer ${authToken}` } }
       );
       setProfile(response.data);
       setIsEditing(false);
@@ -173,6 +346,108 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
     }
   };
 
+  const handleVote = useCallback(
+    async (id: number, action: 'upvote' | 'downvote') => {
+      if (!authToken) {
+        router.push('/login');
+        return;
+      }
+
+      const post = contextPosts.find((p) => p.id === id);
+      if (!post || post.pendingVote) return;
+
+      const currentUserVote = post.user_vote || 0;
+      let newUserVote: number;
+      let voteDelta: number;
+
+      if (action === 'upvote') {
+        newUserVote = currentUserVote === 1 ? 0 : 1; // Toggle off if already upvoted
+      } else {
+        newUserVote = currentUserVote === -1 ? 0 : -1; // Toggle off if already downvoted
+      }
+
+      voteDelta = newUserVote - currentUserVote;
+
+      // Optimistic update
+      updatePost({
+        ...post,
+        user_vote: newUserVote,
+        votes: (post.votes || 0) + voteDelta,
+        pendingVote: true,
+      });
+
+      try {
+        const result = await sendVoteRequest(id.toString(), action);
+        if (result) {
+          // Update with server's response
+          updatePost({
+            ...post,
+            votes: result.votes,
+            user_vote: result.user_vote,
+            pendingVote: false,
+          });
+        } else {
+          // Revert if no result from server
+          updatePost({
+            ...post,
+            user_vote: currentUserVote,
+            votes: (post.votes || 0) - voteDelta,
+            pendingVote: false,
+          });
+        }
+      } catch (error) {
+        console.error('Vote sync error:', error);
+        // Revert on error
+        updatePost({
+          ...post,
+          user_vote: currentUserVote,
+          votes: (post.votes || 0) - voteDelta,
+          pendingVote: false,
+        });
+      }
+    },
+    [authToken, contextPosts, updatePost, router]
+  );
+
+  const sendVoteRequest = async (postId: string, action: 'upvote' | 'downvote') => {
+    try {
+      const response = await axiosInstance.post(
+        `/api/route_posts/${postId}/${action}`,
+        {},
+        { headers: { Authorization: `Bearer ${authToken}` } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Vote error:', error);
+      throw error;
+    }
+  };
+
+  const handleReport = async (id: number) => {
+    console.log(`Report post with id ${id}`);
+  };
+
+  const handleOptionSelect = useCallback((option: string) => {
+    setSelectedOption(option);
+  }, []);
+
+  // Update sortedPosts calculation
+  const sortedPosts = useMemo(() => {
+    const userPosts = contextPosts.filter((p: Post) => userPostIds.includes(p.id));
+    return userPosts.sort((a, b) => {
+      const aDate = new Date(a.created_at || 0).getTime();
+      const bDate = new Date(b.created_at || 0).getTime();
+      switch (selectedOption) {
+        case 'Time':
+          return bDate - aDate;
+        case 'Popularity':
+          return (b.votes || 0) - (a.votes || 0);
+        default:
+          return 0;
+      }
+    });
+  }, [contextPosts, userPostIds, selectedOption]);
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -189,7 +464,6 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
     );
   }
 
-  // Edit mode - display form for editing profile data
   if (isEditing) {
     return (
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -264,13 +538,12 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
       </ScrollView>
     );
   } else {
-    // Display mode - show profile data, route posts, and feedbacks
     return (
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.profileContainer}>
           <View style={styles.avatarContainer}>{renderAvatar()}</View>
-          <Text style={styles.userName}>{profile?.username}</Text>
-          <Text style={styles.userEmail}>{profile?.email}</Text>
+          <Text style={styles.userName}>{profile?.username || 'Username not set'}</Text>
+          <Text style={styles.userEmail}>{profile?.email || 'Email not set'}</Text>
           {successMessage && <Text style={styles.successText}>{successMessage}</Text>}
           <View style={styles.profileContent}>
             <Text style={styles.sectionTitle}>Personal Information</Text>
@@ -291,23 +564,22 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
           >
             <Text style={styles.buttonText}>Change Password</Text>
           </TouchableOpacity>
-
-          {/* My Experiences Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>My Experiences</Text>
-            {routePosts.length > 0 ? (
-              routePosts.map((post) => (
-                <View key={post.id} style={styles.itemContainer}>
-                  <Text style={styles.itemText}>{post.content || 'No content'}</Text>
-                  <Text style={styles.itemDescription}>Status: {post.status}</Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noDataText}>You haven't posted any experiences yet.</Text>
-            )}
+            <View style={styles.headerContainer}>
+              <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
+            </View>
+            <FlatList
+              data={sortedPosts}
+              keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+              renderItem={({ item }) => (
+                <PostItem post={item} onVote={handleVote} onReport={handleReport} />
+              )}
+              ListEmptyComponent={
+                <Text style={styles.noDataText}>You haven't posted any experiences yet.</Text>
+              }
+            />
           </View>
-
-          {/* My Feedbacks Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>My Feedbacks</Text>
             {feedbacks.length > 0 ? (
@@ -328,36 +600,6 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
 };
 
 const styles = StyleSheet.create({
-  section: {
-    width: '100%',
-    marginTop: 20,
-  },
-  itemContainer: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  itemText: {
-    fontSize: 16,
-    color: '#1F2937',
-    fontWeight: '500',
-  },
-  itemDescription: {
-    fontSize: 14,
-    color: '#718096',
-    marginTop: 5,
-  },
-  noDataText: {
-    fontSize: 16,
-    color: '#718096',
-    textAlign: 'center',
-  },
   container: {
     flexGrow: 1,
     backgroundColor: '#F9FAFB',
@@ -422,6 +664,7 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     fontWeight: '600',
     marginBottom: 10,
+    textAlign: 'center',
   },
   infoText: {
     fontSize: 16,
@@ -429,10 +672,10 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   label: {
-    fontSize: 16,
-    color: '#1F2937',
+    fontSize: 14, // Match community's label fontSize
     fontWeight: '500',
-    marginBottom: 5,
+    color: '#44457D', // Add this line to match the community's color
+    marginTop: 8 // Adjust as needed
   },
   inputContainer: {
     flexDirection: 'row',
@@ -499,6 +742,219 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  containerpost: {
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#C7D2FE',
+    padding: 12,
+    elevation: 4,
+    marginBottom: 20,
+    width: '100%',
+    borderWidth: 1,
+  },
+  suggestordetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 50,
+    justifyContent: 'space-between',
+  },
+  profile: {
+    width: 36,
+    height: 36,
+    borderRadius: 24,
+    backgroundColor: '#6366F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  initial: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  suggestor: {
+    flexDirection: 'column',
+  },
+  suggestorname: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '700',
+  },
+  suggestorusername: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  postTimestamp: {
+    marginTop: -8,
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'right',
+  },
+  postLocation: {
+    fontSize: 12,
+    color: '#44457D',
+    marginTop: 14,
+    marginBottom: 6,
+    fontWeight: '400',
+  },
+  postDestination: {
+    fontSize: 12,
+    color: '#44457D',
+    marginBottom: 16,
+    fontWeight: '400',
+  },
+  boldText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#44457D',
+  },
+  experience: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badge: {
+    borderWidth: 1,
+    borderColor: '#ABEBA2',
+    borderRadius: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    backgroundColor: '#ecfdf5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  cert: {
+    color: '#22c55e',
+    fontWeight: '500',
+    fontSize: 11,
+  },
+  arrowcontainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  arrowup: {
+    borderWidth: 1,
+    borderColor: '#4ade80',
+    borderRadius: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  arrowdown: {
+    borderWidth: 1,
+    borderColor: '#f47357',
+    borderRadius: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  arrowupnum: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6B7280',
+  },
+  arrowdownnum: {
+    marginLeft: 6,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  postbutton: {
+    backgroundColor: '#6366F1',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  postButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dropdowncontainer: {
+    justifyContent: 'flex-end',
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  dropdownButton: {
+    backgroundColor: '#F5F7FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 8,
+    width: 125,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 6,
+  },
+  dropdownList: {
+    position: 'absolute',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    zIndex: 2000,
+    width: 125,
+    elevation: 4,
+    top: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  option: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    padding: 4,
+    alignItems: 'center',
+  },
+  optionText: {
+    fontSize: 13,
+    color: '#44457D',
+  },
+  section: {
+    width: '100%',
+    marginTop: 20,
+  },
+  itemContainer: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  itemText: {
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  itemDescription: {
+    fontSize: 14,
+    color: '#718096',
+    marginTop: 5,
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#718096',
+    textAlign: 'center',
   },
 });
 
