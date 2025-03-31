@@ -20,7 +20,7 @@ interface DropdownProps {
   defaultValue?: string;
 }
 
-const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
+const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Sort by'}) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
   const toggleDropdown = () => setIsOpen(!isOpen);
@@ -398,12 +398,11 @@ export default function PostSuggestions() {
                 }}
                 style={styles.postbutton}
               >
-                <Text style={styles.postButtonText}>Post</Text>
+                <Text style={styles.postButtonText}>Create New Post</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.detailsContainer}>
-              <Text style={styles.locationText}><Text style={styles.boldText}>From:</Text> {location}</Text>
-              <Text style={styles.locationText}><Text style={styles.boldText}>To:</Text> {destination}</Text>
+                   <Text style={styles.locationText}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
             </View>
           </>
         }
@@ -439,7 +438,6 @@ export default function PostSuggestions() {
               </View>
             </View>
             <View style={{ flexDirection: 'column', gap: 8 }}>
-              <Text style={styles.label}>Experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
@@ -598,11 +596,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   locationText: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '400',
     color: '#44457D',
     width: '100%',
-    marginTop: -6
   },
   label: {
     fontSize: 14,
