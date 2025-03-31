@@ -92,9 +92,25 @@ const RegisterScreen = () => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!formData.firstname.trim()) newErrors.firstname = 'First Name is required';
-    if (!formData.lastname.trim()) newErrors.lastname = 'Last Name is required';
-    if (!formData.username.trim()) newErrors.username = 'Username is required';
+    if (!formData.firstname.trim()) {
+      newErrors.firstname = 'First Name is required';
+    } else if (formData.firstname.length > 50) {
+      newErrors.firstname = 'First Name cannot be longer than 50 characters';
+    }
+
+    if (!formData.lastname.trim()) {
+      newErrors.lastname = 'Last Name is required';
+    } else if (formData.lastname.length > 50) {
+      newErrors.lastname = 'Last Name cannot be longer than 50 characters';
+    }
+
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    } else if (formData.username.length > 20) {
+      newErrors.username = 'Username cannot be longer than 20 characters';
+    }
 
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
@@ -106,6 +122,8 @@ const RegisterScreen = () => {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
+    } else if (formData.password.length > 20) {
+      newErrors.password = 'Password cannot be longer than 20 characters';
     }
 
     if (!formData.passwordConfirmation) {
@@ -153,7 +171,6 @@ const RegisterScreen = () => {
       }
     } catch (error: any) {
       if (__DEV__) {
-        // console.error('Registration error:', error);
         console.log('Error response data:', error.response?.data);
       }
 
@@ -168,7 +185,6 @@ const RegisterScreen = () => {
 
       if (error.response && error.response.data) {
         const data = error.response.data;
-        // Check if data.error is an array and assign errors based on keywords
         if (data.error && Array.isArray(data.error)) {
           data.error.forEach((errMsg: string) => {
             const lowerMsg = errMsg.toLowerCase();
@@ -176,26 +192,16 @@ const RegisterScreen = () => {
               newErrors.email = errMsg;
             } else if (lowerMsg.includes("username")) {
               newErrors.username = errMsg;
+            } else if (lowerMsg.includes("first name")) {
+              newErrors.firstname = errMsg;
+            } else if (lowerMsg.includes("last name")) {
+              newErrors.lastname = errMsg;
+            } else if (lowerMsg.includes("password confirmation")) {
+              newErrors.passwordConfirmation = errMsg;
             } else if (lowerMsg.includes("password")) {
               newErrors.password = errMsg;
             } else {
-              // Append to general error if no field match
               setGeneralError(prev => prev ? `${prev}, ${errMsg}` : errMsg);
-            }
-          });
-          // Set field errors if any were found
-          if (Object.values(newErrors).some(msg => msg !== '')) {
-            setErrors(newErrors);
-          }
-        } else if (data.error && data.errors) {
-          // Fallback: map errors from data.errors if available
-          Object.keys(data.errors).forEach((field) => {
-            let formField = field === "password_confirmation" ? "passwordConfirmation" : field;
-            if (formField in newErrors) {
-              const errorMsg = Array.isArray(data.errors[field])
-                ? data.errors[field].join(", ")
-                : data.errors[field];
-              newErrors[formField as keyof FormErrors] = mapErrorToFriendlyMessage(field, errorMsg);
             }
           });
           setErrors(newErrors);
