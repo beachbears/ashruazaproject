@@ -9,9 +9,10 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from '../../contexts/AuthContext';
+import { AuthContext } from '../contexts/AuthContext';
 import axiosInstance from '@/axiosConfig';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { router } from 'expo-router';
 
 interface Profile {
   id: number;
@@ -243,13 +244,13 @@ const UserProfile = ({ navigation }: { navigation: NavigationProp }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('changePassword')}
+            onPress={() => router.push('/changePassword')}
             accessibilityLabel="Change Password"
           >
             <Text style={styles.buttonText}>Change Password</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </ScrollView >
     );
   }
 };

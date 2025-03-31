@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { AuthContext } from '../../contexts/AuthContext';
+import { AuthContext } from '../contexts/AuthContext';
 import axiosInstance from '@/axiosConfig';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';

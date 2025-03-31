@@ -106,7 +106,7 @@ export default function TabLayout() {
                     <View style={styles.dropdown}>
                       <View style={styles.dropdownArrow} />
                       <TouchableOpacity
-                        onPress={() => router.push('../profile')}
+                        onPress={() => router.push('../userProfile')}
                         style={styles.dropdownItem}
                         activeOpacity={0.7}
                       >

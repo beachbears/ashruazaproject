@@ -4,7 +4,7 @@ import { ActivityIndicator, View, LogBox } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '../contexts/AuthContext';
 import { PostProvider } from '../contexts/PostContext';
-import { RouteProvider } from '../contexts/RouteContext'; // Import your RouteProvider
+import { RouteProvider } from '../contexts/RouteContext';
 import React from 'react';
 
 // Ignore specific warnings
@@ -22,7 +22,6 @@ export default function RootLayout() {
     const checkAuth = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
-        // Adjust your routing logic as needed.
         router.replace(token ? '/(tabs)' : '/(tabs)');
       } catch (error) {
         console.error('Auth check error:', error);
@@ -44,25 +43,24 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="postsuggestions"
-                options={{
-                  title: ' '
-                }}
+                options={{ title: ' ' }}
               />
               <Stack.Screen
                 name="login"
-                options={{
-                  headerShown: false,
-                  title: 'login'
-                }}
+                options={{ headerShown: false, title: 'login' }}
               />
               <Stack.Screen
                 name="signup"
-                options={{
-                  headerShown: false,
-                  title: 'signup'
-                }}
+                options={{ headerShown: false, title: 'signup' }}
               />
-              <Slot />
+              <Stack.Screen
+                name="userProfile"
+                options={{ title: 'User Profile' }}
+              />
+              <Stack.Screen
+                name="changePassword"
+                options={{ title: 'Change Password' }}
+              />
             </Stack>
             {isLoading && (
               <View
