@@ -434,8 +434,8 @@ export default function PostSuggestions() {
                 <PostOptionsMenu
                   post={post}
                   onReport={openReportModal}
-                  onDelete={(id) => openDeleteModal(id)}
-                />
+                   onDelete={() => post.id !== undefined ? openDeleteModal(post.id) : null} // Ensure post.id is a number
+                    />
               </View>
             </View>
             <View style={{ flexDirection: 'column', gap: 8 }}>
@@ -518,13 +518,15 @@ export default function PostSuggestions() {
         />
       )}
 
-{deleteModalVisible && (
-        <DeleteModal
-          visible={deleteModalVisible}
-          onClose={closeDeleteModal}
-          onConfirm={handleDeleteConfirm}
-        />
-      )}
+{deleteModalVisible && postIdToDelete !== null && (
+  <DeleteModal
+    visible={deleteModalVisible}
+    onClose={closeDeleteModal}
+    onConfirm={handleDeleteConfirm}
+    route_post_id={postIdToDelete} // Use the correct state
+  />
+)}
+
     </View>
   );
 }

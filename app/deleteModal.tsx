@@ -5,6 +5,7 @@ interface DeleteModalProps {
   visible: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  route_post_id: number | null;
 }
 
 const DeleteModal: React.FC<DeleteModalProps> = ({ visible, onClose, onConfirm }) => {

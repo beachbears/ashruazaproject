@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import base64 from 'base-64'; // Add this package
+
+
 
 export interface AuthContextType {
   isLoggedIn: boolean;
@@ -8,93 +9,81 @@ export interface AuthContextType {
   userName: string;
   userHandle: string;
   userInitials: string;
-  userId: number; // NEW: Added user ID
-  login: (name: string, token: string) => void;
+  login: (name: string, token: string) => void; // ✅ Accepts both name and token
   logout: () => void;
 }
 
+
+// ✅ Provide default values for the context to avoid 'null' issues
 const defaultAuthContext: AuthContextType = {
   isLoggedIn: false,
   authToken: "",
   userName: "",
   userHandle: "",
   userInitials: "",
-  userId: 0, // NEW: Default user ID
-  login: () => {},
-  logout: () => {},
+  login: () => { },
+  logout: () => { },
 };
 
+// ✅ Use a default value instead of `null`
 export const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState(defaultAuthContext);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authToken, setAuthToken] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userHandle, setUserHandle] = useState("");
+  const [userInitials, setUserInitials] = useState("");
 
-  // NEW: Token decoding logic
-  const decodeToken = (token: string) => {
-    try {
-      const payload = token.split('.')[1];
-      const decoded = base64.decode(payload);
-      return JSON.parse(decoded);
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      return {};
-    }
-  };
 
   const login = async (name: string, token: string) => {
-    const decoded = decodeToken(token);
-    const userId = decoded?.user_id || decoded?.id || 0; // Get user ID from token
-    
-    await AsyncStorage.multiSet([
-      ['authToken', token],
-      ['userName', name],
-      ['userId', userId.toString()] // NEW: Store user ID
-    ]);
+    setIsLoggedIn(true);
+    setUserName(name);
+    setAuthToken(token);
 
-    setState(prev => ({
-      ...prev,
-      isLoggedIn: true,
-      authToken: token,
-      userName: name,
-      userId: userId,
-      userInitials: name.match(/(\b\S)?/g)?.join("").slice(0, 2) || "",
-    }));
+    await AsyncStorage.setItem("authToken", token);
+    await AsyncStorage.setItem("userName", name); // ✅ Store userName
   };
 
   const logout = async () => {
-    await AsyncStorage.multiRemove(['authToken', 'userName', 'userId']); // NEW: Remove user ID
-    
-    setState(defaultAuthContext);
+    setIsLoggedIn(false);
+    setUserName("");
+    setAuthToken("");
+    setUserHandle("");
+    setUserInitials("");
+
+    await AsyncStorage.removeItem("authToken");
+    await AsyncStorage.removeItem("userName"); // ✅ Remove userName as well
   };
+
 
   useEffect(() => {
     const loadAuthData = async () => {
-      const [token, name, userId] = await Promise.all([
-        AsyncStorage.getItem('authToken'),
-        AsyncStorage.getItem('userName'),
-        AsyncStorage.getItem('userId') // NEW: Get user ID
-      ]);
+      const storedToken = await AsyncStorage.getItem("authToken");
+      const storedName = await AsyncStorage.getItem("userName");
 
-      if (token && name) {
-        setState(prev => ({
-          ...prev,
-          isLoggedIn: true,
-          authToken: token,
-          userName: name,
-          userId: parseInt(userId || '0', 10), // NEW: Set user ID
-          userInitials: name.match(/(\b\S)?/g)?.join("").slice(0, 2) || "",
-        }));
+      if (storedToken && storedName) { // Ensure both are available
+        setAuthToken(storedToken);
+        setUserName(storedName);
+        setIsLoggedIn(true);
       }
     };
 
     loadAuthData();
   }, []);
 
+
   return (
-    <AuthContext.Provider value={state}>
+    <AuthContext.Provider value={{ isLoggedIn, authToken, userName, userHandle, userInitials, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
