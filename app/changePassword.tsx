@@ -23,17 +23,21 @@ const ChangePasswordScreen = () => {
     try {
       setLoading(true);
       setError(null);
-      await axiosInstance.patch('/api/profile', {
+      const payload = {
         user: {
           current_password: currentPassword,
           password: newPassword,
           password_confirmation: confirmPassword,
         }
-      }, {
+      };
+      console.log('Sending payload:', payload); // Add this
+      const response = await axiosInstance.patch('/api/profile', payload, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
+      console.log('Response:', response.data); // Add this
       navigation.goBack();
     } catch (err: any) {
+      console.error('Error:', err.response?.data); // Log full error
       setError(err.response?.data?.errors?.[0] || 'Failed to change password. Please check your current password.');
     } finally {
       setLoading(false);
