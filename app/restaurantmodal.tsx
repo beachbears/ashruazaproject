@@ -9,7 +9,7 @@ import {
   Platform,
   Image,
   Linking,
-  FlatList,
+  FlatList, TextInput
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -376,6 +376,7 @@ const ModalComponent: React.FC<ModalProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<Category>("All");
   const [showCategories, setShowCategories] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(''); // Add search state
 
   type Category =
     | "All"
@@ -413,15 +414,28 @@ const ModalComponent: React.FC<ModalProps> = ({
   ];
 
   const filteredSpots = useMemo(() => {
-    if (selectedCategory === "All") {
-      return restaurants;
+    // First apply category filter
+    let filtered = restaurants;
+    if (selectedCategory !== "All") {
+      filtered = restaurants.filter(
+        (spot) =>
+          spot.amenity?.toLowerCase() ===
+          categoryMapping[selectedCategory].toLowerCase()
+      );
     }
-    return restaurants.filter(
-      (spot) =>
-        spot.amenity?.toLowerCase() ===
-        categoryMapping[selectedCategory].toLowerCase()
-    );
-  }, [selectedCategory, restaurants]);
+
+    // Then apply search filter
+    if (searchQuery.trim()) {
+      const lowerQuery = searchQuery.toLowerCase().trim();
+      return filtered.filter(spot => 
+        spot.name.toLowerCase().includes(lowerQuery) 
+      );
+    }return filtered;
+  }, [selectedCategory, restaurants, searchQuery]);
+
+  const clearSearch = () => {
+    setSearchQuery('');
+  };
 
   const handleSelectCategory = (cat: Category) => {
     setSelectedCategory(cat);
@@ -438,6 +452,23 @@ const ModalComponent: React.FC<ModalProps> = ({
       <View style={styles.modalBackground}>
         <View style={styles.modalContainer}>
           <Text style={styles.modalTitle}>Nearby Dining Spots</Text>
+
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#6366F1" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Find dining spots..."
+                placeholderTextColor="#6366F1"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity style={styles.clearButton} onPress={clearSearch}>
+                    <Ionicons name="close-circle" size={20} color="#6366F1" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
           <View style={styles.controlsContainer}>
             <View style={styles.dropdownContainer}>
               <TouchableOpacity
