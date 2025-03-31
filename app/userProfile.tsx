@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,14 +17,19 @@ import { AuthContext } from '../contexts/AuthContext';
 import axiosInstance from '@/axiosConfig';
 import { router } from 'expo-router';
 import { Post, usePostContext } from '@/contexts/PostContext';
-import { NavigationContainer } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 
-// Define interfaces
+const Tab = createMaterialTopTabNavigator();
+
+// Define interfaces (unchanged)
 interface DropdownProps {
   options: string[];
   onSelect?: (option: string) => void;
   defaultValue?: string;
+  setDropdownPosition: (position: { x: number; y: number }) => void;
+  setDropdownOptions: (options: string[]) => void;
+  setOnDropdownSelect: (callback: (option: string) => void) => void;
+  setIsDropdownOpen: (isOpen: boolean) => void;
 }
 
 interface PostItemProps {
@@ -39,6 +44,10 @@ interface UserProfileTabsProps {
   handleVote: (id: number, action: VoteType) => void;
   handleReport: (id: number) => void;
   handleOptionSelect: (option: string) => void;
+  setDropdownPosition: (position: { x: number; y: number }) => void;
+  setDropdownOptions: (options: string[]) => void;
+  setOnDropdownSelect: (callback: (option: string) => void) => void;
+  setIsDropdownOpen: (isOpen: boolean) => void;
 }
 
 interface ProfileSectionProps<T> {
@@ -50,6 +59,10 @@ interface ProfileSectionProps<T> {
 
 interface SortingHeaderProps {
   onSelect: (option: string) => void;
+  setDropdownPosition: (position: { x: number; y: number }) => void;
+  setDropdownOptions: (options: string[]) => void;
+  setOnDropdownSelect: (callback: (option: string) => void) => void;
+  setIsDropdownOpen: (isOpen: boolean) => void;
 }
 
 interface Profile {
@@ -62,52 +75,67 @@ interface Profile {
 
 type VoteType = 'upvote' | 'downvote';
 
-const Tab = createMaterialTopTabNavigator();
-
 // Dropdown Component
-const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const Dropdown: React.FC<DropdownProps> = ({
+  options,
+  onSelect,
+  defaultValue = 'Select Option',
+  setDropdownPosition,
+  setDropdownOptions,
+  setOnDropdownSelect,
+  setIsDropdownOpen,
+}) => {
+  const dropdownRef = useRef<View>(null);
   const [selectedOption, setSelectedOption] = useState(defaultValue);
 
-  const toggleDropdown = () => setIsOpen(!isOpen);
-  const selectOption = (option: string) => {
-    setSelectedOption(option);
-    setIsOpen(false);
-    if (onSelect) onSelect(option);
+  const toggleDropdown = () => {
+    if (dropdownRef.current) {
+      dropdownRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setDropdownPosition({ x: pageX, y: pageY + height });
+        setDropdownOptions(options);
+        setOnDropdownSelect(() => (option: string) => {
+          setSelectedOption(option);
+          if (onSelect) onSelect(option);
+          setIsDropdownOpen(false);
+        });
+        setIsDropdownOpen(true);
+      });
+    }
   };
 
   return (
-    <View style={styles.dropdownContainer}>
+    <View ref={dropdownRef} style={styles.dropdownContainer}>
       <TouchableOpacity onPress={toggleDropdown} style={styles.dropdownButton}>
         <Text style={styles.dropdownButtonText}>{selectedOption}</Text>
         <Entypo name="chevron-down" size={20} color="#44457D" />
       </TouchableOpacity>
-      {isOpen && (
-        <View style={styles.dropdownList}>
-          {options.map((option, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => selectOption(option)}
-              style={styles.option}
-            >
-              <Text style={styles.optionText}>{option}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
     </View>
   );
 };
 
 // Sorting Header Component
-const SortingHeader: React.FC<SortingHeaderProps> = ({ onSelect }) => (
+const SortingHeader: React.FC<SortingHeaderProps> = ({
+  onSelect,
+  setDropdownPosition,
+  setDropdownOptions,
+  setOnDropdownSelect,
+  setIsDropdownOpen,
+}) => (
   <View style={styles.sortingHeader}>
     <Text style={styles.sortingLabel}>Sort by:</Text>
-    <Dropdown options={['Popularity', 'Time']} onSelect={onSelect} defaultValue="Time" />
+    <Dropdown
+      options={['Popularity', 'Time']}
+      onSelect={onSelect}
+      defaultValue="Time"
+      setDropdownPosition={setDropdownPosition}
+      setDropdownOptions={setDropdownOptions}
+      setOnDropdownSelect={setOnDropdownSelect}
+      setIsDropdownOpen={setIsDropdownOpen}
+    />
   </View>
 );
 
-// Profile Section Component
+// Profile Section Component (unchanged)
 const ProfileSection = <T,>({ data, renderItem, emptyText, header }: ProfileSectionProps<T>) => (
   <FlatList
     data={data}
@@ -126,6 +154,10 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
   handleVote,
   handleReport,
   handleOptionSelect,
+  setDropdownPosition,
+  setDropdownOptions,
+  setOnDropdownSelect,
+  setIsDropdownOpen,
 }) => (
   <Tab.Navigator
     screenOptions={{
@@ -142,7 +174,15 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
           data={sortedPosts}
           renderItem={({ item }) => <PostItem post={item} onVote={handleVote} onReport={handleReport} />}
           emptyText="You haven't posted any experiences yet."
-          header={<SortingHeader onSelect={handleOptionSelect} />}
+          header={
+            <SortingHeader
+              onSelect={handleOptionSelect}
+              setDropdownPosition={setDropdownPosition}
+              setDropdownOptions={setDropdownOptions}
+              setOnDropdownSelect={setOnDropdownSelect}
+              setIsDropdownOpen={setIsDropdownOpen}
+            />
+          }
         />
       )}
     </Tab.Screen>
@@ -165,7 +205,7 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
   </Tab.Navigator>
 );
 
-// Post Item Component
+// Post Item Component (unchanged)
 const PostItem = React.memo<PostItemProps>(
   ({ post, onVote, onReport }) => {
     const timeAgo = (timestamp: number): string => {
@@ -304,6 +344,12 @@ const UserProfile = () => {
   const [selectedOption, setSelectedOption] = useState('Time');
   const { posts: contextPosts, updatePost, setPosts } = usePostContext();
 
+  // Dropdown state
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
+  const [dropdownOptions, setDropdownOptions] = useState<string[]>([]);
+  const [onDropdownSelect, setOnDropdownSelect] = useState<(option: string) => void>(() => { });
+
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -321,6 +367,7 @@ const UserProfile = () => {
   }, [profile]);
 
   const fetchProfile = async () => {
+    // Unchanged fetchProfile logic
     try {
       setLoading(true);
       const profileResponse = await axiosInstance.get('/api/profile', {
@@ -332,15 +379,12 @@ const UserProfile = () => {
         headers: { Authorization: `Bearer ${authToken}` },
       });
 
-      const fetchedPosts: Post[] = routePostsResponse.data.map((post: any) => {
-        const mappedPost = {
-          ...post,
-          location: post.origin_address || 'Unknown Location', // Fallback if missing
-          destination: post.destination_address || 'Unknown Destination', // Fallback if missing
-          pendingVote: false,
-        };
-        return mappedPost;
-      });
+      const fetchedPosts: Post[] = routePostsResponse.data.map((post: any) => ({
+        ...post,
+        location: post.origin_address || 'Unknown Location',
+        destination: post.destination_address || 'Unknown Destination',
+        pendingVote: false,
+      }));
       setRoutePosts(fetchedPosts);
       setUserPostIds(fetchedPosts.map((p) => p.id));
 
@@ -367,6 +411,7 @@ const UserProfile = () => {
   };
 
   const saveProfile = async () => {
+    // Unchanged saveProfile logic
     if (!formData.username.trim()) {
       setError('Username is required');
       return;
@@ -409,6 +454,7 @@ const UserProfile = () => {
 
   const handleVote = useCallback(
     async (id: number, action: VoteType) => {
+      // Unchanged handleVote logic
       if (!authToken) {
         router.push('/login');
         return;
@@ -484,6 +530,7 @@ const UserProfile = () => {
   if (isEditing) {
     return (
       <ScrollView contentContainerStyle={styles.editContainer} keyboardShouldPersistTaps="handled">
+        {/* Unchanged editing UI */}
         <View style={styles.formContainer}>
           <View style={styles.avatarContainer}>{renderAvatar()}</View>
           <Text style={styles.label}>Username</Text>
@@ -577,12 +624,42 @@ const UserProfile = () => {
         handleVote={handleVote}
         handleReport={handleReport}
         handleOptionSelect={handleOptionSelect}
+        setDropdownPosition={setDropdownPosition}
+        setDropdownOptions={setDropdownOptions}
+        setOnDropdownSelect={setOnDropdownSelect}
+        setIsDropdownOpen={setIsDropdownOpen}
       />
+      {/* Render the dropdown list at the root level */}
+      {isDropdownOpen && (
+        <View style={styles.dropdownOverlay}>
+          <TouchableOpacity
+            style={styles.dropdownBackdrop}
+            onPress={() => setIsDropdownOpen(false)}
+            activeOpacity={1}
+          />
+          <View
+            style={[
+              styles.dropdownList,
+              { top: dropdownPosition.y, left: dropdownPosition.x },
+            ]}
+          >
+            {dropdownOptions.map((option, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => onDropdownSelect(option)}
+                style={styles.option}
+              >
+                <Text style={styles.optionText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
     </View>
   );
 };
 
-// Styles
+// Styles (updated)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -590,14 +667,14 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     alignItems: 'center',
-    paddingVertical: 12, // reduced from 24
+    paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   avatarPlaceholder: {
-    width: 64, // reduced from 96
+    width: 64,
     height: 64,
     borderRadius: 32,
     backgroundColor: '#6366F1',
@@ -728,7 +805,6 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     position: 'relative',
-    zIndex: 1000,
   },
   dropdownButton: {
     flexDirection: 'row',
@@ -746,16 +822,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  dropdownOverlay: {
+    position: 'absolute',
+    top: -50,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10000,
+  },
+  dropdownBackdrop: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
   dropdownList: {
     position: 'absolute',
-    top: 40,
-    right: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     width: 120,
-    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
