@@ -19,6 +19,7 @@ export interface Post {
     lastname: string;
     email: string;
     created_at?: string;
+    userHandle?: string; // Added userHandle field
   }
   status?: string;
   email?: string;
@@ -32,6 +33,12 @@ export interface Post {
   origin_address?: string;
   user_vote?: number;
   pendingVote?: boolean; // New field to track pending votes
+}  
+
+interface PostOptionsMenuProps {
+  post: Post;
+  onReport: (id: number) => void;
+  onDelete: (id: number) => void;
 }
 
 interface PostContextType {
