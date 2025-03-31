@@ -10,6 +10,7 @@ const ChangePasswordScreen = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false); // New success state
   const [loading, setLoading] = useState(false);
   const { authToken } = useContext(AuthContext);
   const navigation = useNavigation();
@@ -30,14 +31,17 @@ const ChangePasswordScreen = () => {
           password_confirmation: confirmPassword,
         }
       };
-      console.log('Sending payload:', payload); // Add this
+      console.log('Sending payload:', payload);
       const response = await axiosInstance.patch('/api/profile', payload, {
         headers: { Authorization: `Bearer ${authToken}` }
       });
-      console.log('Response:', response.data); // Add this
-      navigation.goBack();
+      console.log('Response:', response.data);
+      setSuccess(true); // Set success state
+      setTimeout(() => {
+        navigation.goBack(); // Delayed navigation
+      }, 1500);
     } catch (err: any) {
-      console.error('Error:', err.response?.data); // Log full error
+      console.error('Error:', err.response?.data);
       setError(err.response?.data?.errors?.[0] || 'Failed to change password. Please check your current password.');
     } finally {
       setLoading(false);
@@ -84,7 +88,11 @@ const ChangePasswordScreen = () => {
         />
       </View>
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {success ? (
+        <Text style={styles.successText}>Password updated successfully!</Text>
+      ) : error ? (
+        <Text style={styles.errorText}>{error}</Text>
+      ) : null}
 
       <TouchableOpacity
         style={styles.button}
@@ -152,6 +160,12 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     textAlign: 'center',
     marginTop: 10,
+  },
+  successText: {
+    color: '#10B981',
+    textAlign: 'center',
+    marginTop: 10,
+    fontSize: 16,
   },
 });
 
