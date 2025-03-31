@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -18,11 +18,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LogBox } from 'react-native';
+import { AuthContext } from '../contexts/AuthContext'; // Adjust path as needed
 
-LogBox.ignoreLogs([
-  'textShadow*',
-  'shadow*',
-]);
+LogBox.ignoreLogs(['textShadow*', 'shadow*']);
 
 type SignupForm = {
   firstname: string;
@@ -46,6 +44,7 @@ const RegisterScreen = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const styles = getStyles(width);
+  const { login } = useContext(AuthContext); // Access login from AuthContext
 
   const [formData, setFormData] = useState<SignupForm>({
     firstname: '',
@@ -65,20 +64,6 @@ const RegisterScreen = () => {
   });
   const [generalError, setGeneralError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const checkAuthStatus = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      setIsLoggedIn(!!token);
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-    }
-  };
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {
@@ -133,17 +118,15 @@ const RegisterScreen = () => {
     }
 
     setErrors(newErrors);
-    return !Object.values(newErrors).some(error => error !== '');
+    return !Object.values(newErrors).some((error) => error !== '');
   };
 
   const handleInputChange = (field: keyof SignupForm, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
-    // Clear field error as user types
-    setErrors(prev => ({ ...prev, [field]: '' }));
-    // Clear general error when any input changes
+    setErrors((prev) => ({ ...prev, [field]: '' }));
     setGeneralError('');
   };
 
@@ -164,10 +147,17 @@ const RegisterScreen = () => {
     };
 
     try {
-      const response = await axiosInstance.post("/api/users", payload);
+      const response = await axiosInstance.post('/api/users', payload);
+      console.log('Server response:', response.data);
       if (response.status === 201) {
-        await AsyncStorage.setItem("token", response.data.token);
-        router.replace("/(tabs)");
+        const token = response.data.token;
+        const userName = response.data.user.firstname; // Use firstname as userName
+        if (!token) {
+          throw new Error('No token received from server');
+        }
+        await login(userName, token); // Update AuthContext
+        alert(`Account created successfully! Welcome, ${userName}!`);
+        router.replace('/(tabs)');
       }
     } catch (error: any) {
       if (__DEV__) {
@@ -188,66 +178,67 @@ const RegisterScreen = () => {
         if (data.error && Array.isArray(data.error)) {
           data.error.forEach((errMsg: string) => {
             const lowerMsg = errMsg.toLowerCase();
-            if (lowerMsg.includes("email")) {
+            if (lowerMsg.includes('email')) {
               newErrors.email = errMsg;
-            } else if (lowerMsg.includes("username")) {
+            } else if (lowerMsg.includes('username')) {
               newErrors.username = errMsg;
-            } else if (lowerMsg.includes("first name")) {
+            } else if (lowerMsg.includes('first name')) {
               newErrors.firstname = errMsg;
-            } else if (lowerMsg.includes("last name")) {
+            } else if (lowerMsg.includes('last name')) {
               newErrors.lastname = errMsg;
-            } else if (lowerMsg.includes("password confirmation")) {
+            } else if (lowerMsg.includes('password confirmation')) {
               newErrors.passwordConfirmation = errMsg;
-            } else if (lowerMsg.includes("password")) {
+            } else if (lowerMsg.includes('password')) {
               newErrors.password = errMsg;
             } else {
-              setGeneralError(prev => prev ? `${prev}, ${errMsg}` : errMsg);
+              setGeneralError((prev) => (prev ? `${prev}, ${errMsg}` : errMsg));
             }
           });
           setErrors(newErrors);
         } else if (data.message) {
           setGeneralError(data.message);
         } else {
-          setGeneralError("Please check your details and try again.");
+          setGeneralError('Please check your details and try again.');
         }
       } else {
-        setGeneralError("Unable to reach the server. Please try again later.");
+        setGeneralError('Unable to reach the server. Please try again later.');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const mapErrorToFriendlyMessage = (field: string, message: string): string => {
-    if (field === "email" && message.includes("taken")) {
-      return "This email is already registered. Please use a different email or log in.";
-    } else if (field === "password" && message.includes("short")) {
-      return "Password must be at least 8 characters long.";
-    } else {
-      return message;
-    }
-  };
-
+  // The rest of the component (UI rendering) remains unchanged
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'android' ? 'padding' : 'height'} style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'android' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
       <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-        <ScrollView contentContainerStyle={styles.scrollContentContainer}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContentContainer}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.mainContainer}>
             <View style={styles.headerImageContainer}>
               <Image source={require('../assets/images/reg.png')} style={styles.headerImage} />
               <View style={styles.textOverlay}>
                 <Text style={[styles.heading, { fontSize: width * 0.08 }]}>Kommutsera</Text>
                 <Text style={[styles.description, { fontSize: width * 0.03 }]}>
-                  Kommutsera is the perfect guide for exploring Metro Manila. With easy-to-follow routes, it helps you navigate the city’s cultural, historic, and modern attractions effortlessly. Whether you’re a tourist or a local, Kommutsera ensures a smooth, enjoyable, and efficient travel experience throughout Metro Manila.</Text>
+                  Kommutsera is the perfect guide for exploring Metro Manila. With
+                  easy-to-follow routes, it helps you navigate the city’s cultural,
+                  historic, and modern attractions effortlessly. Whether you’re a
+                  tourist or a local, Kommutsera ensures a smooth, enjoyable, and
+                  efficient travel experience throughout Metro Manila.
+                </Text>
               </View>
             </View>
 
             <View style={styles.formContainer}>
               <Image source={require('../assets/images/logo.png')} style={styles.logo} />
-              <Text style={[styles.formTitle,]}>Register to Kommutsera!</Text>
+              <Text style={[styles.formTitle]}>Register to Kommutsera!</Text>
               <Text style={styles.subtitle}>Please enter your credentials</Text>
 
-              {/* Display general error message if exists */}
               {generalError ? (
                 <View style={styles.generalErrorContainer}>
                   <Ionicons name="alert-circle" size={16} color="#FF3B30" style={styles.errorIcon} />
@@ -259,12 +250,12 @@ const RegisterScreen = () => {
                 const key = field as keyof SignupForm;
                 return (
                   <View key={field} style={styles.inputContainer}>
-
                     <Text style={styles.inputLabel}>
-                      {field.replace(/([A-Z])/g, ' $1').trim().replace(/\b\w/g, (char) => char.toUpperCase())}
+                      {field
+                        .replace(/([A-Z])/g, ' $1')
+                        .trim()
+                        .replace(/\b\w/g, (char) => char.toUpperCase())}
                     </Text>
-
-
                     <TextInput
                       style={[styles.input, errors[key] ? styles.inputError : null]}
                       placeholder={
@@ -287,10 +278,14 @@ const RegisterScreen = () => {
                       onChangeText={(value) => handleInputChange(key, value)}
                       placeholderTextColor="#888"
                     />
-
                     {errors[key] ? (
                       <View style={styles.errorContainer}>
-                        <Ionicons name="alert-circle" size={16} color="#FF3B30" style={styles.errorIcon} />
+                        <Ionicons
+                          name="alert-circle"
+                          size={16}
+                          color="#FF3B30"
+                          style={styles.errorIcon}
+                        />
                         <Text style={styles.errorMessage}>{errors[key]}</Text>
                       </View>
                     ) : null}
@@ -310,7 +305,7 @@ const RegisterScreen = () => {
 
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Already have an account?</Text>
-                <TouchableOpacity onPress={() => router.push("/login")}>
+                <TouchableOpacity onPress={() => router.push('/login')}>
                   <Text style={styles.linkText}>Login here</Text>
                 </TouchableOpacity>
               </View>
@@ -322,6 +317,7 @@ const RegisterScreen = () => {
   );
 };
 
+// Styles remain unchanged
 const getStyles = (width: number) =>
   StyleSheet.create({
     scrollContentContainer: {
@@ -341,15 +337,14 @@ const getStyles = (width: number) =>
     headerImageContainer: {
       height: 260,
       position: 'relative',
-      borderRadius: 8
-
+      borderRadius: 8,
     },
     headerImage: {
       width: '100%',
       height: '100%',
       resizeMode: 'cover',
       borderTopLeftRadius: 8,
-      borderTopRightRadius: 8
+      borderTopRightRadius: 8,
     },
     textOverlay: {
       position: 'absolute',
@@ -378,14 +373,14 @@ const getStyles = (width: number) =>
       height: 80,
       alignSelf: 'center',
       marginBottom: 10,
-      borderRadius: 8
+      borderRadius: 8,
     },
     formTitle: {
       fontWeight: 'bold',
       color: '#2D3436',
       textAlign: 'center',
       marginBottom: 2,
-      fontSize: 23
+      fontSize: 23,
     },
     subtitle: {
       color: '#636E72',
@@ -449,7 +444,7 @@ const getStyles = (width: number) =>
       marginTop: 26,
       width: '90%',
       alignSelf: 'center',
-      marginBottom: 2
+      marginBottom: 2,
     },
     disabledButton: {
       opacity: 0.7,
@@ -467,7 +462,7 @@ const getStyles = (width: number) =>
     },
     footerText: {
       color: '#4A5568',
-      fontSize: 15
+      fontSize: 15,
     },
     linkText: {
       color: '#4B7BEC',
