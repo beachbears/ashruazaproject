@@ -119,6 +119,8 @@ const RouteScreen: React.FC = () => {
   const destinationInputRef = useRef<View>(null);
   const [originInputY, setOriginInputY] = useState(0);
   const [destinationInputY, setDestinationInputY] = useState(0);
+  const [destinputHeight, setdestInputHeight] = useState(40); // Default height
+
 
   useEffect(() => {
     if (originInputRef.current && originSuggestions.length > 0) {
@@ -934,7 +936,7 @@ const RouteScreen: React.FC = () => {
       </View>
 
       <View style={styles.locationsContainer}>
-        <Text style={styles.label}>From</Text>
+        <Text style={styles.subHeader}>From</Text>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.userInput}
@@ -953,14 +955,28 @@ const RouteScreen: React.FC = () => {
           <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
         </View>
 
-        <Text style={styles.label}>To</Text>
+        <Text style={styles.subHeader}>To</Text>
         <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.userInput}
-            placeholder='Type Here...'
+ 
+        <TextInput
             value={destination}
-            onChangeText={handleDestinationChange}
+            multiline
+            textAlignVertical="top" // Keeps text aligned properly
+            onChangeText={(value) => {
+              handleDestinationChange(value);
+              if (value.trim() === "") {
+                setdestInputHeight(40); // Reset to normal size when empty
+              }
+            }}
+            onContentSizeChange={(event) => {
+              const newHeight = event.nativeEvent.contentSize.height;
+              setdestInputHeight(newHeight < 40 ? 40 : newHeight); // Shrink if short, expand if needed
+            }}
+            style={[styles.userInput, { height: destinputHeight }]}
+            placeholder="Where do you want to go?"
+
           />
+
           {destination && (
             <TouchableOpacity style={styles.clearButton} onPress={() => setDestination('')}>
               <Ionicons name='close' size={20} color='#666' />
@@ -997,8 +1013,12 @@ const RouteScreen: React.FC = () => {
         <View style={styles.routeOverviewContainer}>
           <Text style={styles.subHeader}>Route Overview</Text>
           {renderRouteOverview()}
+
+          <Text style={styles.exp}>Help fellow commuters! Share route tips or read experiences from commuterss within 1km of your route.</Text>
+
           <TouchableOpacity style={styles.experiencesButton} onPress={handleExperiencesPress} activeOpacity={0.7}>
-            <Text style={styles.experiencesButtonText}>Experiences</Text>
+            <Text style={styles.experiencesButtonText}>View & Share Experiences  </Text>
+            <Feather name="map-pin" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       ) : !isRouteLoading ? (
@@ -1146,7 +1166,7 @@ const RouteScreen: React.FC = () => {
         </View>
       ) : (
         <Text style={styles.promptText}>
-          Enter an origin/destination to view nearby dining spots
+        Click on an origin or destination to view nearby dining spots
         </Text>
       )}
     </View>
@@ -1297,7 +1317,7 @@ const RouteScreen: React.FC = () => {
         )
       ) : (
         <Text style={styles.promptText}>
-          Enter an origin/destination to view nearby attractions
+          Click on an origin or destination to view nearby attractions
         </Text>
       )}
     </View>
@@ -1917,18 +1937,24 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2, // Android shadow
   },
-  locationsContainer: { marginBottom: 8 },
+  locationsContainer: { marginVertical: 20 },
   label: { fontSize: 14, marginBottom: 4 },
   searchContainer: { marginBottom: 8 },
-  routeMetricsContainer: { marginBottom: 8 },
-  metricCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#F9FAFB", padding: 8, borderRadius: 8, marginRight: 8 },
+  routeMetricsContainer: { marginBottom: 20 },
+  metricCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#E5E7EB", padding: 8, borderRadius: 8, marginRight: 8 },
   metricText: { marginLeft: 4, fontSize: 12, color: "#44457D" },
   routeOverviewContainer: { marginBottom: 12 },
   timelineIcon: { width: 32, alignItems: "center" },
   timelineContent: { flex: 1, paddingLeft: 12 },
   segmentLabel: { fontSize: 14, fontWeight: "500", color: "#111827" },
-  experiencesButton: { backgroundColor: "#E0E7FF", padding: 10, borderRadius: 8, alignItems: "center", marginTop: 12 },
-  experiencesButtonText: { color: "#6366F1", fontSize: 14, fontWeight: "500" },
+  experiencesButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "500" },
+  experiencesButton: { backgroundColor: "#6366F1", padding: 10, borderRadius: 8, alignItems: "center", marginTop: 12, flexDirection: "row", justifyContent: "center" },
+  exp: {
+    fontSize: 14,
+    color: "#44457D",
+    marginTop: 34,
+    fontStyle: "italic",
+  },
   errorText: { fontSize: 14, color: "#666", textAlign: "center" },
   metricsGrid: {
     flexDirection: "row",
@@ -2095,7 +2121,7 @@ const styles = StyleSheet.create({
   },
   algorithmDropdownOverlay: {
     position: 'absolute',
-    top: 65, // Adjusted to sit nicely below the button
+    top: 66, // Adjusted to sit nicely below the button
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
@@ -2165,7 +2191,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   tabContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 16 },
-  tabButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: "#F3F4F6" },
+  tabButton: { paddingVertical: 8, paddingHorizontal: 28, borderRadius: 20, backgroundColor: "#F3F4F6" },
   activeTab: { backgroundColor: "#6366F1" },
   tabText: { color: "#6B7280", fontWeight: "500" },
   activeTabText: { color: "#FFFFFF" },

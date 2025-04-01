@@ -9,6 +9,8 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 import ModalComponent from '../reportmodal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import PostOptionsMenu from '../PostOptionsMenu';
+import DeleteModal from '../deleteModal';
 
 const dropdownOptions = ['Popularity', 'Time'];
 
@@ -22,6 +24,7 @@ interface PostItemProps {
   post: Post;
   onVote: (id: number, action: VoteType) => void;
   onReport: (id: number) => void;
+   onDelete: (id: number) => void; // Add this line
 }
 
 const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
@@ -61,7 +64,7 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 type VoteType = 'upvote' | 'downvote';
 
 const PostItem = React.memo<PostItemProps>(
-  ({ post, onVote, onReport }) => {
+  ({ post, onVote, onReport, onDelete}) => {
     const timeAgo = (timestamp: number): string => {
       const now = Date.now();
       const diff = now - timestamp;
@@ -131,11 +134,13 @@ const PostItem = React.memo<PostItemProps>(
           <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
             <Text style={styles.postTimestamp}>
               {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
-            </Text>
-            <TouchableOpacity onPress={() => post.id && onReport(post.id)}>
-              <MaterialIcons name="report" size={20} color="#C52222" />
-            </TouchableOpacity>
-          </View>
+              </Text>
+                <PostOptionsMenu
+                  post={post}
+                  onReport={() => post.id !== undefined ? onReport(post.id) : null}
+                  onDelete={() => post.id !== undefined ? onDelete(post.id) : null}
+                />
+                  </View>
         </View>
         <Text style={styles.postLocation}>
           <Text style={styles.boldText}>From:</Text> {post.location || 'Unknown Location'}
@@ -205,6 +210,10 @@ export default function CommunityPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string>('Time');
   const router = useRouter();
+
+
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [postIdToDelete, setPostIdToDelete] = useState<number | null>(null);
 
   const params = useLocalSearchParams();
 
@@ -435,17 +444,20 @@ export default function CommunityPage() {
     setModalVisible(true);
   }, [authToken]);
 
-  const openReportModal = useCallback(
-    (postId: number) => {
-      if (!authToken) {
-        router.push('/login');
-        return;
-      }
-      setSelectedPostId(postId);
-      setIsModalVisible(true);
-    },
-    [authToken]
-  );
+  const openReportModal = (postId: number) => {
+    if (!authToken) {
+      router.push('/login');
+      return;
+    }
+    setSelectedPostId(postId);
+    setIsModalVisible(true);
+  };
+
+  const closeReportModal = () => {
+    setIsModalVisible(false);
+    setSelectedPostId(null);
+  };
+
 
   const handleOptionSelect = useCallback((option: string) => {
     setSelectedOption(option);
@@ -464,6 +476,39 @@ export default function CommunityPage() {
     });
   }, [contextPosts, selectedOption]);
 
+  const openDeleteModal = (postId: number) => {
+    setPostIdToDelete(postId);
+    setDeleteModalVisible(true);
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalVisible(false);
+    setPostIdToDelete(null);
+  };
+  
+   
+    const handleDeleteConfirm = async () => {
+      if (!postIdToDelete) return;
+      try {
+        const response = await fetch(
+          `https://yourapi.com/api/route_posts/${postIdToDelete}/delete`,
+          {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${authToken}` },
+          }
+        );
+        if (!response.ok) throw new Error('Delete failed');
+        setPosts((prev) => prev.filter((p) => p.id !== postIdToDelete));
+        Alert.alert('Success', 'Post deleted successfully.');
+      } catch (error) {
+        console.error('Error deleting post:', error);
+        Alert.alert('Error', 'Failed to delete post. Please try again.');
+      } finally {
+        closeDeleteModal();
+      }
+    };
+  
+
   return (
     <View style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
@@ -481,6 +526,7 @@ export default function CommunityPage() {
             post={item}
             onVote={handleVote}
             onReport={openReportModal}
+            onDelete={openDeleteModal} // Pass the delete handler
           />
         )}
         keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
@@ -515,17 +561,22 @@ export default function CommunityPage() {
         userPassword={''}
         isFromCommunity={true}
       />
-      {isModalVisible && selectedPostId !== null && (
+{isModalVisible && selectedPostId !== null && (
         <ModalComponent
           visible={isModalVisible}
-          onClose={() => {
-            setIsModalVisible(false);
-            setSelectedPostId(null);
-          }}
+          onClose={closeReportModal}
           onSubmit={handleReportSubmit}
           route_post_id={selectedPostId}
         />
       )}
+{deleteModalVisible && postIdToDelete !== null && (
+  <DeleteModal
+    visible={deleteModalVisible}
+    onClose={closeDeleteModal}
+    onConfirm={handleDeleteConfirm}
+    route_post_id={postIdToDelete} // Use the correct state
+  />
+)}
     </View>
   );
 }

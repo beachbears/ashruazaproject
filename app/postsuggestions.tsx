@@ -8,6 +8,8 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import { Post } from '@/contexts/PostContext';
 import ModalComponent from './reportmodal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import PostOptionsMenu from './PostOptionsMenu';
+import DeleteModal from './deleteModal';
 
 const dropdownOptions = ['Popularity', 'Time'];
 type VoteType = 'upvote' | 'downvote';
@@ -18,7 +20,7 @@ interface DropdownProps {
   defaultValue?: string;
 }
 
-const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
+const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Sort by'}) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
   const toggleDropdown = () => setIsOpen(!isOpen);
@@ -68,6 +70,9 @@ export default function PostSuggestions() {
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [postIdToDelete, setPostIdToDelete] = useState<number | null>(null);
 
   const router = useRouter();
   const location = decodeURIComponent(params.location as string);
@@ -337,6 +342,38 @@ export default function PostSuggestions() {
     }
   };
 
+  const openDeleteModal = (postId: number) => {
+    setPostIdToDelete(postId);
+    setDeleteModalVisible(true);
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalVisible(false);
+    setPostIdToDelete(null);
+  };
+
+  
+  const handleDeleteConfirm = async () => {
+    if (!postIdToDelete) return;
+    try {
+      const response = await fetch(
+        `https://yourapi.com/api/route_posts/${postIdToDelete}/delete`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${authToken}` },
+        }
+      );
+      if (!response.ok) throw new Error('Delete failed');
+      setPosts((prev) => prev.filter((p) => p.id !== postIdToDelete));
+      Alert.alert('Success', 'Post deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      Alert.alert('Error', 'Failed to delete post. Please try again.');
+    } finally {
+      closeDeleteModal();
+    }
+  };
+
   return (
     <View style={styles.maincontainer}>
       <FlatList
@@ -361,12 +398,11 @@ export default function PostSuggestions() {
                 }}
                 style={styles.postbutton}
               >
-                <Text style={styles.postButtonText}>Post</Text>
+                <Text style={styles.postButtonText}>Create New Post</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.detailsContainer}>
-              <Text style={styles.locationText}><Text style={styles.boldText}>From:</Text> {location}</Text>
-              <Text style={styles.locationText}><Text style={styles.boldText}>To:</Text> {destination}</Text>
+                   <Text style={styles.locationText}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
             </View>
           </>
         }
@@ -394,13 +430,14 @@ export default function PostSuggestions() {
                 <Text style={styles.postTimestamp}>
                   {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
                 </Text>
-                <TouchableOpacity onPress={() => post.id && openReportModal(post.id)}>
-                  <MaterialIcons name="report" size={20} color="#C52222" />
-                </TouchableOpacity>
+                <PostOptionsMenu
+                  post={post}
+                  onReport={openReportModal}
+                   onDelete={() => post.id !== undefined ? openDeleteModal(post.id) : null} // Ensure post.id is a number
+                    />
               </View>
             </View>
             <View style={{ flexDirection: 'column', gap: 8 }}>
-              <Text style={styles.label}>Experiences</Text>
               <Text style={styles.experience}>{post.content}</Text>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
@@ -478,6 +515,16 @@ export default function PostSuggestions() {
           route_post_id={selectedPostId}
         />
       )}
+
+{deleteModalVisible && postIdToDelete !== null && (
+  <DeleteModal
+    visible={deleteModalVisible}
+    onClose={closeDeleteModal}
+    onConfirm={handleDeleteConfirm}
+    route_post_id={postIdToDelete} // Use the correct state
+  />
+)}
+
     </View>
   );
 }
@@ -549,11 +596,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   locationText: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '400',
     color: '#44457D',
     width: '100%',
-    marginTop: -6
   },
   label: {
     fontSize: 14,
