@@ -151,7 +151,7 @@ const RegisterScreen = () => {
       console.log('Server response:', response.data);
       if (response.status === 201) {
         const token = response.data.token;
-        const userName = response.data.user.firstname; // Use firstname as userName
+        const userName = response.data.user.username
         if (!token) {
           throw new Error('No token received from server');
         }
