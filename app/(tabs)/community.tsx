@@ -107,31 +107,29 @@ const PostItem = React.memo<PostItemProps>(
       }
     };
 
-    const voteStatus: VoteType | undefined =
-      post.user_vote === 1 ? 'upvote' : post.user_vote === -1 ? 'downvote' : undefined;
-
     const selectedVote = post.user_vote === 1 ? 'upvote' : post.user_vote === -1 ? 'downvote' : undefined;
+
     return (
-      <View style={styles.containerpost}>
-        <View style={styles.suggestordetails}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+      <View style={styles.postContainer}>
+        <View style={styles.suggestorDetails}>
+          <View style={styles.suggestorInfo}>
             <View style={styles.profile}>
               <Text style={styles.initial}>
                 {post.user?.firstname && post.user?.lastname
-                  ? `${post.user.firstname[0].toUpperCase()}${post.user.lastname[0].toUpperCase()}`
+                  ? `${post.user.username[0].toUpperCase()}`
                   : 'G'}
               </Text>
             </View>
-            <View style={styles.suggestor}>
-              <Text style={styles.suggestorname}>
+            <View>
+              <Text style={styles.suggestorName}>
                 {post.user?.firstname && post.user?.lastname
-                  ? `${post.user.firstname} ${post.user.lastname}`
+                  ? `${post.user.username}`
                   : 'Guest'}
               </Text>
-              <Text style={styles.suggestorusername}>{post.user?.email}</Text>
+              <Text style={styles.suggestorUsername}>{post.user?.email}</Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'column', alignItems: 'center' }}>
             <Text style={styles.postTimestamp}>
               {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
             </Text>
@@ -148,42 +146,34 @@ const PostItem = React.memo<PostItemProps>(
         <Text style={styles.postDestination}>
           <Text style={styles.boldText}>To:</Text> {post.destination || 'Unknown Destination'}
         </Text>
-        <View style={{ flexDirection: 'column', gap: 8 }}>
-          <Text style={styles.label}>Experiences</Text>
+        <View style={styles.experienceContainer}>
+          <Text style={styles.label}>Experience</Text>
           <Text style={styles.experience}>{post.content}</Text>
         </View>
-        <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={styles.content}>
-            <View style={[styles.badge, getStatusStyle(post.status || '')]}>
-              <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
-            </View>
+        <View style={styles.postFooter}>
+          <View style={[styles.badge, getStatusStyle(post.status || '')]}>
+            <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
           </View>
-          <View style={styles.arrowcontainer}>
+          <View style={styles.voteContainer}>
             <TouchableOpacity
-              style={[
-                styles.arrowup,
-                selectedVote === 'upvote' ? { backgroundColor: '#22C55E' } : undefined,
-              ]}
+              style={[styles.voteButton, selectedVote === 'upvote' && styles.voteButtonActiveUp]}
               onPress={() => post.id && onVote(post.id, 'upvote')}
             >
               <AntDesign
                 name="arrowup"
-                size={13}
+                size={16}
                 color={selectedVote === 'upvote' ? '#fff' : '#22C55E'}
               />
             </TouchableOpacity>
-            <Text style={styles.arrowupnum}>{post.votes}</Text>
+            <Text style={styles.voteCount}>{post.votes}</Text>
             <TouchableOpacity
-              style={[
-                styles.arrowdown,
-                selectedVote === 'downvote' ? { backgroundColor: '#C52222' } : undefined,
-              ]}
+              style={[styles.voteButton, selectedVote === 'downvote' && styles.voteButtonActiveDown]}
               onPress={() => post.id && onVote(post.id, 'downvote')}
             >
               <AntDesign
                 name="arrowdown"
-                size={13}
-                color={selectedVote === 'downvote' ? '#fff' : '#C52222'}
+                size={16}
+                color={selectedVote === 'downvote' ? '#fff' : '#EF4444'}
               />
             </TouchableOpacity>
           </View>
@@ -193,9 +183,9 @@ const PostItem = React.memo<PostItemProps>(
   },
   (prevProps, nextProps) =>
     prevProps.post === nextProps.post &&
-    // prevProps.selectedVote === nextProps.selectedVote &&
     prevProps.onVote === nextProps.onVote &&
-    prevProps.onReport === nextProps.onReport
+    prevProps.onReport === nextProps.onReport &&
+    prevProps.onDelete === nextProps.onDelete
 );
 
 export default function CommunityPage() {
@@ -589,126 +579,129 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   maincontainer: { flex: 1, backgroundColor: '#F9FAFB', padding: 15 },
-  containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#C7D2FE', padding: 12, elevation: 4, marginBottom: 20, width: '100%', borderWidth: 1 },
-  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2, justifyContent: "space-between" },
-  profile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 16, },
-  username: { fontSize: 12, color: '#6B7280', },
-  initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
-  suggestorusername: { fontSize: 11, color: '#6B7280' },
-  suggestor: { flexDirection: 'column' },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#44457D',
-    marginTop: 8
-  },
-  boldText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#44457D',
-  },
-  experience: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
   sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 20, textAlign: 'center', marginBottom: 10 },
   postbutton: { backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  postButtonText: { color: 'white', fontSize: 12, fontWeight: 600 },
+  postButtonText: { color: 'white', fontSize: 12, fontWeight: '600' },
   loadingIndicator: {
     marginVertical: 20,
-  },
-  badge: {
-    borderWidth: 1,
-    borderColor: '#ABEBA2',
-    borderRadius: 6,
-    paddingHorizontal: 3,
-    paddingVertical: 1,
-    backgroundColor: '#ecfdf5',
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 4,
   },
   postsContainer: {
     marginTop: 10,
   },
-  postTimestamp: {
-    marginTop: -8,
-    fontSize: 10,
-    color: '#999',
-    textAlign: 'right',
-  },
   postContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 12,
+    marginTop: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  postContent: {
+  suggestorDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  suggestorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profile: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  initial: {
+    color: '#FFFFFF',
     fontSize: 16,
-    marginBottom: 4,
+    fontWeight: 'bold',
   },
-  cert: {
-    color: '#22c55e',
-    fontWeight: '500',
-    fontSize: 11,
+  suggestorName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
   },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  postLocation: {
+  suggestorUsername: {
     fontSize: 12,
-    color: '#44457D',
-    marginTop: 14,
-    marginBottom: 6,
-    fontWeight: 400
-  },
-  postDestination: {
-    fontSize: 12,
-    color: '#44457D',
-    marginBottom: 16,
-    fontWeight: 400
-  },
-  arrowup: {
-    borderWidth: 1,
-    borderColor: '#4ade80',
-    borderRadius: 6,
-    paddingHorizontal: 3,
-    paddingVertical: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  arrowdown: {
-    borderWidth: 1,
-    borderColor: '#f47357',
-    borderRadius: 6,
-    paddingHorizontal: 3,
-    paddingVertical: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  arrowcontainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  arrowupnum: {
-    fontSize: 10,
-    fontWeight: '800',
     color: '#6B7280',
   },
-  arrowdownnum: {
-    marginLeft: 6,
-    fontSize: 10,
-    fontWeight: '700',
+  postTimestamp: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  postLocation: {
+    fontSize: 14,
+    color: '#475569',
+    marginBottom: 4,
+  },
+  postDestination: {
+    fontSize: 14,
+    color: '#475569',
+    marginBottom: 12,
+  },
+  boldText: {
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  experienceContainer: {
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1E293B',
+    marginBottom: 4, // Added for spacing between label and experience
+  },
+  experience: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 22,
+  },
+  postFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  badge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  cert: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  voteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  voteButton: {
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  voteButtonActiveUp: {
+    backgroundColor: '#22C55E',
+    borderColor: '#22C55E',
+  },
+  voteButtonActiveDown: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
+  voteCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
   },
   dropdowncontainer: {
     justifyContent: 'flex-end',
@@ -739,7 +732,6 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     zIndex: 2000,
     width: 125,
-    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
     elevation: 4,
     top: 40,
   },
