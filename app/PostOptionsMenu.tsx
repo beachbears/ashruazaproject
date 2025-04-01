@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+// PostOptionsMenu.tsx
+import React, { useState, useContext } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Post } from '@/contexts/PostContext';
+import { AuthContext } from '@/contexts/AuthContext'; // Adjust path as needed
+
 interface PostOptionsMenuProps {
   post: Post;
   onReport: (id: number) => void;
@@ -9,9 +12,13 @@ interface PostOptionsMenuProps {
 }
 
 const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ post, onReport, onDelete }) => {
+  const { userId } = useContext(AuthContext); // Get userId from context
   const [menuVisible, setMenuVisible] = useState(false);
 
   const toggleMenu = () => setMenuVisible(prev => !prev);
+
+  // Check if the post belongs to the current user
+  const isOwnPost = post.user?.id === userId && userId !== null;
 
   return (
     <View style={styles.menuContainer}>
@@ -20,15 +27,23 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ post, onReport, onDel
       </TouchableOpacity>
       {menuVisible && (
         <View style={styles.menu}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => post.id !== undefined && onDelete(post.id)}>
-            <MaterialIcons name="delete" size={16} color="#DC2626" />
-            <Text style={[styles.menuText, { color: '#DC2626' }]}>Delete</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.menuItem} onPress={() => post.id !== undefined && onReport(post.id)}>
-            <MaterialIcons name="flag" size={16} color="#F97316" />
-            <Text style={[styles.menuText, { color: '#F97316' }]}>Report</Text>
-          </TouchableOpacity>
+          {isOwnPost ? (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => post.id !== undefined && onDelete(post.id)}
+            >
+              <MaterialIcons name="delete" size={16} color="#DC2626" />
+              <Text style={[styles.menuText, { color: '#DC2626' }]}>Delete</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => post.id !== undefined && onReport(post.id)}
+            >
+              <MaterialIcons name="flag" size={16} color="#F97316" />
+              <Text style={[styles.menuText, { color: '#F97316' }]}>Report</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -38,7 +53,6 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ post, onReport, onDel
 const styles = StyleSheet.create({
   menuContainer: {
     position: 'relative',
-
   },
   optionsButton: {
     padding: 4,
@@ -50,7 +64,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderColor: '#ccc',
     borderRadius: 10,
-    elevation: 4, // For Android shadow
+    elevation: 4,
     zIndex: 100,
     flexDirection: 'column',
     width: 100,
@@ -66,12 +80,7 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 14,
     marginRight: 10,
-    fontWeight: '600', // Slightly bolder
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB', // Light gray divider
-    marginVertical: 4,
+    fontWeight: '600',
   },
 });
 
