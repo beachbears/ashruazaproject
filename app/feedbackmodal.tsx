@@ -99,7 +99,7 @@ const ModalComponent: React.FC<ModalComponentProps> = ({
       <View style={styles.modalBackground}>
         <View style={styles.PostContainer}>
           {/* User details area - display logged in user info or default Guest info */}
-           
+
 
           <Text style={styles.modalText}>Rate your experience</Text>
           <View style={{ flexDirection: 'row', marginBottom: 10 }}>
