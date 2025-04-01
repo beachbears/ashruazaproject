@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
   FlatList,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -18,6 +19,8 @@ import axiosInstance from '@/axiosConfig';
 import { router } from 'expo-router';
 import { Post, usePostContext } from '@/contexts/PostContext';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import PostOptionsMenu from './PostOptionsMenu';
+import DeleteModal from './deleteModal';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -36,6 +39,7 @@ interface PostItemProps {
   post: Post;
   onVote: (id: number, action: VoteType) => void;
   onReport: (id: number) => void;
+  onDelete: (id: number) => void; // Added for delete functionality
 }
 
 interface UserProfileTabsProps {
@@ -49,6 +53,7 @@ interface UserProfileTabsProps {
   setOnDropdownSelect: (callback: (option: string) => void) => void;
   setIsDropdownOpen: (isOpen: boolean) => void;
   profile: Profile | null;
+  openDeleteModal: (postId: number) => void;
 }
 
 interface ProfileSectionProps<T> {
@@ -208,6 +213,7 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
   setOnDropdownSelect,
   setIsDropdownOpen,
   profile,
+  openDeleteModal
 }) => {
   const getInitials = (firstname: string | undefined, lastname: string | undefined) => {
     const firstInitial = firstname ? firstname.charAt(0).toUpperCase() : '';
@@ -229,7 +235,14 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
         {() => (
           <ProfileSection<Post>
             data={sortedPosts}
-            renderItem={({ item }) => <PostItem post={item} onVote={handleVote} onReport={handleReport} />}
+            renderItem={({ item }) => (
+              <PostItem
+                post={item}
+                onVote={handleVote}
+                onReport={handleReport}
+                onDelete={openDeleteModal} // Pass onDelete handler
+              />
+            )}
             emptyText="You haven't posted any experiences yet."
             header={
               <SortingHeader
@@ -256,9 +269,8 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
   );
 };
 
-// Post Item Component (unchanged)
 const PostItem = React.memo<PostItemProps>(
-  ({ post, onVote, onReport }) => {
+  ({ post, onVote, onReport, onDelete }) => {
     const timeAgo = (timestamp: number): string => {
       const now = Date.now();
       const diff = now - timestamp;
@@ -319,9 +331,16 @@ const PostItem = React.memo<PostItemProps>(
               <Text style={styles.suggestorUsername}>{post.user?.email}</Text>
             </View>
           </View>
-          <Text style={styles.postTimestamp}>
-            {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
-          </Text>
+          <View style={{ flexDirection: 'column', alignItems: 'center' }}>
+            <Text style={styles.postTimestamp}>
+              {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
+            </Text>
+            <PostOptionsMenu
+              post={post}
+              onReport={onReport}
+              onDelete={onDelete}
+            />
+          </View>
         </View>
         <Text style={styles.postLocation}>
           <Text style={styles.boldText}>From:</Text> {post.location || 'Unknown Location'}
@@ -367,7 +386,8 @@ const PostItem = React.memo<PostItemProps>(
   (prevProps, nextProps) =>
     prevProps.post === nextProps.post &&
     prevProps.onVote === nextProps.onVote &&
-    prevProps.onReport === nextProps.onReport
+    prevProps.onReport === nextProps.onReport &&
+    prevProps.onDelete === nextProps.onDelete
 );
 
 // Main UserProfile Component
@@ -390,6 +410,8 @@ const UserProfile = () => {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [selectedOption, setSelectedOption] = useState('Time');
   const { posts: contextPosts, updatePost, setPosts } = usePostContext();
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [postIdToDelete, setPostIdToDelete] = useState<number | null>(null);
 
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -414,6 +436,32 @@ const UserProfile = () => {
       setSuccessMessage(null);
     }
   }, [profile]);
+
+  const openDeleteModal = (postId: number) => {
+    setPostIdToDelete(postId);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!postIdToDelete) return;
+    try {
+      const response = await axiosInstance.delete(`/api/route_posts/${postIdToDelete}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (response.status === 200) {
+        setRoutePosts((prev) => prev.filter((p) => p.id !== postIdToDelete));
+        setPosts((prev) => prev.filter((p) => p.id !== postIdToDelete));
+        setUserPostIds((prev) => prev.filter((id) => id !== postIdToDelete));
+        Alert.alert('Success', 'Post deleted successfully.');
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      Alert.alert('Error', 'Failed to delete post. Please try again.');
+    } finally {
+      setDeleteModalVisible(false);
+      setPostIdToDelete(null);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -677,6 +725,7 @@ const UserProfile = () => {
         setOnDropdownSelect={setOnDropdownSelect}
         setIsDropdownOpen={setIsDropdownOpen}
         profile={profile}
+        openDeleteModal={openDeleteModal}
       />
       {isDropdownOpen && (
         <View style={styles.dropdownOverlay}>
@@ -702,6 +751,14 @@ const UserProfile = () => {
             ))}
           </View>
         </View>
+      )}
+      {deleteModalVisible && postIdToDelete !== null && (
+        <DeleteModal
+          visible={deleteModalVisible}
+          onClose={() => setDeleteModalVisible(false)}
+          onConfirm={handleDeleteConfirm}
+          route_post_id={postIdToDelete}
+        />
       )}
     </View>
   );
