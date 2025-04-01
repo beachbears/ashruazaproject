@@ -16,19 +16,19 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ post, onReport, onDel
   return (
     <View style={styles.menuContainer}>
       <TouchableOpacity onPress={toggleMenu} style={styles.optionsButton}>
-        <MaterialIcons name="more-vert" size={18} color="black" />
+        <MaterialIcons name="more-vert" size={18} color="#6B7280" />
       </TouchableOpacity>
       {menuVisible && (
         <View style={styles.menu}>
           <TouchableOpacity style={styles.menuItem} onPress={() => post.id !== undefined && onDelete(post.id)}>
-          <MaterialIcons name="delete" size={16} color="#DC2626" /> 
-          <Text style={[styles.menuText, { color: '#DC2626' }]}>Delete</Text>
+            <MaterialIcons name="delete" size={16} color="#DC2626" />
+            <Text style={[styles.menuText, { color: '#DC2626' }]}>Delete</Text>
           </TouchableOpacity>
           <View style={styles.divider} />
           <TouchableOpacity style={styles.menuItem} onPress={() => post.id !== undefined && onReport(post.id)}>
-          <MaterialIcons name="flag" size={16} color="#F97316" />
-          <Text style={[styles.menuText, { color: '#F97316' }]}>Report</Text>
-                 </TouchableOpacity>
+            <MaterialIcons name="flag" size={16} color="#F97316" />
+            <Text style={[styles.menuText, { color: '#F97316' }]}>Report</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
