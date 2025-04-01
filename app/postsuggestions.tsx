@@ -404,74 +404,71 @@ export default function PostSuggestions() {
             <View style={styles.detailsContainer}>
               <Text style={styles.locationText}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
             </View>
+            <View style={styles.detailsContainer}>
+              <Text style={styles.locationText}><Text style={styles.boldText}>From:</Text> {location}</Text>
+              <Text style={styles.locationText}><Text style={styles.boldText}>To:</Text> {destination}</Text>
+            </View>
           </>
         }
         renderItem={({ item: post }) => (
-          <View style={styles.containerpost}>
-            <View style={styles.suggestordetails}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+          <View style={styles.postContainer}>
+            <View style={styles.suggestorDetails}>
+              <View style={styles.suggestorInfo}>
                 <View style={styles.profile}>
                   <Text style={styles.initial}>
                     {post.user?.firstname && post.user?.lastname
-                      ? post.user.firstname[0].toUpperCase() + post.user.lastname[0].toUpperCase()
+                      ? post.user.username[0].toUpperCase()
                       : 'G'}
                   </Text>
                 </View>
-                <View style={styles.suggestor}>
-                  <Text style={styles.suggestorname}>
+                <View>
+                  <Text style={styles.suggestorName}>
                     {post.user?.firstname && post.user?.lastname
-                      ? `${post.user.firstname} ${post.user.lastname}`
+                      ? `${post.user.username}`
                       : 'Guest'}
                   </Text>
-                  <Text style={styles.suggestorusername}>{post.user?.email}</Text>
+                  <Text style={styles.suggestorUsername}>{post.user?.email}</Text>
                 </View>
               </View>
-              <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'column', alignItems: 'center' }}>
                 <Text style={styles.postTimestamp}>
                   {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
                 </Text>
                 <PostOptionsMenu
                   post={post}
                   onReport={openReportModal}
-                  onDelete={() => post.id !== undefined ? openDeleteModal(post.id) : null} // Ensure post.id is a number
+                  onDelete={() => post.id !== undefined ? openDeleteModal(post.id) : null}
                 />
               </View>
             </View>
-            <View style={{ flexDirection: 'column', gap: 8 }}>
+            <View style={styles.experienceContainer}>
+              <Text style={styles.label}>Experience</Text>
               <Text style={styles.experience}>{post.content}</Text>
             </View>
-            <View style={{ flexDirection: 'row', marginTop: 16, alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={styles.content}>
-                <View style={[styles.badge, getStatusStyle(post.status || '')]}>
-                  <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
-                </View>
+            <View style={styles.postFooter}>
+              <View style={[styles.badge, getStatusStyle(post.status || '')]}>
+                <Text style={[styles.cert, getStatusTextColor(post.status || '')]}>{post.status}</Text>
               </View>
-              <View style={styles.arrowcontainer}>
+              <View style={styles.voteContainer}>
                 <TouchableOpacity
-                  style={[
-                    styles.arrowup,
-                    post.user_vote === 1 ? { backgroundColor: '#22C55E' } : undefined
-                  ]}
+                  style={[styles.voteButton, post.user_vote === 1 && styles.voteButtonActiveUp]}
                   onPress={() => post.id && handleVote(post.id, 'upvote')}
                 >
                   <AntDesign
                     name="arrowup"
-                    size={13}
+                    size={16}
                     color={post.user_vote === 1 ? '#fff' : '#22C55E'}
                   />
                 </TouchableOpacity>
-                <Text style={styles.arrowupnum}>{post.votes}</Text>
+                <Text style={styles.voteCount}>{post.votes}</Text>
                 <TouchableOpacity
-                  style={[
-                    styles.arrowdown,
-                    post.user_vote === -1 ? { backgroundColor: '#C52222' } : undefined
-                  ]}
+                  style={[styles.voteButton, post.user_vote === -1 && styles.voteButtonActiveDown]}
                   onPress={() => post.id && handleVote(post.id, 'downvote')}
                 >
                   <AntDesign
                     name="arrowdown"
-                    size={13}
-                    color={post.user_vote === -1 ? '#fff' : '#C52222'}
+                    size={16}
+                    color={post.user_vote === -1 ? '#fff' : '#EF4444'}
                   />
                 </TouchableOpacity>
               </View>
@@ -552,22 +549,12 @@ const styles = StyleSheet.create({
   loadingIndicator: {
     marginVertical: 20,
   },
-  boldText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#44457D',
-  },
   maincontainer: {
     flexDirection: 'column',
     backgroundColor: '#F9FAFB',
     width: '100%',
     padding: 15,
-    height: '100%'
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    height: '100%',
   },
   headerText: {
     color: '#44457D',
@@ -585,7 +572,7 @@ const styles = StyleSheet.create({
   postButtonText: {
     color: 'white',
     fontSize: 12,
-    fontWeight: 700
+    fontWeight: '700',
   },
   detailsContainer: {
     marginBottom: 16,
@@ -600,11 +587,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#44457D',
     width: '100%',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#44457D',
   },
   dropdowncontainer: {
     justifyContent: 'flex-end',
@@ -635,7 +617,6 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     zIndex: 1000,
     width: 125,
-    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
     elevation: 4,
     top: 40,
   },
@@ -649,14 +630,138 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#44457D',
   },
-  profile: {
-    width: 36,
-    height: 36,
-    borderRadius: 24,
-    backgroundColor: '#6366f1',
+  sectionHeader: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    width: '100%',
+    marginTop: 16,
+  },
+  sectionTitle: {
+    color: '#44457D',
+    fontWeight: '500',
+    fontSize: 23,
+    textAlign: 'center',
+  },
+  // Post-related styles
+  postContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  suggestorDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
+  },
+  suggestorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profile: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#6366F1',
     justifyContent: 'center',
-    marginRight: 16,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  initial: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  suggestorName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  suggestorUsername: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  postTimestamp: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  postLocation: {
+    fontSize: 14,
+    color: '#475569',
+    marginBottom: 4,
+  },
+  postDestination: {
+    fontSize: 14,
+    color: '#475569',
+    marginBottom: 12,
+  },
+  boldText: {
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  experienceContainer: {
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  experience: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 22,
+  },
+  postFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  badge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  cert: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  voteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  voteButton: {
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  voteButtonActiveUp: {
+    backgroundColor: '#22C55E',
+    borderColor: '#22C55E',
+  },
+  voteButtonActiveDown: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
+  voteCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   username: {
     fontSize: 12,
@@ -689,11 +794,6 @@ const styles = StyleSheet.create({
   suggestor: {
     flexDirection: 'column',
   },
-  initial: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
   suggestorname: {
     fontSize: 13,
     color: '#6B7280',
@@ -702,13 +802,6 @@ const styles = StyleSheet.create({
   suggestorusername: {
     fontSize: 11,
     color: '#6B7280',
-  },
-  postTimestamp: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: -8,
-    marginBottom: 2,
-    textAlign: 'right',
   },
   arrowup: {
     borderWidth: 1,
@@ -743,34 +836,4 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  sectionHeader: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    width: '100%',
-    marginTop: 16,
-  },
-  sectionTitle: {
-    color: '#44457D',
-    fontWeight: '500',
-    fontSize: 23,
-    textAlign: 'center'
-  },
-  cert: {
-    fontWeight: '500',
-    fontSize: 11,
-  },
-  badge: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 3,
-    paddingVertical: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  experience: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '400',
-  }
 });
