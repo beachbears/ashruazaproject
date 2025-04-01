@@ -148,14 +148,14 @@ const RegisterScreen = () => {
 
     try {
       const response = await axiosInstance.post('/api/users', payload);
-      console.log('Server response:', response.data);
       if (response.status === 201) {
         const token = response.data.token;
-        const userName = response.data.user.username
+        const userName = response.data.user.username;
+        const userId = response.data.user.id; // Extract user ID
         if (!token) {
           throw new Error('No token received from server');
         }
-        await login(userName, token); // Update AuthContext
+        await login(userName, token, userId); // Pass userId
         alert(`Account created successfully! Welcome, ${userName}!`);
         router.replace('/(tabs)');
       }

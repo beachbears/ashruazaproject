@@ -96,29 +96,28 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
     checkAuthStatus();
   }, []);
 
+  // login.tsx (partial update)
   const handleLogin = async () => {
     if (!validateForm()) return;
     setLoading(true);
 
     try {
-      const response = await axiosInstance.post("/api/login", { // Siguraduhing tama ang endpoint
+      const response = await axiosInstance.post("/api/login", {
         email: formData.email,
-        password: formData.password
+        password: formData.password,
       });
 
       if (response.data.token) {
         await AsyncStorage.setItem("token", response.data.token);
-        // I-update ang global auth state gamit ang login function mula sa AuthContext
         const userName = response.data.user.username;
-        await login(userName, response.data.token);
+        const userId = response.data.user.id; // Extract user ID
+        await login(userName, response.data.token, userId); // Pass userId
         router.replace("/(tabs)");
       }
     } catch (error: any) {
       let errorMessage = "Login failed. Please check your credentials.";
-      if (error.response) {
-        if (error.response.status === 401) {
-          errorMessage = "Invalid email or password";
-        }
+      if (error.response?.status === 401) {
+        errorMessage = "Invalid email or password";
       }
       setErrors(prev => ({ ...prev, form: errorMessage }));
     } finally {
