@@ -52,8 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUserHandle("");
     setUserInitials("");
 
-    await AsyncStorage.removeItem("authToken");
-    await AsyncStorage.removeItem("userName"); // ✅ Remove userName as well
+    await AsyncStorage.multiRemove(["authToken", "userName"]); // Use multiRemove for atomicity
   };
 
 

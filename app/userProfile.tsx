@@ -355,8 +355,10 @@ const UserProfile = () => {
   const [onDropdownSelect, setOnDropdownSelect] = useState<(option: string) => void>(() => { });
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (authToken) {
+      fetchProfile();
+    }
+  }, [authToken]);
 
   useEffect(() => {
     if (profile) {
