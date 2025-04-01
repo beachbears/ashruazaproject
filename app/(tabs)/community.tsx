@@ -269,10 +269,10 @@ export default function CommunityPage() {
     fetchOldPosts();
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(fetchOldPosts, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  // useEffect(() => {
+  //   const interval = setInterval(fetchOldPosts, 5000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   const handlePostSubmit = useCallback(
     async (formData: Post) => {
