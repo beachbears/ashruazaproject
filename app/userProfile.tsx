@@ -1035,7 +1035,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   suggestorDetails: {
     flexDirection: 'row',

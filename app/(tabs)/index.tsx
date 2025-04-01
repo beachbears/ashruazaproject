@@ -344,11 +344,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   heroContainer: {
-    paddingRight: 16,
+    paddingRight: 0,
   },
   headerContent: {
     alignItems: 'flex-start',
-    textAlign: 'left',
   },
   badge: {
     backgroundColor: '#E0E7FF',
@@ -382,12 +381,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   conquerImage: {
-    width: 380,
-    height: 260,
+    width: "100%",
+    height: 220,
     resizeMode: 'contain',
     marginTop: 30,
     marginBottom: 20,
-    borderRadius: 16
+    borderRadius: 20,
   },
   searchContainer: {
     width: '100%',

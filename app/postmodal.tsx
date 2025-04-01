@@ -131,12 +131,12 @@ export default function PostModal({
             {isFromCommunity ? (
               <View style={styles.inputContainer}>
                 <TextInput
-                  placeholder="Type here..."
+                  placeholder="Your location"
                   value={localLocation}
                   onChangeText={setLocalLocation}
                   style={styles.input}
                   editable={isFromCommunity}
-                  multiline={false}
+                  multiline
                 />
                 {localLocation && (
                   <TouchableOpacity
@@ -177,12 +177,13 @@ export default function PostModal({
             {isFromCommunity ? (
               <View style={styles.inputContainer}>
                 <TextInput
-                  placeholder="Type here..."
                   value={localDestination}
                   onChangeText={setLocalDestination}
                   style={styles.input}
                   editable={isFromCommunity}
-                  multiline={false}
+                  multiline
+                  textAlignVertical="top" // Keeps text aligned properly
+                  placeholder="Where do you want to go?"
                 />
                 {localDestination && (
                   <TouchableOpacity
@@ -221,7 +222,7 @@ export default function PostModal({
             {/* Content Section */}
             <Text style={styles.label}>Your Experiences:</Text>
             <TextInput
-              placeholder="Type here..."
+              placeholder="Type here your experiences or tips..."
               value={content}
               onChangeText={setContent}
               multiline

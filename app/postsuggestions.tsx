@@ -387,7 +387,11 @@ export default function PostSuggestions() {
         ListHeaderComponent={
           <>
             <Text style={styles.sectionTitle}>Discover Experiences</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+            <View style={styles.detailsContainer}>
+            <Foundation name="lightbulb" size={24} color="#B8860B" />
+                   <Text style={styles.labeltext}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Dropdown options={dropdownOptions} onSelect={setSelectedOption} />
               <TouchableOpacity
                 onPress={() => {
@@ -402,11 +406,7 @@ export default function PostSuggestions() {
                 <Text style={styles.postButtonText}>Create New Post +</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.detailsContainer}>
-            <Foundation name="lightbulb" size={24} color="#B8860B" />
-                   <Text style={styles.locationText}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
-            </View>
-            <View style={styles.detailsContainer}>
+            <View style={styles.details}>
               <Text style={styles.locationText}><Text style={styles.boldText}>From:</Text> {location}</Text>
               <Text style={styles.locationText}><Text style={styles.boldText}>To:</Text> {destination}</Text>
             </View>
@@ -577,22 +577,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   detailsContainer: {
-    marginBottom: 16,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: "center",
     width: '90%',
     justifyContent: 'space-between',
     gap: 14
   },
-  locationText: {
+  details: {
+    flexDirection: 'column',
+    width: "100%"
+  },
+  labeltext: {
     fontSize: 14,
     fontWeight: '400',
     color: '#44457D',
     fontStyle: "italic",
   },
-  label: {
+  locationText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#44457D',
   },
   dropdowncontainer: {
@@ -637,18 +641,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#44457D',
   },
-  sectionHeader: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    width: '100%',
-    marginTop: 16,
-  },
-  sectionTitle: {
-    color: '#44457D',
-    fontWeight: '500',
-    fontSize: 23,
-    textAlign: 'center',
-  },
+  
   // Post-related styles
   postContainer: {
     backgroundColor: '#FFFFFF',
@@ -660,7 +653,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 4,
+    borderColor: '#C7D2FE',
+    borderWidth: 1,
   },
   suggestorDetails: {
     flexDirection: 'row',
@@ -732,11 +727,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  badge: {
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
+  
   cert: {
     fontSize: 12,
     fontWeight: '500',
@@ -791,12 +782,12 @@ const styles = StyleSheet.create({
   containerpost: {
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
-    borderColor: '#C7D2FE',
     padding: 12,
     elevation: 4,
     marginBottom: 20,
     width: '100%',
     borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   suggestor: {
     flexDirection: 'column',
@@ -854,11 +845,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: 26,
     textAlign: 'center',
-    marginVertical: 16
-  },
-  cert: {
-    fontWeight: '500',
-    fontSize: 11,
+    marginBottom: 4,
   },
   badge: {
     borderWidth: 1,
@@ -869,9 +856,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 4,
   },
-  experience: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '400',
-  }
 });

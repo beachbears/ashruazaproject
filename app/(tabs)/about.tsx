@@ -36,8 +36,7 @@ const About = () => {
       <View style={styles.teamSection}>
         <Text style={styles.teamTitle}>Meet Our Talented Team</Text>
         <View style={styles.teamGrid}>
-          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
-          <View style={styles.teamMember}>
+           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
               source={require('../../assets/images/abellana.jpg')}// Replace with actual image URL
@@ -55,10 +54,7 @@ const About = () => {
             <Text style={styles.memberName}>Joanah Marie L. Aldave</Text>
             <Text style={styles.memberRole}>Assistant Project Manager {"\n"} UI/UX Designer {"\n"} Head Researcher</Text>
           </View>
-          </View>
-
-          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
-          <View style={styles.teamMember}>
+           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
               source={require('../../assets/images/bruzula.png')}// Replace with actual image URL
@@ -76,8 +72,7 @@ const About = () => {
             <Text style={styles.memberName}>Gerson A. Boyboy</Text>
             <Text style={styles.memberRole}>UI/UX Designer {"\n"}  Researcher</Text>
           </View>
-          </View>
-          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
+          
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -97,8 +92,7 @@ const About = () => {
             <Text style={styles.memberName}>Sean Zidane L. Dumlao</Text>
             <Text style={styles.memberRole}>Main Programmer </Text>
           </View>
-          </View>
-          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
+          
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -117,8 +111,7 @@ const About = () => {
             <Text style={styles.memberName}>Patricia Mae R. Romillo</Text>
             <Text style={styles.memberRole}>UI/UX Designer {"\n"}  Researcher</Text>
           </View>
-          </View>
-          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
+          
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -137,8 +130,7 @@ const About = () => {
             <Text style={styles.memberName}>John Paul J. Saavedra</Text>
             <Text style={styles.memberRole}>Programmer</Text>
           </View>
-          </View>
-          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10}}>
+          
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -157,7 +149,7 @@ const About = () => {
             <Text style={styles.memberName}>Joshua P. Valeza</Text>
             <Text style={styles.memberRole}>Programmer</Text>
           </View>
-          </View>
+          
         </View>
       </View>
 
@@ -235,8 +227,8 @@ const styles = StyleSheet.create({
     marginTop: 16
   },
   avatar: {
-    width: 40,
-    height: 40,
+    width: 90,
+    height: 90,
     backgroundColor: "#6366F1",
     borderRadius: 40,
     marginBottom: 5,
@@ -311,7 +303,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#4A5568",
     textAlign: "center",
-    marginBottom: 30,
+    marginBottom: 40,
   },
   teamGrid: {
     flexDirection: "column",
@@ -320,14 +312,15 @@ const styles = StyleSheet.create({
   teamMember: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 2,
+    marginBottom: 40,
     backgroundColor: "#FFFFFF",
     borderColor: "#FFFFFF",
     borderRadius: 10,
     elevation: 14,
     borderWidth: 2, 
-    width: 160,
-    height: 140,
+    width: 300,
+    height: 100,
+    paddingBottom: 30
   },
   memberAvatar: {
     width: 50,
@@ -335,6 +328,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     marginBottom: 10,
     overflow: 'hidden',
+    elevation: 5
   },
   memberName: {
     fontSize: 14,
@@ -382,15 +376,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#404163",
     textAlign: "left",
-    marginBottom: 20
+    marginBottom: 10
   },
   footerBottom: {
-    marginTop: 1,
+    marginTop: 10,
     flexDirection: "column",
     justifyContent: "space-between",
     paddingHorizontal: 10,
     alignItems: "center",
-    backgroundColor: "#C7D2FE"
+    backgroundColor: "#D1D5E6"
   },
   footerBrand: {
     flexDirection: "column",
@@ -423,7 +417,7 @@ const styles = StyleSheet.create({
     color: "#00000",
     textAlign: "center",
     marginTop: 20,
-    marginBottom: 100,
+    marginBottom: 80,
     fontWeight: "500"
   },
 });
