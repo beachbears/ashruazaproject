@@ -1,7 +1,6 @@
+// AuthContext.tsx
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
 
 export interface AuthContextType {
   isLoggedIn: boolean;
@@ -9,23 +8,22 @@ export interface AuthContextType {
   userName: string;
   userHandle: string;
   userInitials: string;
-  login: (name: string, token: string) => void; // ✅ Accepts both name and token
+  userId: number | null; // Add userId
+  login: (name: string, token: string, id: number) => void; // Update login to accept id
   logout: () => void;
 }
 
-
-// ✅ Provide default values for the context to avoid 'null' issues
 const defaultAuthContext: AuthContextType = {
   isLoggedIn: false,
   authToken: "",
   userName: "",
   userHandle: "",
   userInitials: "",
+  userId: null,
   login: () => { },
   logout: () => { },
 };
 
-// ✅ Use a default value instead of `null`
 export const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -34,15 +32,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [userName, setUserName] = useState("");
   const [userHandle, setUserHandle] = useState("");
   const [userInitials, setUserInitials] = useState("");
+  const [userId, setUserId] = useState<number | null>(null); // Add userId state
 
-
-  const login = async (name: string, token: string) => {
+  const login = async (name: string, token: string, id: number) => {
     setIsLoggedIn(true);
     setUserName(name);
     setAuthToken(token);
+    setUserId(id);
 
     await AsyncStorage.setItem("authToken", token);
-    await AsyncStorage.setItem("userName", name); // ✅ Store userName
+    await AsyncStorage.setItem("userName", name);
+    await AsyncStorage.setItem("userId", id.toString());
   };
 
   const logout = async () => {
@@ -51,19 +51,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAuthToken("");
     setUserHandle("");
     setUserInitials("");
+    setUserId(null);
 
-    await AsyncStorage.multiRemove(["authToken", "userName"]); // Use multiRemove for atomicity
+    await AsyncStorage.multiRemove(["authToken", "userName", "userId"]);
   };
-
 
   useEffect(() => {
     const loadAuthData = async () => {
       const storedToken = await AsyncStorage.getItem("authToken");
       const storedName = await AsyncStorage.getItem("userName");
+      const storedId = await AsyncStorage.getItem("userId");
 
-      if (storedToken && storedName) { // Ensure both are available
+      if (storedToken && storedName && storedId) {
         setAuthToken(storedToken);
         setUserName(storedName);
+        setUserId(parseInt(storedId, 10));
         setIsLoggedIn(true);
       }
     };
@@ -71,18 +73,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadAuthData();
   }, []);
 
-
   return (
-    <AuthContext.Provider value={{ isLoggedIn, authToken, userName, userHandle, userInitials, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, authToken, userName, userHandle, userInitials, userId, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 };
