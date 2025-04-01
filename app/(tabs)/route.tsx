@@ -957,8 +957,8 @@ const RouteScreen: React.FC = () => {
 
         <Text style={styles.subHeader}>To</Text>
         <View style={styles.inputContainer}>
- 
-        <TextInput
+
+          <TextInput
             value={destination}
             multiline
             textAlignVertical="top" // Keeps text aligned properly
@@ -1014,7 +1014,7 @@ const RouteScreen: React.FC = () => {
           <Text style={styles.subHeader}>Route Overview</Text>
           {renderRouteOverview()}
 
-          <Text style={styles.exp}>Help fellow commuters! Share route tips or read experiences from commuterss within 1km of your route.</Text>
+          <Text style={styles.exp}>Help fellow commuters! Share route tips or read experiences from commuters within 1km of your route.</Text>
 
           <TouchableOpacity style={styles.experiencesButton} onPress={handleExperiencesPress} activeOpacity={0.7}>
             <Text style={styles.experiencesButtonText}>View & Share Experiences  </Text>
@@ -1166,7 +1166,7 @@ const RouteScreen: React.FC = () => {
         </View>
       ) : (
         <Text style={styles.promptText}>
-        Click on an origin or destination to view nearby dining spots
+          Click on an origin or destination to view nearby dining spots
         </Text>
       )}
     </View>
