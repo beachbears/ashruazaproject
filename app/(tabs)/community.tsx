@@ -11,6 +11,8 @@ import ModalComponent from '../reportmodal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import PostOptionsMenu from '../PostOptionsMenu';
 import DeleteModal from '../deleteModal';
+import Foundation from '@expo/vector-icons/Foundation';
+
 
 const dropdownOptions = ['Popularity', 'Time'];
 
@@ -503,11 +505,15 @@ export default function CommunityPage() {
     <View style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
       <View style={styles.headerContainer}>
-        <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
+        <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Sort by" />
         <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-          <Text style={styles.postButtonText}>Post</Text>
+          <Text style={styles.postButtonText}>Create New Post +</Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.detailsContainer}>
+                  <Foundation name="lightbulb" size={24} color="#B8860B" />
+                         <Text style={styles.locationText}>Share route tips or browse experiences from commuters.</Text>
+                  </View>
       <FlatList
         contentContainerStyle={{ paddingBottom: 80 }} // Adjust bottom padding as needed
         data={sortedPosts}
@@ -572,6 +578,20 @@ export default function CommunityPage() {
 }
 
 const styles = StyleSheet.create({
+  detailsContainer: {
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: "center",
+    width: '90%',
+    justifyContent: 'space-between',
+    gap: 14
+  },
+  locationText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#44457D',
+    fontStyle: "italic",
+  },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -579,6 +599,31 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   maincontainer: { flex: 1, backgroundColor: '#F9FAFB', padding: 15 },
+  containerpost: { borderRadius: 10, backgroundColor: '#FFFFFF', borderColor: '#C7D2FE', padding: 12, elevation: 4, marginBottom: 20, width: '100%', borderWidth: 1 },
+  suggestordetails: { flexDirection: 'row', alignItems: 'center', height: 50, gap: 2, justifyContent: "space-between" },
+  profile: { width: 36, height: 36, borderRadius: 24, backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center', marginRight: 16, },
+  username: { fontSize: 12, color: '#6B7280', },
+  initial: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  suggestorname: { fontSize: 13, color: '#6B7280', fontWeight: '700' },
+  suggestorusername: { fontSize: 11, color: '#6B7280' },
+  suggestor: { flexDirection: 'column' },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#44457D',
+    marginTop: 8
+  },
+  boldText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#44457D',
+  },
+  experience: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 26, textAlign: 'center', marginBottom: 10 },
   sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 20, textAlign: 'center', marginBottom: 10 },
   postbutton: { backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   postButtonText: { color: 'white', fontSize: 12, fontWeight: '600' },

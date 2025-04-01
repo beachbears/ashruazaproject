@@ -202,7 +202,7 @@ const Feedback: React.FC = () => {
       </Text>
       <View style={styles.ButtonContainer}>
         <TouchableOpacity style={styles.Button} onPress={handleFeedbackPress}>
-          <Text style={styles.ButtonText}>Submit Feedback</Text>
+          <Text style={styles.ButtonText}>Submit Feedback + </Text>
         </TouchableOpacity>
       </View>
       <View style={{ marginBottom: 150 }}>
@@ -234,11 +234,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   headerText: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
     color: '#44457D',
     textAlign: 'center',
-    marginTop: -10,
+    marginTop: 6,
+    marginVertical: 10
   },
   descriptionText: {
     color: '#44457D',
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   Button: {
-    width: 120,
+    width: 150,
     height: 30,
     borderRadius: 8,
     backgroundColor: '#22C55E',
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
   },
   ButtonText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
   },
   // New styles for FeedbackItem

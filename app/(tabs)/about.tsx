@@ -27,7 +27,6 @@ const About = () => {
         <View style={styles.aboutSection}>
           <Text style={styles.aboutTitle}>{APP_NAME}:</Text>
           <Text style={styles.aboutText}>
-
             Say goodbye to stress and confusion with {APP_NAME}, your perfect guide for hassle-free commuting. Whether you're a daily commuter or a visitor, {APP_NAME} provides route suggestions and detailed maps to help you navigate the metro with ease. With the quickest, most efficient paths, you’ll enjoy smooth, stress-free travel. Experience a faster, smarter commute {APP_NAME} makes every journey simple, efficient, and enjoyable!
           </Text>
         </View>
@@ -37,6 +36,7 @@ const About = () => {
       <View style={styles.teamSection}>
         <Text style={styles.teamTitle}>Meet Our Talented Team</Text>
         <View style={styles.teamGrid}>
+          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -48,13 +48,16 @@ const About = () => {
           </View>
           <View style={styles.teamMember}>
             <Image
-              style={styles.memberAvatar}
+               style={[styles.memberAvatar, { marginTop: 14 }]}
               source={require('../../assets/images/aldave.jpg')} // Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Joanah Marie L. Aldave</Text>
             <Text style={styles.memberRole}>Assistant Project Manager {"\n"} UI/UX Designer {"\n"} Head Researcher</Text>
           </View>
+          </View>
+
+          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -66,22 +69,25 @@ const About = () => {
           </View>
           <View style={styles.teamMember}>
             <Image
-              style={styles.memberAvatar}
+             style={[styles.memberAvatar, { marginTop: 13 }]}
               source={require('../../assets/images/boyboy.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Gerson A. Boyboy</Text>
             <Text style={styles.memberRole}>UI/UX Designer {"\n"}  Researcher</Text>
           </View>
+          </View>
+          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
               source={require('../../assets/images/deguzman.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
-            <Text style={styles.memberName}>Marc Jerald B. De Guzman</Text>
+            <Text style={styles.memberName}>Marc B. De Guzman</Text>
             <Text style={styles.memberRole}>Researcher</Text>
           </View>
+          
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -91,6 +97,8 @@ const About = () => {
             <Text style={styles.memberName}>Sean Zidane L. Dumlao</Text>
             <Text style={styles.memberRole}>Main Programmer </Text>
           </View>
+          </View>
+          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -102,13 +110,15 @@ const About = () => {
           </View>
           <View style={styles.teamMember}>
             <Image
-              style={styles.memberAvatar}
+              style={[styles.memberAvatar, { marginTop: 13 }]} 
               source={require('../../assets/images/romillo.jpg')}// Replace with actual image URL
               resizeMode="cover"
             />
             <Text style={styles.memberName}>Patricia Mae R. Romillo</Text>
             <Text style={styles.memberRole}>UI/UX Designer {"\n"}  Researcher</Text>
           </View>
+          </View>
+          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8}}>
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -127,6 +137,8 @@ const About = () => {
             <Text style={styles.memberName}>John Paul J. Saavedra</Text>
             <Text style={styles.memberRole}>Programmer</Text>
           </View>
+          </View>
+          <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10}}>
           <View style={styles.teamMember}>
             <Image
               style={styles.memberAvatar}
@@ -142,8 +154,9 @@ const About = () => {
               source={require('../../assets/images/valeza.jpg')} // Replace with actual image URL
               resizeMode="cover"
             />
-            <Text style={styles.memberName}>Joshua Emmanuel P. Valeza</Text>
+            <Text style={styles.memberName}>Joshua P. Valeza</Text>
             <Text style={styles.memberRole}>Programmer</Text>
+          </View>
           </View>
         </View>
       </View>
@@ -171,6 +184,8 @@ const About = () => {
             <Text style={styles.footerDescription}>
               Suggests the most economical routes using public transportation or walking paths.
             </Text>
+            
+
           </View>
         </View>
 
@@ -217,7 +232,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     width: '90%',
     alignSelf: 'center',
-    marginTop: 40
+    marginTop: 16
   },
   avatar: {
     width: 40,
@@ -235,12 +250,13 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   headerTitle: {
-    marginTop: 30,
-    fontSize: 35,
+    marginTop: 20,
+    fontSize: 30,
     fontWeight: "bold",
     color: "#4A5568",
     textAlign: 'center',
-    flexWrap: 'wrap'
+    flexWrap: 'wrap',
+    padding: 10
   },
   highlight: {
     color: "#6A5AE0",
@@ -251,7 +267,7 @@ const styles = StyleSheet.create({
     color: '#424368',
   },
   subtitle: {
-    marginTop: 20,
+    marginTop: 10,
     marginBottom: 5,
     fontSize: 14,
     color: "#A0AEC0",
@@ -265,18 +281,18 @@ const styles = StyleSheet.create({
   teamRole: {
     fontSize: 14,
     color: "#A0AEC0",
+    marginBottom: 8
   },
   aboutSection: {
-    padding: 20,
+    padding: 6,
     textAlign: "center",
   },
   aboutTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#4A5568",
-    marginBottom: 15,
+    marginBottom: 6,
     textAlign: "center",
-    marginTop: 20
   },
   aboutText: {
     fontSize: 14,
@@ -286,9 +302,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap'
   },
   teamSection: {
-    paddingVertical: 30,
+    paddingVertical: 10,
     backgroundColor: "#F9FAFB",
-    marginTop: 20
+    width: "100%"
   },
   teamTitle: {
     fontSize: 24,
@@ -303,7 +319,15 @@ const styles = StyleSheet.create({
   },
   teamMember: {
     alignItems: "center",
-    marginBottom: 20,
+    justifyContent: "center",
+    marginBottom: 2,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#FFFFFF",
+    borderRadius: 10,
+    elevation: 14,
+    borderWidth: 2, 
+    width: 160,
+    height: 140,
   },
   memberAvatar: {
     width: 50,
@@ -324,7 +348,7 @@ const styles = StyleSheet.create({
     marginBottom: 15
   },
   footer: {
-    backgroundColor: "#C7D2FE",
+    backgroundColor: "#F9FAFB",
     paddingVertical: 16,
   },
   footerGrid: {
@@ -334,9 +358,14 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   footerItem: {
-    alignItems: "flex-start",
     marginBottom: 20,
     width: "100%",
+    borderRadius: 16,
+    backgroundColor: "#C7D2FE",
+    elevation: 8,
+    padding: 20,
+    alignItems: "flex-start",
+    
   },
   footerIcon: {
     fontSize: 30,
@@ -345,7 +374,7 @@ const styles = StyleSheet.create({
   },
   footerTitle: {
     fontWeight: "700",
-    color: "#4A5568",
+    color: "black",
     fontSize: 16,
     textAlign: "left",
   },
@@ -361,6 +390,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 10,
     alignItems: "center",
+    backgroundColor: "#C7D2FE"
   },
   footerBrand: {
     flexDirection: "column",
@@ -370,13 +400,12 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 8,
-    marginRight: 10,
     marginTop: 20
   },
   brandTitle: {
     fontWeight: "700",
     fontSize: 18,
-    color: "#4A5568",
+    color: "black",
     textAlign: "center",
     marginTop: 10
   },

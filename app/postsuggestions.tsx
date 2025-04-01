@@ -10,6 +10,7 @@ import ModalComponent from './reportmodal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import PostOptionsMenu from './PostOptionsMenu';
 import DeleteModal from './deleteModal';
+import Foundation from '@expo/vector-icons/Foundation';
 
 const dropdownOptions = ['Popularity', 'Time'];
 type VoteType = 'upvote' | 'downvote';
@@ -398,11 +399,12 @@ export default function PostSuggestions() {
                 }}
                 style={styles.postbutton}
               >
-                <Text style={styles.postButtonText}>Create New Post</Text>
+                <Text style={styles.postButtonText}>Create New Post +</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.detailsContainer}>
-              <Text style={styles.locationText}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
+            <Foundation name="lightbulb" size={24} color="#B8860B" />
+                   <Text style={styles.locationText}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
             </View>
             <View style={styles.detailsContainer}>
               <Text style={styles.locationText}><Text style={styles.boldText}>From:</Text> {location}</Text>
@@ -576,17 +578,22 @@ const styles = StyleSheet.create({
   },
   detailsContainer: {
     marginBottom: 16,
-    flexDirection: 'column',
-    paddingHorizontal: 10,
-    width: '100%',
+    flexDirection: 'row',
+    alignItems: "center",
+    width: '90%',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 14
   },
   locationText: {
     fontSize: 14,
     fontWeight: '400',
     color: '#44457D',
-    width: '100%',
+    fontStyle: "italic",
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#44457D',
   },
   dropdowncontainer: {
     justifyContent: 'flex-end',
@@ -836,4 +843,35 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  sectionHeader: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    width: '100%',
+    marginTop: 16,
+  },
+  sectionTitle: {
+    color: '#44457D',
+    fontWeight: '500',
+    fontSize: 26,
+    textAlign: 'center',
+    marginVertical: 16
+  },
+  cert: {
+    fontWeight: '500',
+    fontSize: 11,
+  },
+  badge: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  experience: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '400',
+  }
 });
