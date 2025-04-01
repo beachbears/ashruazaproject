@@ -20,7 +20,7 @@ interface DropdownProps {
   defaultValue?: string;
 }
 
-const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Sort by'}) => {
+const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Sort by' }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string>(defaultValue);
   const toggleDropdown = () => setIsOpen(!isOpen);
@@ -352,7 +352,7 @@ export default function PostSuggestions() {
     setPostIdToDelete(null);
   };
 
-  
+
   const handleDeleteConfirm = async () => {
     if (!postIdToDelete) return;
     try {
@@ -402,7 +402,7 @@ export default function PostSuggestions() {
               </TouchableOpacity>
             </View>
             <View style={styles.detailsContainer}>
-                   <Text style={styles.locationText}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
+              <Text style={styles.locationText}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
             </View>
           </>
         }
@@ -433,8 +433,8 @@ export default function PostSuggestions() {
                 <PostOptionsMenu
                   post={post}
                   onReport={openReportModal}
-                   onDelete={() => post.id !== undefined ? openDeleteModal(post.id) : null} // Ensure post.id is a number
-                    />
+                  onDelete={() => post.id !== undefined ? openDeleteModal(post.id) : null} // Ensure post.id is a number
+                />
               </View>
             </View>
             <View style={{ flexDirection: 'column', gap: 8 }}>
@@ -516,14 +516,14 @@ export default function PostSuggestions() {
         />
       )}
 
-{deleteModalVisible && postIdToDelete !== null && (
-  <DeleteModal
-    visible={deleteModalVisible}
-    onClose={closeDeleteModal}
-    onConfirm={handleDeleteConfirm}
-    route_post_id={postIdToDelete} // Use the correct state
-  />
-)}
+      {deleteModalVisible && postIdToDelete !== null && (
+        <DeleteModal
+          visible={deleteModalVisible}
+          onClose={closeDeleteModal}
+          onConfirm={handleDeleteConfirm}
+          route_post_id={postIdToDelete} // Use the correct state
+        />
+      )}
 
     </View>
   );
