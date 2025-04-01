@@ -357,7 +357,7 @@ export default function PostSuggestions() {
     if (!postIdToDelete) return;
     try {
       const response = await fetch(
-        `https://yourapi.com/api/route_posts/${postIdToDelete}/delete`,
+        `https://comgu20-production.up.railway.app/api/route_posts/${postIdToDelete}`,
         {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${authToken}` },
