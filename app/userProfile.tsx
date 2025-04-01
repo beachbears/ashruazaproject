@@ -21,7 +21,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 
 const Tab = createMaterialTopTabNavigator();
 
-// Define interfaces (unchanged)
+// Define interfaces
 interface DropdownProps {
   options: string[];
   onSelect?: (option: string) => void;
@@ -48,6 +48,7 @@ interface UserProfileTabsProps {
   setDropdownOptions: (options: string[]) => void;
   setOnDropdownSelect: (callback: (option: string) => void) => void;
   setIsDropdownOpen: (isOpen: boolean) => void;
+  profile: Profile | null;
 }
 
 interface ProfileSectionProps<T> {
@@ -75,7 +76,55 @@ interface Profile {
 
 type VoteType = 'upvote' | 'downvote';
 
-// Dropdown Component
+interface FeedbackItemProps {
+  feedback: any; // Adjust type based on actual feedback structure if known
+  profile: Profile | null;
+}
+
+const FeedbackItem: React.FC<FeedbackItemProps> = ({ feedback, profile }) => {
+  const getInitials = (firstname: string | undefined, lastname: string | undefined, username: string | undefined) => {
+    // const firstInitial = firstname ? firstname.charAt(0).toUpperCase() : '';
+    // const lastInitial = lastname ? lastname.charAt(0).toUpperCase() : '';
+    const userNameInitial = username ? username.charAt(0).toUpperCase() : '';
+    // return firstInitial + lastInitial;
+    return userNameInitial;
+  };
+
+  const initial = getInitials(profile?.firstname, profile?.lastname, profile?.username);
+
+  return (
+    <View style={styles.postContainer}>
+      <View style={styles.suggestorInfo}>
+        <View style={styles.profile}>
+          <Text style={styles.initial}>{initial || 'U'}</Text>
+        </View>
+        <View>
+          <Text style={styles.suggestorName}>{profile?.username || 'User'}</Text>
+          <Text style={styles.suggestorUsername}>{profile?.email || 'user@gmail.com'}</Text>
+        </View>
+      </View>
+      {feedback.deleted ? (
+        <Text style={styles.feedbackDeletedMessage}>Feedback deleted by admin.</Text>
+      ) : (
+        <>
+          <View style={styles.ratingContainer}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <AntDesign
+                key={star}
+                name="star"
+                size={16}
+                color={star <= feedback.rating ? '#FFD700' : '#D3D3D3'}
+              />
+            ))}
+          </View>
+          <Text style={styles.feedbackContent}>{feedback.content || 'No comment provided'}</Text>
+        </>
+      )}
+    </View>
+  );
+};
+
+// Dropdown Component (unchanged)
 const Dropdown: React.FC<DropdownProps> = ({
   options,
   onSelect,
@@ -113,7 +162,7 @@ const Dropdown: React.FC<DropdownProps> = ({
   );
 };
 
-// Sorting Header Component
+// Sorting Header Component (unchanged)
 const SortingHeader: React.FC<SortingHeaderProps> = ({
   onSelect,
   setDropdownPosition,
@@ -147,7 +196,7 @@ const ProfileSection = <T,>({ data, renderItem, emptyText, header }: ProfileSect
   />
 );
 
-// User Profile Tabs Component
+// User Profile Tabs Component (updated)
 const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
   sortedPosts,
   feedbacks,
@@ -158,56 +207,54 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({
   setDropdownOptions,
   setOnDropdownSelect,
   setIsDropdownOpen,
-}) => (
-  <Tab.Navigator
-    screenOptions={{
-      tabBarLabelStyle: { fontSize: 16, fontWeight: '600', textTransform: 'none' },
-      tabBarIndicatorStyle: { backgroundColor: '#6366F1' },
-      tabBarActiveTintColor: '#6366F1',
-      tabBarInactiveTintColor: '#64748B',
-      tabBarStyle: { backgroundColor: '#FFFFFF', elevation: 2 },
-    }}
-  >
-    <Tab.Screen
-      name="Experiences"
+  profile,
+}) => {
+  const getInitials = (firstname: string | undefined, lastname: string | undefined) => {
+    const firstInitial = firstname ? firstname.charAt(0).toUpperCase() : '';
+    const lastInitial = lastname ? lastname.charAt(0).toUpperCase() : '';
+    return firstInitial + lastInitial;
+  };
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        tabBarLabelStyle: { fontSize: 16, fontWeight: '600', textTransform: 'none' },
+        tabBarIndicatorStyle: { backgroundColor: '#6366F1' },
+        tabBarActiveTintColor: '#6366F1',
+        tabBarInactiveTintColor: '#64748B',
+        tabBarStyle: { backgroundColor: '#FFFFFF', elevation: 2 },
+      }}
     >
-      {() => (
-        <ProfileSection<Post>
-          data={sortedPosts}
-          renderItem={({ item }) => <PostItem post={item} onVote={handleVote} onReport={handleReport} />}
-          emptyText="You haven't posted any experiences yet."
-          header={
-            <SortingHeader
-              onSelect={handleOptionSelect}
-              setDropdownPosition={setDropdownPosition}
-              setDropdownOptions={setDropdownOptions}
-              setOnDropdownSelect={setOnDropdownSelect}
-              setIsDropdownOpen={setIsDropdownOpen}
-            />
-          }
-        />
-      )}
-    </Tab.Screen>
-    <Tab.Screen
-      name="Feedbacks"
-    >
-      {() => (
-        <ProfileSection<any>
-          data={feedbacks}
-          renderItem={({ item }) => (
-            <View style={styles.feedbackCard}>
-              <View style={styles.ratingBadge}>
-                <Text style={styles.ratingText}>{item.rating}/5</Text>
-              </View>
-              <Text style={styles.feedbackText}>{item.content || 'No comment provided'}</Text>
-            </View>
-          )}
-          emptyText="You haven't submitted any feedback yet."
-        />
-      )}
-    </Tab.Screen>
-  </Tab.Navigator>
-);
+      <Tab.Screen name="Experiences">
+        {() => (
+          <ProfileSection<Post>
+            data={sortedPosts}
+            renderItem={({ item }) => <PostItem post={item} onVote={handleVote} onReport={handleReport} />}
+            emptyText="You haven't posted any experiences yet."
+            header={
+              <SortingHeader
+                onSelect={handleOptionSelect}
+                setDropdownPosition={setDropdownPosition}
+                setDropdownOptions={setDropdownOptions}
+                setOnDropdownSelect={setOnDropdownSelect}
+                setIsDropdownOpen={setIsDropdownOpen}
+              />
+            }
+          />
+        )}
+      </Tab.Screen>
+      <Tab.Screen name="Feedbacks">
+        {() => (
+          <ProfileSection<any>
+            data={feedbacks}
+            renderItem={({ item }) => <FeedbackItem feedback={item} profile={profile} />}
+            emptyText="You haven't submitted any feedback yet."
+          />
+        )}
+      </Tab.Screen>
+    </Tab.Navigator>
+  );
+};
 
 // Post Item Component (unchanged)
 const PostItem = React.memo<PostItemProps>(
@@ -262,16 +309,12 @@ const PostItem = React.memo<PostItemProps>(
           <View style={styles.suggestorInfo}>
             <View style={styles.profile}>
               <Text style={styles.initial}>
-                {post.user?.username
-                  ? `${post.user.username[0].toUpperCase()}`
-                  : 'G'}
+                {post.user?.username ? `${post.user.username[0].toUpperCase()}` : 'G'}
               </Text>
             </View>
             <View>
               <Text style={styles.suggestorName}>
-                {post.user?.username
-                  ? `${post.user.username}`
-                  : 'Guest'}
+                {post.user?.username ? `${post.user.username}` : 'Guest'}
               </Text>
               <Text style={styles.suggestorUsername}>{post.user?.email}</Text>
             </View>
@@ -373,7 +416,6 @@ const UserProfile = () => {
   }, [profile]);
 
   const fetchProfile = async () => {
-    // Unchanged fetchProfile logic
     try {
       setLoading(true);
       const profileResponse = await axiosInstance.get('/api/profile', {
@@ -417,7 +459,6 @@ const UserProfile = () => {
   };
 
   const saveProfile = async () => {
-    // Unchanged saveProfile logic
     if (!formData.username.trim()) {
       setError('Username is required');
       return;
@@ -460,7 +501,6 @@ const UserProfile = () => {
 
   const handleVote = useCallback(
     async (id: number, action: VoteType) => {
-      // Unchanged handleVote logic
       if (!authToken) {
         router.push('/login');
         return;
@@ -509,8 +549,6 @@ const UserProfile = () => {
 
   const renderAvatar = () => {
     const initialUserName = profile?.username ? profile.username.charAt(0).toUpperCase() : 'U';
-    const initialFirstName = profile?.firstname ? profile.firstname.charAt(0).toUpperCase() : 'U';
-    const initialLastName = profile?.lastname ? profile.lastname.charAt(0).toUpperCase() : 'U';
     return (
       <View style={styles.avatarPlaceholder}>
         <Text style={styles.avatarText}>{initialUserName}</Text>
@@ -537,7 +575,6 @@ const UserProfile = () => {
   if (isEditing) {
     return (
       <ScrollView contentContainerStyle={styles.editContainer} keyboardShouldPersistTaps="handled">
-        {/* Unchanged editing UI */}
         <View style={styles.formContainer}>
           <View style={styles.avatarContainer}>{renderAvatar()}</View>
           <Text style={styles.label}>Username</Text>
@@ -639,8 +676,8 @@ const UserProfile = () => {
         setDropdownOptions={setDropdownOptions}
         setOnDropdownSelect={setOnDropdownSelect}
         setIsDropdownOpen={setIsDropdownOpen}
+        profile={profile}
       />
-      {/* Render the dropdown list at the root level */}
       {isDropdownOpen && (
         <View style={styles.dropdownOverlay}>
           <TouchableOpacity
@@ -670,7 +707,7 @@ const UserProfile = () => {
   );
 };
 
-// Styles (updated)
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -720,7 +757,7 @@ const styles = StyleSheet.create({
   profileActions: {
     flexDirection: 'row',
     gap: 12,
-    marginLeft: 16
+    marginLeft: 16,
   },
   iconButton: {
     padding: 8,
@@ -876,42 +913,67 @@ const styles = StyleSheet.create({
     color: '#44457D',
     textAlign: 'center',
   },
-  feedbackCard: {
+  feedbackContainer: {
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderColor: '#EEF2FF',
+    padding: 12,
+    elevation: 4,
+    marginBottom: 15,
+  },
+  feedbackSuggestorDetails: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    height: 50,
+    gap: 11,
   },
-  ratingBadge: {
-    backgroundColor: '#E0E7FF',
-    borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+  feedbackProfile: {
+    width: 36,
+    height: 36,
+    borderRadius: 24,
+    backgroundColor: '#6366F1',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  ratingText: {
-    color: '#4F46E5',
-    fontWeight: '600',
+  feedbackInitial: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  feedbackSuggestor: {
+    flexDirection: 'column',
+  },
+  feedbackSuggestorName: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '700',
+  },
+  feedbackSuggestorUsername: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    marginTop: 12,
+  },
+  feedbackContent: {
     fontSize: 14,
-  },
-  feedbackText: {
-    flex: 1,
     color: '#475569',
+    lineHeight: 22,
+    marginTop: 8,
+  },
+  feedbackDeletedMessage: {
     fontSize: 14,
-    lineHeight: 20,
+    color: '#EF4444',
+    fontStyle: 'italic',
+    marginTop: 12,
   },
   postContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    marginTop: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
