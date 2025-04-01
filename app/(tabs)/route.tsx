@@ -1053,7 +1053,7 @@ const RouteScreen: React.FC = () => {
   const renderRestaurantsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.headerText}>Nearby Dining Spots</Text>
-      <ClearCacheButton />
+      {/* <ClearCacheButton /> */}
       <View style={styles.spotLimitContainer}>
         <Text style={styles.spotLimitHint}>Limit results to:</Text>
         {[10, 20, 50, 100].map((limit) => (

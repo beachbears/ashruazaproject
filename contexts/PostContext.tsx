@@ -33,7 +33,7 @@ export interface Post {
   origin_address?: string;
   user_vote?: number;
   pendingVote?: boolean; // New field to track pending votes
-}  
+}
 
 interface PostOptionsMenuProps {
   post: Post;
