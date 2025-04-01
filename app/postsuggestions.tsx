@@ -10,6 +10,7 @@ import ModalComponent from './reportmodal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import PostOptionsMenu from './PostOptionsMenu';
 import DeleteModal from './deleteModal';
+import Foundation from '@expo/vector-icons/Foundation';
 
 const dropdownOptions = ['Popularity', 'Time'];
 type VoteType = 'upvote' | 'downvote';
@@ -398,10 +399,11 @@ export default function PostSuggestions() {
                 }}
                 style={styles.postbutton}
               >
-                <Text style={styles.postButtonText}>Create New Post</Text>
+                <Text style={styles.postButtonText}>Create New Post +</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.detailsContainer}>
+            <Foundation name="lightbulb" size={24} color="#B8860B" />
                    <Text style={styles.locationText}>What's on your mind? Share route tips or browse experiences from commuterss within 1km of your route.</Text>
             </View>
           </>
@@ -589,17 +591,17 @@ const styles = StyleSheet.create({
   },
   detailsContainer: {
     marginBottom: 16,
-    flexDirection: 'column',
-    paddingHorizontal: 10,
-    width: '100%',
+    flexDirection: 'row',
+    alignItems: "center",
+    width: '90%',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 14
   },
   locationText: {
     fontSize: 14,
     fontWeight: '400',
     color: '#44457D',
-    width: '100%',
+    fontStyle: "italic",
   },
   label: {
     fontSize: 14,
@@ -752,8 +754,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#44457D',
     fontWeight: '500',
-    fontSize: 23,
-    textAlign: 'center'
+    fontSize: 26,
+    textAlign: 'center',
+    marginVertical: 16
   },
   cert: {
     fontWeight: '500',

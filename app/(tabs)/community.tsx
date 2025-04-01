@@ -11,6 +11,8 @@ import ModalComponent from '../reportmodal';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import PostOptionsMenu from '../PostOptionsMenu';
 import DeleteModal from '../deleteModal';
+import Foundation from '@expo/vector-icons/Foundation';
+
 
 const dropdownOptions = ['Popularity', 'Time'];
 
@@ -513,11 +515,15 @@ export default function CommunityPage() {
     <View style={styles.maincontainer}>
       <Text style={styles.sectionTitle}>Discover Experiences</Text>
       <View style={styles.headerContainer}>
-        <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Time" />
+        <Dropdown options={dropdownOptions} onSelect={handleOptionSelect} defaultValue="Sort by" />
         <TouchableOpacity onPress={handlePostButtonPress} style={styles.postbutton}>
-          <Text style={styles.postButtonText}>Post</Text>
+          <Text style={styles.postButtonText}>Create New Post +</Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.detailsContainer}>
+                  <Foundation name="lightbulb" size={24} color="#B8860B" />
+                         <Text style={styles.locationText}>Share route tips or browse experiences from commuters.</Text>
+                  </View>
       <FlatList
         contentContainerStyle={{ paddingBottom: 80 }} // Adjust bottom padding as needed
         data={sortedPosts}
@@ -582,6 +588,20 @@ export default function CommunityPage() {
 }
 
 const styles = StyleSheet.create({
+  detailsContainer: {
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: "center",
+    width: '90%',
+    justifyContent: 'space-between',
+    gap: 14
+  },
+  locationText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#44457D',
+    fontStyle: "italic",
+  },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -613,7 +633,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
   },
-  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 20, textAlign: 'center', marginBottom: 10 },
+  sectionTitle: { color: '#44457D', fontWeight: '500', fontSize: 26, textAlign: 'center', marginBottom: 10 },
   postbutton: { backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   postButtonText: { color: 'white', fontSize: 12, fontWeight: 600 },
   loadingIndicator: {

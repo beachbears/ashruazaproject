@@ -281,7 +281,7 @@ const Home = () => {
                 </ScrollView>
               )}
 
-              <Image source={require('../../assets/images/image 90.png')} style={styles.conquerImage} />
+              <Image source={require('../../assets/images/home.png')} style={styles.conquerImage} />
             </View>
           </View>
 
@@ -382,11 +382,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   conquerImage: {
-    width: '100%',
-    height: width * 0.5,
+    width: 380,
+    height: 260,
     resizeMode: 'contain',
     marginTop: 30,
     marginBottom: 20,
+    borderRadius: 16
   },
   searchContainer: {
     width: '100%',
