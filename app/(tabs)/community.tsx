@@ -24,7 +24,7 @@ interface PostItemProps {
   post: Post;
   onVote: (id: number, action: VoteType) => void;
   onReport: (id: number) => void;
-   onDelete: (id: number) => void; // Add this line
+  onDelete: (id: number) => void; // Add this line
 }
 
 const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = 'Select Option' }) => {
@@ -64,7 +64,7 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, defaultValue = '
 type VoteType = 'upvote' | 'downvote';
 
 const PostItem = React.memo<PostItemProps>(
-  ({ post, onVote, onReport, onDelete}) => {
+  ({ post, onVote, onReport, onDelete }) => {
     const timeAgo = (timestamp: number): string => {
       const now = Date.now();
       const diff = now - timestamp;
@@ -134,13 +134,13 @@ const PostItem = React.memo<PostItemProps>(
           <View style={{ flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
             <Text style={styles.postTimestamp}>
               {post.created_at ? timeAgo(new Date(post.created_at).getTime()) : 'Unknown time'}
-              </Text>
-                <PostOptionsMenu
-                  post={post}
-                  onReport={() => post.id !== undefined ? onReport(post.id) : null}
-                  onDelete={() => post.id !== undefined ? onDelete(post.id) : null}
-                />
-                  </View>
+            </Text>
+            <PostOptionsMenu
+              post={post}
+              onReport={() => post.id !== undefined ? onReport(post.id) : null}
+              onDelete={() => post.id !== undefined ? onDelete(post.id) : null}
+            />
+          </View>
         </View>
         <Text style={styles.postLocation}>
           <Text style={styles.boldText}>From:</Text> {post.location || 'Unknown Location'}
@@ -485,29 +485,29 @@ export default function CommunityPage() {
     setDeleteModalVisible(false);
     setPostIdToDelete(null);
   };
-  
-   
-    const handleDeleteConfirm = async () => {
-      if (!postIdToDelete) return;
-      try {
-        const response = await fetch(
-          `https://yourapi.com/api/route_posts/${postIdToDelete}/delete`,
-          {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${authToken}` },
-          }
-        );
-        if (!response.ok) throw new Error('Delete failed');
-        setPosts((prev) => prev.filter((p) => p.id !== postIdToDelete));
-        Alert.alert('Success', 'Post deleted successfully.');
-      } catch (error) {
-        console.error('Error deleting post:', error);
-        Alert.alert('Error', 'Failed to delete post. Please try again.');
-      } finally {
-        closeDeleteModal();
-      }
-    };
-  
+
+
+  const handleDeleteConfirm = async () => {
+    if (!postIdToDelete) return;
+    try {
+      const response = await fetch(
+        `https://yourapi.com/api/route_posts/${postIdToDelete}/delete`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${authToken}` },
+        }
+      );
+      if (!response.ok) throw new Error('Delete failed');
+      setPosts((prev) => prev.filter((p) => p.id !== postIdToDelete));
+      Alert.alert('Success', 'Post deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      Alert.alert('Error', 'Failed to delete post. Please try again.');
+    } finally {
+      closeDeleteModal();
+    }
+  };
+
 
   return (
     <View style={styles.maincontainer}>
@@ -561,7 +561,7 @@ export default function CommunityPage() {
         userPassword={''}
         isFromCommunity={true}
       />
-{isModalVisible && selectedPostId !== null && (
+      {isModalVisible && selectedPostId !== null && (
         <ModalComponent
           visible={isModalVisible}
           onClose={closeReportModal}
@@ -569,14 +569,14 @@ export default function CommunityPage() {
           route_post_id={selectedPostId}
         />
       )}
-{deleteModalVisible && postIdToDelete !== null && (
-  <DeleteModal
-    visible={deleteModalVisible}
-    onClose={closeDeleteModal}
-    onConfirm={handleDeleteConfirm}
-    route_post_id={postIdToDelete} // Use the correct state
-  />
-)}
+      {deleteModalVisible && postIdToDelete !== null && (
+        <DeleteModal
+          visible={deleteModalVisible}
+          onClose={closeDeleteModal}
+          onConfirm={handleDeleteConfirm}
+          route_post_id={postIdToDelete} // Use the correct state
+        />
+      )}
     </View>
   );
 }
