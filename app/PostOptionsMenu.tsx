@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
   },
   menuItem: {
-    padding: 4,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
