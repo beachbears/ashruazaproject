@@ -596,20 +596,7 @@ const RouteScreen: React.FC = () => {
       if (routeData && routeData.segments && routeData.segments.length > 0) {
         const allWalking = routeData.segments.every((seg: { walking: any; }) => seg.walking);
         setPolylineColor(allWalking ? "#808080" : "#6366F1");
-      } else {
-        setPolylineColor("#6366F1");
-      }
-      if (response.data.polyline && response.data.polyline.length > 0) {
-        const decodedPath: LatLng[] = polyline.decode(response.data.polyline).map((coord: number[]) => ({
-          latitude: coord[0],
-          longitude: coord[1],
-        }));
-        const points: Point[] = decodedPath.map(pt => ({ x: pt.longitude, y: pt.latitude }));
-        // Use type assertion to tell TypeScript that simplify returns Point[]
-        const simplifiedPoints = simplify(points, 0.00005, true) as unknown as Point[];
-        const simplifiedPath: LatLng[] = simplifiedPoints.map(pt => ({ latitude: pt.y, longitude: pt.x }));
-        setRoadPath(simplifiedPath);
-      } else if (routeData && routeData.segments && routeData.segments.length > 0) {
+
         const segmentsPaths: SegmentPath[] = routeData.segments
           .filter((segment: { geometry: any; }) => segment.geometry)
           .map((segment: { type: string; geometry: any; }) => {
@@ -619,12 +606,20 @@ const RouteScreen: React.FC = () => {
               longitude: coord[1],
             }));
             const points: Point[] = decodedCoords.map(pt => ({ x: pt.longitude, y: pt.latitude }));
-            // Use type assertion here as well
             const simplifiedPoints = simplify(points, 0.00005, true) as unknown as Point[];
             const simplifiedCoords: LatLng[] = simplifiedPoints.map(pt => ({ latitude: pt.y, longitude: pt.x }));
-            return { coords: simplifiedCoords, color };
+            return { coords: simplifiedCoords, color, type: segment.type }; // Include type here
           });
         setRoadPath(segmentsPaths);
+      } else if (response.data.polyline && response.data.polyline.length > 0) {
+        const decodedPath: LatLng[] = polyline.decode(response.data.polyline).map((coord: number[]) => ({
+          latitude: coord[0],
+          longitude: coord[1],
+        }));
+        const points: Point[] = decodedPath.map(pt => ({ x: pt.longitude, y: pt.latitude }));
+        const simplifiedPoints = simplify(points, 0.00005, true) as unknown as Point[];
+        const simplifiedPath: LatLng[] = simplifiedPoints.map(pt => ({ latitude: pt.y, longitude: pt.x }));
+        setRoadPath(simplifiedPath);
       } else if (route.length === 2) {
         setRoadPath(route);
       } else {
@@ -636,6 +631,7 @@ const RouteScreen: React.FC = () => {
       setIsRouteLoading(false);
     }
   };
+
   const selectOriginSuggestion = useCallback(async (item: any) => {
     setOrigin(item.name);
     setOriginSuggestions([]);

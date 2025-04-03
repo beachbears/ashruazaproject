@@ -36,6 +36,29 @@ const BASE_HTML_HEAD = `
       <div id="map"></div>
       <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
       <script>
+        // Function to generate segment icons
+        function getSegmentIcon(type, color) {
+          let iconClass;
+          switch(type.toLowerCase()) {
+            case 'walking':
+              iconClass = 'fas fa-walking';
+              break;
+            case 'bus':
+              iconClass = 'fas fa-bus';
+              break;
+            case 'jeep':
+              iconClass = 'fas fa-car';
+              break;
+            default:
+              iconClass = 'fas fa-question';
+          }
+          return L.divIcon({
+            html: \`<div style="background-color: #fff; border: 2px solid \${color}; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;"><i class="\${iconClass}" style="font-size: 8px; color: \${color};"></i></div>\`,
+            className: 'segment-icon',
+            iconSize: [24, 24],
+            iconAnchor: [12, 24]
+          });
+        }
 `;
 
 export const getMapHTML = ({
@@ -131,16 +154,19 @@ export const getMapHTML = ({
     });
   }
 
-  // Polyline rendering
+  // Polyline rendering with segment start icons
   if (Array.isArray(roadPath)) {
     if (roadPath.length > 0 && (roadPath[0] as any).coords) {
       // SegmentPath[]
       polylinesJS.push("window.segmentPolylines = [];");
       (roadPath as SegmentPath[]).forEach((segment, idx) => {
+        const firstCoord = segment.coords[0];
         polylinesJS.push(`
           var segment${idx} = L.polyline(${JSON.stringify(segment.coords.map(pt => [pt.latitude, pt.longitude]))}, { color: '${segment.color}', weight: 3 }).addTo(map);
           segment${idx}.options.defaultColor = '${segment.color}';
           window.segmentPolylines.push(segment${idx});
+          var icon = getSegmentIcon('${segment.type}', '${segment.color}');
+          L.marker([${firstCoord.latitude}, ${firstCoord.longitude}], { icon: icon }).addTo(map);
         `);
       });
       polylinesJS.push(`

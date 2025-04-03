@@ -98,6 +98,7 @@ export interface LatLng {
 export interface SegmentPath {
   coords: LatLng[];
   color: string;
+  type: string; // Added to specify 'walking', 'bus', 'car', etc.
 }
 
 export interface Point {
