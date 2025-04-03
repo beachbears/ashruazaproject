@@ -101,7 +101,7 @@ export const getMapHTML = ({
       });
       L.marker([${route[0].latitude}, ${route[0].longitude}], { icon: originIcon })
         .addTo(map)
-        .bindPopup("Origin").openPopup();
+        .bindPopup("Origin")
     `);
   }
   if (route.length >= 2) {
@@ -114,7 +114,7 @@ export const getMapHTML = ({
       });
       L.marker([${route[1].latitude}, ${route[1].longitude}], { icon: destinationIcon })
         .addTo(map)
-        .bindPopup("Destination").openPopup();
+        .bindPopup("Destination")
     `);
   }
 
