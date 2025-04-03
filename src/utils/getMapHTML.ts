@@ -223,9 +223,9 @@ export const getMapHTML = ({
                   }));
                 }
                 this.setIcon(L.divIcon({
-                  html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 14px; height: 14px;"></div>',
+                  html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 12px; height: 12px;"></div>',
                   className: 'step-dot-selected',
-                  iconSize: [14, 14],
+                  iconSize: [12, 12],
                   iconAnchor: [9, 9]
                 }));
                 window.currentSelectedStepMarker = this;
@@ -297,10 +297,10 @@ export const getMapHTML = ({
             }));
           }
           marker.setIcon(L.divIcon({
-            html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 14px; height: 14px;"></div>',
+            html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 12px; height: 12px;"></div>',
             className: 'step-dot-selected',
-            iconSize: [14, 14],
-            iconAnchor: [9, 9]
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
           }));
           window.currentSelectedStepMarker = marker;
           marker.openPopup();
