@@ -185,7 +185,7 @@ export const getMapHTML = ({
           var segment${idx} = L.polyline(${JSON.stringify(segment.coords.map(pt => [pt.latitude, pt.longitude]))}, polylineOptions${idx}).addTo(map);
           segment${idx}.options.defaultColor = '${segment.color}';
           window.segmentPolylines.push(segment${idx});
-          if ('${segment.type}'.toLowerCase() !== 'walking' && '${segment.type}'.toLowerCase() !== 'jeep') {
+          if ('${segment.type}'.toLowerCase() !== 'walking') {
             var icon = getSegmentIcon('${segment.type}', '${segment.color}');
             var marker = L.marker([${firstCoord.latitude}, ${firstCoord.longitude}], { icon: icon }).addTo(map);
             if (${isOrigin}) {
