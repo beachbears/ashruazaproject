@@ -210,10 +210,10 @@ export const getMapHTML = ({
             polylinesJS.push(`
               var stepMarker${idx}_${stepIdx} = L.marker([${startCoord.latitude}, ${startCoord.longitude}], {
                 icon: L.divIcon({
-                  html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 8px; height: 8px;"></div>',
+                  html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 6px; height: 6px;"></div>',
                   className: 'step-dot',
-                  iconSize: [10, 10],
-                  iconAnchor: [6, 6]
+                  iconSize: [8, 8],
+                  iconAnchor: [4, 4]
                 }),
                 segmentIdx: ${idx},
                 stepIdx: ${stepIdx}
@@ -222,16 +222,16 @@ export const getMapHTML = ({
               stepMarker${idx}_${stepIdx}.on('click', function() {
                 if (window.currentSelectedStepMarker && window.currentSelectedStepMarker !== this) {
                   window.currentSelectedStepMarker.setIcon(L.divIcon({
-                    html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 8px; height: 8px;"></div>',
+                    html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 6px; height: 6px;"></div>',
                     className: 'step-dot',
-                    iconSize: [10, 10],
-                    iconAnchor: [6, 6]
+                    iconSize: [8, 8],
+                    iconAnchor: [4, 4]
                   }));
                 }
                 this.setIcon(L.divIcon({
-                  html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 12px; height: 12px;"></div>',
+                  html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 10px; height: 10px;"></div>',
                   className: 'step-dot-selected',
-                  iconSize: [12, 12],
+                  iconSize: [8, 8],
                   iconAnchor: [9, 9]
                 }));
                 window.currentSelectedStepMarker = this;
@@ -296,16 +296,16 @@ export const getMapHTML = ({
           const marker = targetMarker.marker;
           if (window.currentSelectedStepMarker && window.currentSelectedStepMarker !== marker) {
             window.currentSelectedStepMarker.setIcon(L.divIcon({
-              html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 8px; height: 8px;"></div>',
+              html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 6px; height: 6px;"></div>',
               className: 'step-dot',
-              iconSize: [10, 10],
-              iconAnchor: [6, 6]
+              iconSize: [8, 8],
+              iconAnchor: [4, 4]
             }));
           }
           marker.setIcon(L.divIcon({
-            html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 12px; height: 12px;"></div>',
+            html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 10px; height: 10px;"></div>',
             className: 'step-dot-selected',
-            iconSize: [12, 12],
+            iconSize: [10, 10],
             iconAnchor: [6, 6]
           }));
           window.currentSelectedStepMarker = marker;
