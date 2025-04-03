@@ -93,17 +93,29 @@ export const getMapHTML = ({
   // Current location and destination markers
   if (route?.length > 0 && !isRouteGenerated) {
     markersJS.push(`
-    L.marker([${route[0].latitude}, ${route[0].longitude}])
-      .addTo(map)
-      .bindPopup("Current Location").openPopup();
-  `);
+      var originIcon = L.divIcon({
+        html: '<div style="background-color: #0000ff; border: 2px solid #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-location-dot" style="color: #fff; font-size: 12px;"></i></div>',
+        className: 'origin-icon',
+        iconSize: [24, 24],
+        iconAnchor: [12, 24]
+      });
+      L.marker([${route[0].latitude}, ${route[0].longitude}], { icon: originIcon })
+        .addTo(map)
+        // .bindPopup("Origin").openPopup();
+    `);
   }
   if (route.length >= 2) {
     markersJS.push(`
-    L.marker([${route[1].latitude}, ${route[1].longitude}])
-      .addTo(map)
-      .bindPopup("Destination");
-  `);
+      var destinationIcon = L.divIcon({
+        html: '<div style="background-color: #ff0000; border: 2px solid #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-map-pin" style="color: #fff; font-size: 12px;"></i></div>',
+        className: 'destination-icon',
+        iconSize: [24, 24],
+        iconAnchor: [12, 24]
+      });
+      L.marker([${route[1].latitude}, ${route[1].longitude}], { icon: destinationIcon })
+        .addTo(map)
+        // .bindPopup("Destination").openPopup();
+    `);
   }
 
   // Tourist spot markers
@@ -159,21 +171,23 @@ export const getMapHTML = ({
   // Polyline rendering with segment start icons
   if (Array.isArray(roadPath)) {
     if (roadPath.length > 0 && (roadPath[0] as any).coords) {
-      // SegmentPath[]
       polylinesJS.push("window.segmentPolylines = [];");
       polylinesJS.push("window.stepMarkers = [];");
       polylinesJS.push("window.currentSelectedStepMarker = null;");
       (roadPath as SegmentPath[]).forEach((segment, idx) => {
         const firstCoord = segment.coords[0];
+        const isOrigin = idx === 0; // Identify the first segment (origin)
         polylinesJS.push(`
           var segment${idx} = L.polyline(${JSON.stringify(segment.coords.map(pt => [pt.latitude, pt.longitude]))}, { color: '${segment.color}', weight: 3 }).addTo(map);
           segment${idx}.options.defaultColor = '${segment.color}';
           window.segmentPolylines.push(segment${idx});
           var icon = getSegmentIcon('${segment.type}', '${segment.color}');
-          L.marker([${firstCoord.latitude}, ${firstCoord.longitude}], { icon: icon }).addTo(map);
+          var marker = L.marker([${firstCoord.latitude}, ${firstCoord.longitude}], { icon: icon }).addTo(map);
+          if (${isOrigin}) {
+            marker.bindPopup("Current Location").openPopup();
+          }
         `);
 
-        // Add step markers for walking segments
         if (segment.type.toLowerCase() === 'walking' && segment.steps && segment.steps.length > 0) {
           const coords = segment.coords;
           const numSteps = segment.steps.length;
@@ -181,7 +195,6 @@ export const getMapHTML = ({
           segment.steps.forEach((step: any, stepIdx: number) => {
             const startIdx = stepIdx * pointsPerStep;
             const startCoord = coords[startIdx] || coords[0];
-            // Skip the first step marker if it’s at the origin and this is the first segment
             if (stepIdx === 0 && idx === 0 && route?.length > 0 &&
               startCoord.latitude === route[0].latitude &&
               startCoord.longitude === route[0].longitude) {
@@ -203,7 +216,7 @@ export const getMapHTML = ({
               stepMarker${idx}_${stepIdx}.on('click', function() {
                 if (window.currentSelectedStepMarker && window.currentSelectedStepMarker !== this) {
                   window.currentSelectedStepMarker.setIcon(L.divIcon({
-                    html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 10px; height: 10px;"></div>',
+                    html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 8px; height: 8px;"></div>',
                     className: 'step-dot',
                     iconSize: [10, 10],
                     iconAnchor: [6, 6]
@@ -277,7 +290,7 @@ export const getMapHTML = ({
           const marker = targetMarker.marker;
           if (window.currentSelectedStepMarker && window.currentSelectedStepMarker !== marker) {
             window.currentSelectedStepMarker.setIcon(L.divIcon({
-              html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 10px; height: 10px;"></div>',
+              html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 8px; height: 8px;"></div>',
               className: 'step-dot',
               iconSize: [10, 10],
               iconAnchor: [6, 6]
