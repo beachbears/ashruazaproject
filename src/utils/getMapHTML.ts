@@ -114,7 +114,7 @@ export const getMapHTML = ({
       });
       L.marker([${route[1].latitude}, ${route[1].longitude}], { icon: destinationIcon })
         .addTo(map)
-        // .bindPopup("Destination").openPopup();
+        .bindPopup("Destination").openPopup();
     `);
   }
 
