@@ -184,7 +184,7 @@ export const getMapHTML = ({
           var icon = getSegmentIcon('${segment.type}', '${segment.color}');
           var marker = L.marker([${firstCoord.latitude}, ${firstCoord.longitude}], { icon: icon }).addTo(map);
           if (${isOrigin}) {
-            marker.bindPopup("Current Location").openPopup();
+            marker.bindPopup("Origin").openPopup();
           }
         `);
 
