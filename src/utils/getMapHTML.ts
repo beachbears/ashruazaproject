@@ -20,6 +20,7 @@ interface GetMapHTMLOptions {
     cuisine?: string;
     image_url?: string;
   }>;
+  isRouteGenerated: boolean; // New flag
 }
 
 // Static HTML head content (could be moved to a constant file)
@@ -68,6 +69,7 @@ export const getMapHTML = ({
   polylineColor,
   nearbySpots,
   nearbyRestaurants,
+  isRouteGenerated
 }: GetMapHTMLOptions): string => {
   // Use arrays to build JavaScript code efficiently
   const markersJS: string[] = [];
@@ -89,19 +91,19 @@ export const getMapHTML = ({
   };
 
   // Current location and destination markers
-  if (route?.length > 0) {
+  if (route?.length > 0 && !isRouteGenerated) {
     markersJS.push(`
-      L.marker([${route[0].latitude}, ${route[0].longitude}])
-        .addTo(map)
-        .bindPopup("Current Location").openPopup();
-    `);
-    if (route.length >= 2) {
-      markersJS.push(`
-        L.marker([${route[1].latitude}, ${route[1].longitude}])
-          .addTo(map)
-          .bindPopup("Destination");
-      `);
-    }
+    L.marker([${route[0].latitude}, ${route[0].longitude}])
+      .addTo(map)
+      .bindPopup("Current Location").openPopup();
+  `);
+  }
+  if (route.length >= 2) {
+    markersJS.push(`
+    L.marker([${route[1].latitude}, ${route[1].longitude}])
+      .addTo(map)
+      .bindPopup("Destination");
+  `);
   }
 
   // Tourist spot markers
@@ -159,6 +161,8 @@ export const getMapHTML = ({
     if (roadPath.length > 0 && (roadPath[0] as any).coords) {
       // SegmentPath[]
       polylinesJS.push("window.segmentPolylines = [];");
+      polylinesJS.push("window.stepMarkers = [];");
+      polylinesJS.push("window.currentSelectedStepMarker = null;");
       (roadPath as SegmentPath[]).forEach((segment, idx) => {
         const firstCoord = segment.coords[0];
         polylinesJS.push(`
@@ -168,6 +172,56 @@ export const getMapHTML = ({
           var icon = getSegmentIcon('${segment.type}', '${segment.color}');
           L.marker([${firstCoord.latitude}, ${firstCoord.longitude}], { icon: icon }).addTo(map);
         `);
+
+        // Add step markers for walking segments
+        if (segment.type.toLowerCase() === 'walking' && segment.steps && segment.steps.length > 0) {
+          const coords = segment.coords;
+          const numSteps = segment.steps.length;
+          const pointsPerStep = Math.floor(coords.length / numSteps);
+          segment.steps.forEach((step: any, stepIdx: number) => {
+            const startIdx = stepIdx * pointsPerStep;
+            const startCoord = coords[startIdx] || coords[0];
+            // Skip the first step marker if it’s at the origin and this is the first segment
+            if (stepIdx === 0 && idx === 0 && route?.length > 0 &&
+              startCoord.latitude === route[0].latitude &&
+              startCoord.longitude === route[0].longitude) {
+              return;
+            }
+            const instruction = (step.instruction || `Step ${stepIdx + 1}`).replace(/'/g, "\\'");
+            polylinesJS.push(`
+              var stepMarker${idx}_${stepIdx} = L.marker([${startCoord.latitude}, ${startCoord.longitude}], {
+                icon: L.divIcon({
+                  html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 8px; height: 8px;"></div>',
+                  className: 'step-dot',
+                  iconSize: [10, 10],
+                  iconAnchor: [6, 6]
+                }),
+                segmentIdx: ${idx},
+                stepIdx: ${stepIdx}
+              }).addTo(map).bindPopup('${instruction}');
+              window.stepMarkers.push({ marker: stepMarker${idx}_${stepIdx}, segmentIdx: ${idx}, stepIdx: ${stepIdx} });
+              stepMarker${idx}_${stepIdx}.on('click', function() {
+                if (window.currentSelectedStepMarker && window.currentSelectedStepMarker !== this) {
+                  window.currentSelectedStepMarker.setIcon(L.divIcon({
+                    html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 10px; height: 10px;"></div>',
+                    className: 'step-dot',
+                    iconSize: [10, 10],
+                    iconAnchor: [6, 6]
+                  }));
+                }
+                this.setIcon(L.divIcon({
+                  html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 14px; height: 14px;"></div>',
+                  className: 'step-dot-selected',
+                  iconSize: [14, 14],
+                  iconAnchor: [9, 9]
+                }));
+                window.currentSelectedStepMarker = this;
+                this.openPopup();
+                map.flyTo([this.getLatLng().lat, this.getLatLng().lng], 16, { animate: true, duration: 1 });
+              });
+            `);
+          });
+        }
       });
       polylinesJS.push(`
         var group = new L.featureGroup(window.segmentPolylines);
@@ -205,59 +259,64 @@ export const getMapHTML = ({
   }
 
   const messageListenerJS = `
-  function zoomToSegment(bounds, idx) {
-    var southWest = L.latLng(bounds.minLat, bounds.minLon);
-    var northEast = L.latLng(bounds.maxLat, bounds.maxLon);
-    var segmentBounds = L.latLngBounds(southWest, northEast);
-    map.fitBounds(segmentBounds, { padding: [50, 50] });
-    if (window.segmentPolylines) {
-      window.segmentPolylines.forEach((polyline, index) => {
-        polyline.setStyle({ weight: index === idx ? 6 : 3, color: polyline.options.defaultColor || '${polylineColor}' });
-      });
-    }
-  }
-  function zoomToStep(lat, lng, instruction) {
-    // Remove any existing step markers
-    if (window.stepMarker) {
-      map.removeLayer(window.stepMarker);
-    }
-    // Add a new marker at the step's starting point
-    window.stepMarker = L.marker([lat, lng], {
-      icon: L.divIcon({
-        html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-walking" style="color: #6366F1; font-size: 12px;"></i></div>',
-        className: 'step-icon',
-        iconSize: [24, 24],
-        iconAnchor: [12, 24]
-      })
-    }).addTo(map);
-    // Bind and open popup with instruction
-    window.stepMarker.bindPopup(instruction || 'Step location').openPopup();
-    // Smoothly zoom to the location
-    map.flyTo([lat, lng], 16, { animate: true, duration: 1 });
-  }
-  document.addEventListener('message', (event) => {
-    try {
-      var data = JSON.parse(event.data);
-      if (data.type === 'zoomToSegment') {
-        zoomToSegment(data.bounds, data.index);
-      } else if (data.type === 'zoomToStep') {
-        zoomToStep(data.latitude, data.longitude, data.instruction);
+    function zoomToSegment(bounds, idx) {
+      var southWest = L.latLng(bounds.minLat, bounds.minLon);
+      var northEast = L.latLng(bounds.maxLat, bounds.maxLon);
+      var segmentBounds = L.latLngBounds(southWest, northEast);
+      map.fitBounds(segmentBounds, { padding: [50, 50] });
+      if (window.segmentPolylines) {
+        window.segmentPolylines.forEach((polyline, index) => {
+          polyline.setStyle({ weight: index === idx ? 6 : 3, color: polyline.options.defaultColor || '${polylineColor}' });
+        });
       }
-    } catch (e) { console.error(e); }
-  });
-  window.addEventListener('message', (event) => {
-    try {
-      var data = JSON.parse(event.data);
-      if (data.type === 'zoomToSegment') {
-        zoomToSegment(data.bounds, data.index);
-      } else if (data.type === 'zoomToStep') {
-        zoomToStep(data.latitude, data.longitude, data.instruction);
+    }
+    function zoomToStep(lat, lng, instruction, segmentIdx, stepIdx) {
+      if (window.stepMarkers) {
+        const targetMarker = window.stepMarkers.find(m => m.segmentIdx === segmentIdx && m.stepIdx === stepIdx);
+        if (targetMarker) {
+          const marker = targetMarker.marker;
+          if (window.currentSelectedStepMarker && window.currentSelectedStepMarker !== marker) {
+            window.currentSelectedStepMarker.setIcon(L.divIcon({
+              html: '<div style="background-color: #fff; border: 1px solid #6366F1; border-radius: 50%; width: 10px; height: 10px;"></div>',
+              className: 'step-dot',
+              iconSize: [10, 10],
+              iconAnchor: [6, 6]
+            }));
+          }
+          marker.setIcon(L.divIcon({
+            html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 14px; height: 14px;"></div>',
+            className: 'step-dot-selected',
+            iconSize: [14, 14],
+            iconAnchor: [9, 9]
+          }));
+          window.currentSelectedStepMarker = marker;
+          marker.openPopup();
+          map.flyTo([lat, lng], 16, { animate: true, duration: 1 });
+        }
       }
-    } catch (e) { console.error(e); }
-  });
-`;
+    }
+    document.addEventListener('message', (event) => {
+      try {
+        var data = JSON.parse(event.data);
+        if (data.type === 'zoomToSegment') {
+          zoomToSegment(data.bounds, data.index);
+        } else if (data.type === 'zoomToStep') {
+          zoomToStep(data.latitude, data.longitude, data.instruction, data.segmentIdx, data.stepIdx);
+        }
+      } catch (e) { console.error(e); }
+    });
+    window.addEventListener('message', (event) => {
+      try {
+        var data = JSON.parse(event.data);
+        if (data.type === 'zoomToSegment') {
+          zoomToSegment(data.bounds, data.index);
+        } else if (data.type === 'zoomToStep') {
+          zoomToStep(data.latitude, data.longitude, data.instruction, data.segmentIdx, data.stepIdx);
+        }
+      } catch (e) { console.error(e); }
+    });
+  `;
 
-  // Assemble the final HTML
   return `
     ${BASE_HTML_HEAD}
       var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);

@@ -99,6 +99,10 @@ export interface SegmentPath {
   coords: LatLng[];
   color: string;
   type: string; // Added to specify 'walking', 'bus', 'car', etc.
+  steps: Array<{
+    instruction: string;
+    // Add other step properties as needed
+  }>;
 }
 
 export interface Point {

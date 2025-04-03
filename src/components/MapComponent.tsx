@@ -45,6 +45,7 @@ const MapComponent = memo(
         polylineColor,
         nearbySpots: activeTab === "Attractions" ? nearbySpots : [],
         nearbyRestaurants: activeTab === "Dining" ? nearbyRestaurants : [],
+        isRouteGenerated: roadPath.length > 0,
       });
     }, [initialRegion, route, roadPath, polylineColor, nearbySpots, nearbyRestaurants, activeTab]);
 

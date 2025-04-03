@@ -599,7 +599,7 @@ const RouteScreen: React.FC = () => {
 
         const segmentsPaths: SegmentPath[] = routeData.segments
           .filter((segment: { geometry: any; }) => segment.geometry)
-          .map((segment: { type: string; geometry: any; }) => {
+          .map((segment: { type: string; geometry: any; steps?: any[]; }) => {
             const color = segment.type.toLowerCase() === "walking" ? "#808080" : "#6366F1";
             const decodedCoords: LatLng[] = polyline.decode(segment.geometry).map((coord: number[]) => ({
               latitude: coord[0],
@@ -608,7 +608,12 @@ const RouteScreen: React.FC = () => {
             const points: Point[] = decodedCoords.map(pt => ({ x: pt.longitude, y: pt.latitude }));
             const simplifiedPoints = simplify(points, 0.00005, true) as unknown as Point[];
             const simplifiedCoords: LatLng[] = simplifiedPoints.map(pt => ({ latitude: pt.y, longitude: pt.x }));
-            return { coords: simplifiedCoords, color, type: segment.type }; // Include type here
+            return {
+              coords: simplifiedCoords,
+              color,
+              type: segment.type,
+              steps: segment.type.toLowerCase() === "walking" ? segment.steps : undefined,
+            };
           });
         setRoadPath(segmentsPaths);
       } else if (response.data.polyline && response.data.polyline.length > 0) {
@@ -707,6 +712,8 @@ const RouteScreen: React.FC = () => {
             latitude: startCoord.latitude,
             longitude: startCoord.longitude,
             instruction: instruction,
+            segmentIdx: segmentIdx,
+            stepIdx: stepIdx,
           })
         );
       }
