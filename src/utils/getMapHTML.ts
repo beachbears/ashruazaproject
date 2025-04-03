@@ -178,32 +178,58 @@ export const getMapHTML = ({
     `);
   }
 
-  // Message listener for segment zooming
   const messageListenerJS = `
-    function zoomToSegment(bounds, idx) {
-      var southWest = L.latLng(bounds.minLat, bounds.minLon);
-      var northEast = L.latLng(bounds.maxLat, bounds.maxLon);
-      var segmentBounds = L.latLngBounds(southWest, northEast);
-      map.fitBounds(segmentBounds, { padding: [50, 50] });
-      if (window.segmentPolylines) {
-        window.segmentPolylines.forEach((polyline, index) => {
-          polyline.setStyle({ weight: index === idx ? 6 : 3, color: polyline.options.defaultColor || '${polylineColor}' });
-        });
-      }
+  function zoomToSegment(bounds, idx) {
+    var southWest = L.latLng(bounds.minLat, bounds.minLon);
+    var northEast = L.latLng(bounds.maxLat, bounds.maxLon);
+    var segmentBounds = L.latLngBounds(southWest, northEast);
+    map.fitBounds(segmentBounds, { padding: [50, 50] });
+    if (window.segmentPolylines) {
+      window.segmentPolylines.forEach((polyline, index) => {
+        polyline.setStyle({ weight: index === idx ? 6 : 3, color: polyline.options.defaultColor || '${polylineColor}' });
+      });
     }
-    document.addEventListener('message', (event) => {
-      try {
-        var data = JSON.parse(event.data);
-        if (data.type === 'zoomToSegment') zoomToSegment(data.bounds, data.index);
-      } catch (e) { console.error(e); }
-    });
-    window.addEventListener('message', (event) => {
-      try {
-        var data = JSON.parse(event.data);
-        if (data.type === 'zoomToSegment') zoomToSegment(data.bounds, data.index);
-      } catch (e) { console.error(e); }
-    });
-  `;
+  }
+  function zoomToStep(lat, lng, instruction) {
+    // Remove any existing step markers
+    if (window.stepMarker) {
+      map.removeLayer(window.stepMarker);
+    }
+    // Add a new marker at the step's starting point
+    window.stepMarker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        html: '<div style="background-color: #fff; border: 2px solid #6366F1; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-walking" style="color: #6366F1; font-size: 12px;"></i></div>',
+        className: 'step-icon',
+        iconSize: [24, 24],
+        iconAnchor: [12, 24]
+      })
+    }).addTo(map);
+    // Bind and open popup with instruction
+    window.stepMarker.bindPopup(instruction || 'Step location').openPopup();
+    // Smoothly zoom to the location
+    map.flyTo([lat, lng], 16, { animate: true, duration: 1 });
+  }
+  document.addEventListener('message', (event) => {
+    try {
+      var data = JSON.parse(event.data);
+      if (data.type === 'zoomToSegment') {
+        zoomToSegment(data.bounds, data.index);
+      } else if (data.type === 'zoomToStep') {
+        zoomToStep(data.latitude, data.longitude, data.instruction);
+      }
+    } catch (e) { console.error(e); }
+  });
+  window.addEventListener('message', (event) => {
+    try {
+      var data = JSON.parse(event.data);
+      if (data.type === 'zoomToSegment') {
+        zoomToSegment(data.bounds, data.index);
+      } else if (data.type === 'zoomToStep') {
+        zoomToStep(data.latitude, data.longitude, data.instruction);
+      }
+    } catch (e) { console.error(e); }
+  });
+`;
 
   // Assemble the final HTML
   return `

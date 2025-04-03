@@ -691,6 +691,32 @@ const RouteScreen: React.FC = () => {
     return primary;
   };
 
+  const handleViewStep = (segmentIdx: number, stepIdx: number) => {
+    if (webviewRef.current && routeDetails.route?.segments[segmentIdx]) {
+      const segment = routeDetails.route.segments[segmentIdx];
+      if (segment.geometry && segment.steps && segment.steps.length > 0) {
+        const coords = polyline.decode(segment.geometry).map((coord: any[]) => ({
+          latitude: coord[0],
+          longitude: coord[1],
+        }));
+        const numSteps = segment.steps.length;
+        if (coords.length < numSteps) return;
+        const pointsPerStep = Math.floor(coords.length / numSteps);
+        const startIdx = stepIdx * pointsPerStep;
+        const startCoord = coords[startIdx] || coords[0];
+        const instruction = segment.steps[stepIdx].instruction || "Start of step";
+        webviewRef.current.postMessage(
+          JSON.stringify({
+            type: 'zoomToStep',
+            latitude: startCoord.latitude,
+            longitude: startCoord.longitude,
+            instruction: instruction,
+          })
+        );
+      }
+    }
+  };
+
   const renderRouteOverview = useCallback(() => {
     if (!routeDetails.route) return (
       <Text style={styles.overviewText}>
@@ -790,9 +816,16 @@ const RouteScreen: React.FC = () => {
                         {segment.steps?.map((step: any, stepIdx: number) => (
                           <View key={stepIdx} style={styles.stepRow}>
                             <Text style={styles.stepBullet}>{stepIdx + 1}.</Text>
-                            <Text style={styles.stepText}>
+                            <Text style={[styles.stepText, { flex: 1 }]}>
                               {step.instruction}
                             </Text>
+                            <TouchableOpacity
+                              style={styles.viewStepButton}
+                              onPress={() => handleViewStep(idx, stepIdx)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.viewStepButtonText}>View</Text>
+                            </TouchableOpacity>
                           </View>
                         ))}
                       </>
@@ -1502,6 +1535,18 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  viewStepButton: {
+    backgroundColor: "#6366F1",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  viewStepButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "500",
+  },
   timelineItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
