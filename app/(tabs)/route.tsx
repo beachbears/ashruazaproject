@@ -1977,13 +1977,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12, // Slightly more padding for comfort
-    shadowColor: '#000', // Subtle shadow for elevation
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2, // Android shadow
   },
-  locationsContainer: { marginVertical: 20 },
+  locationsContainer: { marginVertical: 0 },
   label: { fontSize: 14, marginBottom: 4 },
   searchContainer: { marginBottom: 8 },
   routeMetricsContainer: { marginBottom: 20 },
