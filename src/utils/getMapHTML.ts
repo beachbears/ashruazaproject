@@ -91,7 +91,7 @@ export const getMapHTML = ({
   };
 
   // Current location and destination markers
-  if (route?.length > 0 && !isRouteGenerated) {
+  if (route?.length > 0) {
     markersJS.push(`
       var originIcon = L.divIcon({
         html: '<div style="background-color: #0000ff; border: 2px solid #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-location-dot" style="color: #fff; font-size: 12px;"></i></div>',
@@ -101,7 +101,7 @@ export const getMapHTML = ({
       });
       L.marker([${route[0].latitude}, ${route[0].longitude}], { icon: originIcon })
         .addTo(map)
-        // .bindPopup("Origin").openPopup();
+        .bindPopup("Origin").openPopup();
     `);
   }
   if (route.length >= 2) {
@@ -181,10 +181,12 @@ export const getMapHTML = ({
           var segment${idx} = L.polyline(${JSON.stringify(segment.coords.map(pt => [pt.latitude, pt.longitude]))}, { color: '${segment.color}', weight: 3 }).addTo(map);
           segment${idx}.options.defaultColor = '${segment.color}';
           window.segmentPolylines.push(segment${idx});
-          var icon = getSegmentIcon('${segment.type}', '${segment.color}');
-          var marker = L.marker([${firstCoord.latitude}, ${firstCoord.longitude}], { icon: icon }).addTo(map);
-          if (${isOrigin}) {
-            marker.bindPopup("Origin").openPopup();
+          if ('${segment.type}'.toLowerCase() !== 'walking' && '${segment.type}'.toLowerCase() !== 'jeep') {
+            var icon = getSegmentIcon('${segment.type}', '${segment.color}');
+            var marker = L.marker([${firstCoord.latitude}, ${firstCoord.longitude}], { icon: icon }).addTo(map);
+            if (${isOrigin}) {
+              marker.bindPopup("Origin").openPopup();
+            }
           }
         `);
 
