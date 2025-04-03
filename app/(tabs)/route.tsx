@@ -1541,6 +1541,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
     marginLeft: 8,
+    alignSelf: "center"
   },
   viewStepButtonText: {
     color: "#FFFFFF",
