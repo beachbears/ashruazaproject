@@ -176,9 +176,13 @@ export const getMapHTML = ({
       polylinesJS.push("window.currentSelectedStepMarker = null;");
       (roadPath as SegmentPath[]).forEach((segment, idx) => {
         const firstCoord = segment.coords[0];
-        const isOrigin = idx === 0; // Identify the first segment (origin)
+        const isOrigin = idx === 0;
         polylinesJS.push(`
-          var segment${idx} = L.polyline(${JSON.stringify(segment.coords.map(pt => [pt.latitude, pt.longitude]))}, { color: '${segment.color}', weight: 3 }).addTo(map);
+          var polylineOptions${idx} = { color: '${segment.color}', weight: 3 };
+          if ('${segment.type}'.toLowerCase() === 'walking') {
+            polylineOptions${idx}.dashArray = '5, 10';  // Adjust the pattern as desired
+          }
+          var segment${idx} = L.polyline(${JSON.stringify(segment.coords.map(pt => [pt.latitude, pt.longitude]))}, polylineOptions${idx}).addTo(map);
           segment${idx}.options.defaultColor = '${segment.color}';
           window.segmentPolylines.push(segment${idx});
           if ('${segment.type}'.toLowerCase() !== 'walking' && '${segment.type}'.toLowerCase() !== 'jeep') {
