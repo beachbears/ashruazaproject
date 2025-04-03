@@ -817,20 +817,21 @@ const RouteScreen: React.FC = () => {
 
                         <Text style={styles.sectionHeading}>Directions</Text>
                         {segment.steps?.map((step: any, stepIdx: number) => (
-                          <View key={stepIdx} style={styles.stepRow}>
+                          <TouchableOpacity
+                            key={stepIdx}
+                            style={styles.stepRow}
+                            onPress={() => handleViewStep(idx, stepIdx)}
+                            activeOpacity={0.7}
+                          >
                             <Text style={styles.stepBullet}>{stepIdx + 1}.</Text>
                             <Text style={[styles.stepText, { flex: 1 }]}>
                               {step.instruction}
                             </Text>
-                            <TouchableOpacity
-                              style={styles.viewStepButton}
-                              onPress={() => handleViewStep(idx, stepIdx)}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={styles.viewStepButtonText}>View</Text>
-                            </TouchableOpacity>
-                          </View>
+                            {/* Replace the "View" button with a chevron icon */}
+                            <Ionicons name="chevron-forward" size={16} color="#6366F1" />
+                          </TouchableOpacity>
                         ))}
+
                       </>
                     ) : (
                       /* Transit Details */
