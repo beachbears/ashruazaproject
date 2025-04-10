@@ -382,6 +382,15 @@ const ModalComponent: React.FC<ModalProps> = ({
   const [searchQuery, setSearchQuery] = useState(''); // Add search state
   const flatListRef = useRef<FlatList>(null);
 
+
+  useEffect(() => {
+    if (selectedRestaurantId) {
+      setSelectedCategory("All");
+      setSearchQuery("");
+    }
+  }, [selectedRestaurantId]);
+
+
   type Category =
     | "All"
     | "Restaurant"
@@ -450,7 +459,10 @@ const ModalComponent: React.FC<ModalProps> = ({
     if (selectedRestaurantId && visible) {
       const index = filteredSpots.findIndex((r) => r.id === selectedRestaurantId);
       if (index !== -1) {
-        flatListRef.current?.scrollToIndex({ index, animated: true });
+        // Delay to allow FlatList to render items
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({ index, animated: true });
+        }, 500); // 500ms delay
       }
     }
   }, [selectedRestaurantId, visible, filteredSpots]);
@@ -538,7 +550,7 @@ const ModalComponent: React.FC<ModalProps> = ({
               />
             )}
             keyExtractor={(item, index) => `${item.name}-${index}`}
-            initialNumToRender={5}
+            initialNumToRender={20}
             windowSize={5}
             removeClippedSubviews={true}
             contentContainerStyle={{ paddingBottom: 20 }}
@@ -547,7 +559,7 @@ const ModalComponent: React.FC<ModalProps> = ({
               <Text style={styles.noResultsText}>No dining spots found.</Text>
             }
             onScrollToIndexFailed={(info) => {
-              const wait = new Promise((resolve) => setTimeout(resolve, 500));
+              const wait = new Promise((resolve) => setTimeout(resolve, 1000)); // 1000ms delay
               wait.then(() => {
                 flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
               });
