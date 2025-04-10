@@ -127,7 +127,7 @@ export interface MapComponentProps {
   selectedSpot?: LatLng | null;
   isLoading?: boolean;
   nearbyRestaurants?: Restaurant[]; // Changed to use Restaurant interface
-  onRestaurantClick: (name: string) => void;
+  onRestaurantClick: (id: number) => void;
   onSpotClick: (spotName: string) => void;
   activeTab: string;
   selectedRestaurant?: { latitude: number; longitude: number; name: string };

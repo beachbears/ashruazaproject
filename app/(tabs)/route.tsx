@@ -93,6 +93,7 @@ const RouteScreen: React.FC = () => {
     latitude: number;
     longitude: number;
     name: string;
+    id: number;
   } | null>(null);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<string>("best");
   const [showAlgorithmDropdown, setShowAlgorithmDropdown] = useState<boolean>(false);
@@ -1394,8 +1395,8 @@ const RouteScreen: React.FC = () => {
             selectedSpot={selectedSpot}
             isLoading={isRouteLoading}
             nearbyRestaurants={memoizedRestaurants}
-            onRestaurantClick={(name: string) => {
-              const restaurant = nearbyRestaurants.find((r) => r.name === name);
+            onRestaurantClick={(id: number) => {
+              const restaurant = nearbyRestaurants.find((r) => r.id === id);
               if (restaurant) {
                 setSelectedRestaurant(restaurant);
                 setRestaurantModalVisible(true);
@@ -1427,8 +1428,12 @@ const RouteScreen: React.FC = () => {
             {detailsContent}
             <ModalComponent
               visible={restaurantModalVisible}
-              onClose={() => setRestaurantModalVisible(false)}
+              onClose={() => {
+                setRestaurantModalVisible(false);
+                setSelectedRestaurant(null);
+              }}
               restaurants={nearbyRestaurants}
+              selectedRestaurantId={selectedRestaurant?.id}
               onView={(restaurant) => {
                 const js = `
                 if (window.map) {

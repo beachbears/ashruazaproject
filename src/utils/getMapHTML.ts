@@ -13,12 +13,17 @@ interface GetMapHTMLOptions {
     image_url?: string;
   }>;
   nearbyRestaurants?: Array<{
+    id: number;
     amenity: string;
     latitude: number;
     longitude: number;
     name: string;
     cuisine?: string;
+    metadata?: {
+      cuisine?: string;
+    }
     image_url?: string;
+    distance: number;
   }>;
   isRouteGenerated: boolean; // New flag
 }
@@ -118,6 +123,10 @@ export const getMapHTML = ({
     `);
   }
 
+  const escapeHtml = (str: string) => {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  };
+
   // Tourist spot markers
   if (nearbySpots && nearbySpots.length > 0) {
     markersJS.push(`
@@ -148,23 +157,31 @@ export const getMapHTML = ({
   // Restaurant markers
   if (nearbyRestaurants && nearbyRestaurants.length > 0) {
     nearbyRestaurants.forEach((restaurant) => {
-      const escapedName = restaurant.name.replace(/'/g, "\\'");
+      // Escape special characters in strings to prevent HTML/JS injection
+      const name = escapeHtml(restaurant.name);
+      const amenity = escapeHtml(restaurant.amenity);
+      const cuisine = escapeHtml(restaurant.metadata?.cuisine || 'Not specified');
+      const distance = restaurant.distance.toFixed(2);
+
       markersJS.push(`
-        var restaurantIcon = L.divIcon({
-          html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;"><img src="${getIconUrl(restaurant.amenity)}" style="width: 12px; height: 12px;" /></div>',
-          className: 'restaurant-icon',
-          iconSize: [28, 28],
-          iconAnchor: [14, 28]
-        });
-        L.marker([${restaurant.latitude}, ${restaurant.longitude}], { icon: restaurantIcon, isRestaurant: true })
-          .addTo(map)
-          .bindPopup(\`
-            <div style="max-width: 200px;">
-              <b>${escapedName}</b>
-              ${restaurant.cuisine ? `<p style="margin: 2px 0; color: #666;">Cuisine: ${restaurant.cuisine}</p>` : ""}
-            </div>
-          \`);
-      `);
+      var restaurantIcon = L.divIcon({
+        html: '<div style="background-color: #fff; border: 2px solid #dc3545; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;"><img src="${getIconUrl(restaurant.amenity)}" style="width: 12px; height: 12px;" /></div>',
+        className: 'restaurant-icon',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28]
+      });
+      L.marker([${restaurant.latitude}, ${restaurant.longitude}], { icon: restaurantIcon, isRestaurant: true })
+        .addTo(map)
+        .bindPopup(\`
+          <div style="max-width: 200px; font-family: Arial, sans-serif;">
+            <h3 style="margin: 0; font-size: 16px; color: #333;">${name}</h3>
+            <p style="margin: 2px 0; color: #666;">${amenity}</p>
+            <p style="margin: 2px 0; color: #666;">Cuisine: ${cuisine}</p>
+            <p style="margin: 2px 0; color: #666;">Distance: ${distance} km</p>
+            <button style="margin-top: 5px; padding: 5px 10px; background-color: #6366F1; color: #fff; border: none; border-radius: 4px; cursor: pointer;" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'restaurantClick', id: ${restaurant.id} }))">View More</button>
+          </div>
+        \`);
+    `);
     });
   }
 

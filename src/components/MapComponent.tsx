@@ -104,6 +104,19 @@ const MapComponent = memo(
           source={{ html: mapHTML }}
           style={style}
           onLoadEnd={handleLoadEnd}
+          onMessage={(event) => {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              if (data.type === "restaurantClick") {
+                const restaurantId = data.id;
+                onRestaurantClick(restaurantId);
+              } else if (data.type === "spotClick") {
+                onSpotClick(data.name);
+              }
+            } catch (e) {
+              console.error("Error parsing message from WebView:", e);
+            }
+          }}
         />
         {(loading || isLoading) && (
           <Animated.View

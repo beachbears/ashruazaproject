@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   View,
@@ -87,6 +87,7 @@ interface ModalProps {
   visible: boolean;
   onClose: () => void;
   restaurants: Restaurant[];
+  selectedRestaurantId?: number; // Add this
   onView?: (restaurant: { latitude: number; longitude: number; name: string }) => void;
   onGoHere?: (restaurant: Restaurant) => void;
 }
@@ -95,6 +96,7 @@ interface RestaurantItemProps {
   item: Restaurant;
   onView?: (restaurant: { latitude: number; longitude: number; name: string }) => void;
   onGoHere?: (restaurant: Restaurant) => void;
+  isSelected?: boolean; // Add this
 }
 
 // Updated ServiceBadge now accepts a prop for iconSet, and for accessibility we use MaterialCommunityIcons.
@@ -117,7 +119,7 @@ const ServiceBadge = ({ icon, label, value, iconSet = 'material' }: ServiceBadge
 );
 
 // RestaurantItem now renders all details expanded.
-const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere }) => {
+const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere, isSelected }) => {
   const getServiceValue = (value: boolean | string | undefined): string => {
     if (value === undefined || value === null) {
       return 'Not specified';
@@ -162,7 +164,7 @@ const RestaurantItem = React.memo<RestaurantItemProps>(({ item, onView, onGoHere
   ].some(service => getServiceValue(service) !== 'Not specified');
 
   return (
-    <View style={styles.spotCard}>
+    <View style={[styles.spotCard, isSelected && styles.selectedSpotCard]}>
       {/* Header Section */}
       <View style={styles.headerContainer}>
         <Text style={styles.restaurantName}>{item.name}</Text>
@@ -371,12 +373,14 @@ const ModalComponent: React.FC<ModalProps> = ({
   visible,
   onClose,
   restaurants,
+  selectedRestaurantId,
   onView,
   onGoHere,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<Category>("All");
   const [showCategories, setShowCategories] = useState(false);
   const [searchQuery, setSearchQuery] = useState(''); // Add search state
+  const flatListRef = useRef<FlatList>(null);
 
   type Category =
     | "All"
@@ -427,10 +431,10 @@ const ModalComponent: React.FC<ModalProps> = ({
     // Then apply search filter
     if (searchQuery.trim()) {
       const lowerQuery = searchQuery.toLowerCase().trim();
-      return filtered.filter(spot => 
-        spot.name.toLowerCase().includes(lowerQuery) 
+      return filtered.filter(spot =>
+        spot.name.toLowerCase().includes(lowerQuery)
       );
-    }return filtered;
+    } return filtered;
   }, [selectedCategory, restaurants, searchQuery]);
 
   const clearSearch = () => {
@@ -441,6 +445,15 @@ const ModalComponent: React.FC<ModalProps> = ({
     setSelectedCategory(cat);
     setShowCategories(false);
   };
+
+  useEffect(() => {
+    if (selectedRestaurantId && visible) {
+      const index = filteredSpots.findIndex((r) => r.id === selectedRestaurantId);
+      if (index !== -1) {
+        flatListRef.current?.scrollToIndex({ index, animated: true });
+      }
+    }
+  }, [selectedRestaurantId, visible, filteredSpots]);
 
   return (
     <Modal
@@ -455,19 +468,19 @@ const ModalComponent: React.FC<ModalProps> = ({
 
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#6366F1" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Find dining spots..."
-                placeholderTextColor="#6366F1"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity style={styles.clearButton} onPress={clearSearch}>
-                    <Ionicons name="close-circle" size={20} color="#6366F1" />
-                  </TouchableOpacity>
-                )}
-              </View>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Find dining spots..."
+              placeholderTextColor="#6366F1"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity style={styles.clearButton} onPress={clearSearch}>
+                <Ionicons name="close-circle" size={20} color="#6366F1" />
+              </TouchableOpacity>
+            )}
+          </View>
 
           <View style={styles.controlsContainer}>
             <View style={styles.dropdownContainer}>
@@ -514,9 +527,15 @@ const ModalComponent: React.FC<ModalProps> = ({
             </View>
           </View>
           <FlatList
+            ref={flatListRef}
             data={filteredSpots}
             renderItem={({ item }) => (
-              <RestaurantItem item={item} onView={onView} onGoHere={onGoHere} />
+              <RestaurantItem
+                item={item}
+                onView={onView}
+                onGoHere={onGoHere}
+                isSelected={item.id === selectedRestaurantId}
+              />
             )}
             keyExtractor={(item, index) => `${item.name}-${index}`}
             initialNumToRender={5}
@@ -527,6 +546,12 @@ const ModalComponent: React.FC<ModalProps> = ({
             ListEmptyComponent={
               <Text style={styles.noResultsText}>No dining spots found.</Text>
             }
+            onScrollToIndexFailed={(info) => {
+              const wait = new Promise((resolve) => setTimeout(resolve, 500));
+              wait.then(() => {
+                flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+              });
+            }}
           />
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -547,6 +572,11 @@ const styles = StyleSheet.create({
     width: "100%",
     overflow: "visible", // Make sure the icons are not clipped
   },
+  selectedSpotCard: {
+    borderColor: "#6366F1",
+    borderWidth: 2,
+    backgroundColor: "#f0f5ff",
+  },
   searchInput: {
     height: 42,
     borderWidth: 1,
@@ -558,7 +588,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F7FF",
     marginVertical: 10,
     alignItems: "center",
-    justifyContent: "center",  },
+    justifyContent: "center",
+  },
   searchIcon: {
     position: "absolute",
     left: 10,
