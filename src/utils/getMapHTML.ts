@@ -106,7 +106,7 @@ export const getMapHTML = ({
       });
       L.marker([${route[0].latitude}, ${route[0].longitude}], { icon: originIcon })
         .addTo(map)
-        .bindPopup("Origin")
+        .bindPopup("Starting Location")
     `);
   }
   if (route.length >= 2) {
