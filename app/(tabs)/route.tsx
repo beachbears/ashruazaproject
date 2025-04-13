@@ -523,7 +523,19 @@ const RouteScreen: React.FC = () => {
   const clearOrigin = useCallback(() => {
     setOrigin('');
     setOriginSuggestions([]);
+    setShowNoResultsOrigin(false); // Reset the "No matching locations found" flag
     setRoute((prev) => (prev.length > 1 ? [prev[1]] : []));
+    setRouteDetails({ route: null, posts: [] });
+    setRoadPath([]);
+    setNearbySpots([]);
+    setSelectedLocationType(null);
+  }, []);
+
+  const clearDestination = useCallback(() => {
+    setDestination('');
+    setDestinationSuggestions([]);
+    setShowNoResultsDestination(false); // Reset the "No matching locations found" flag
+    setRoute((prev) => (prev.length > 0 ? [prev[0]] : [])); // Keep origin if it exists
     setRouteDetails({ route: null, posts: [] });
     setRoadPath([]);
     setNearbySpots([]);
@@ -981,68 +993,78 @@ const RouteScreen: React.FC = () => {
         {/* Starting Point Section */}
         <Text style={styles.subHeader}>Starting Point</Text>
         <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.userInput}
-            placeholder="Enter starting location"
-            value={origin}
-            onChangeText={handleOriginChange}
-          />
-          {origin && (
-            <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
-              <Ionicons name="close" size={20} color="#666" />
-            </TouchableOpacity>
+          <View style={[styles.textInputWrapper, { height: 40 }]}>
+            <TextInput
+              style={styles.userInput}
+              placeholder="Enter starting location"
+              value={origin}
+              onChangeText={handleOriginChange}
+            />
+            {origin && (
+              <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
+                <Ionicons name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+            {isOriginLoading && (
+              <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
+            )}
+          </View>
+          {originSuggestions.length > 0 && (
+            <View style={[styles.suggestionListContainer, { top: 40 }]}>
+              <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
+            </View>
           )}
-          {isOriginLoading && (
-            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
-          )}
-          {originSuggestions.length > 0 ? (
-            <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
-          ) : showNoResultsOrigin ? (
-            <View style={styles.noResultsContainer}>
+          {showNoResultsOrigin && (
+            <View style={[styles.noResultsContainer, { top: 40 }]}>
               <Text style={styles.noResultsText}>
                 No matching locations found. Try a different search term.
               </Text>
             </View>
-          ) : null}
+          )}
         </View>
 
         {/* Destination Section */}
         <Text style={styles.subHeader}>Destination</Text>
         <View style={styles.inputContainer}>
-          <TextInput
-            value={destination}
-            multiline
-            textAlignVertical="top"
-            onChangeText={(value) => {
-              handleDestinationChange(value);
-              if (value.trim() === "") {
-                setdestInputHeight(40);
-              }
-            }}
-            onContentSizeChange={(event) => {
-              const newHeight = event.nativeEvent.contentSize.height;
-              setdestInputHeight(newHeight < 40 ? 40 : newHeight);
-            }}
-            style={[styles.userInput, { height: destinputHeight }]}
-            placeholder="Enter your destination"
-          />
-          {destination && (
-            <TouchableOpacity style={styles.clearButton} onPress={() => setDestination("")}>
-              <Ionicons name="close" size={20} color="#666" />
-            </TouchableOpacity>
+          <View style={[styles.textInputWrapper, { height: destinputHeight }]}>
+            <TextInput
+              value={destination}
+              multiline
+              textAlignVertical="top"
+              onChangeText={(value) => {
+                handleDestinationChange(value);
+                if (value.trim() === "") {
+                  setdestInputHeight(40);
+                }
+              }}
+              onContentSizeChange={(event) => {
+                const newHeight = event.nativeEvent.contentSize.height;
+                setdestInputHeight(newHeight < 40 ? 40 : newHeight);
+              }}
+              style={[styles.userInput, { height: destinputHeight }]}
+              placeholder="Enter your destination"
+            />
+            {destination && (
+              <TouchableOpacity style={styles.clearButton} onPress={clearDestination}>
+                <Ionicons name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+            {isDestinationLoading && (
+              <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
+            )}
+          </View>
+          {destinationSuggestions.length > 0 && (
+            <View style={[styles.suggestionListContainer, { top: destinputHeight }]}>
+              <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
+            </View>
           )}
-          {isDestinationLoading && (
-            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
-          )}
-          {destinationSuggestions.length > 0 ? (
-            <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
-          ) : showNoResultsDestination ? (
-            <View style={styles.noResultsContainer}>
+          {showNoResultsDestination && (
+            <View style={[styles.noResultsContainer, { top: destinputHeight }]}>
               <Text style={styles.noResultsText}>
                 No matching locations found. Try a different search term.
               </Text>
             </View>
-          ) : null}
+          )}
         </View>
       </View>
 
@@ -1563,9 +1585,17 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  textInputWrapper: {
+    position: 'relative',
+  },
+  suggestionListContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
   noResultsContainer: {
     position: 'absolute',
-    top: 40, // Matches suggestionList to appear below the input
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
@@ -1918,6 +1948,7 @@ const styles = StyleSheet.create({
     borderColor: "#6366F1", // Purple border
     backgroundColor: '#fff',
     transform: [{ translateY: -10 }],
+    zIndex: 1001, // Higher than suggestions list
   },
   loadingIndicator: {
     position: "absolute",
