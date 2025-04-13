@@ -121,7 +121,8 @@ const RouteScreen: React.FC = () => {
   const [originInputY, setOriginInputY] = useState(0);
   const [destinationInputY, setDestinationInputY] = useState(0);
   const [destinputHeight, setdestInputHeight] = useState(40); // Default height
-
+  const [showNoResultsOrigin, setShowNoResultsOrigin] = useState(false);
+  const [showNoResultsDestination, setShowNoResultsDestination] = useState(false);
 
   useEffect(() => {
     if (originInputRef.current && originSuggestions.length > 0) {
@@ -469,11 +470,7 @@ const RouteScreen: React.FC = () => {
     debounce(async (text: string) => {
       if (!text) {
         setOriginSuggestions([]);
-        setDestination('');
-        setDestinationSuggestions([]);
-        setRoute([]);
-        setRouteDetails({ route: null, posts: [] });
-        setRoadPath([]);
+        setShowNoResultsOrigin(false);
         setIsOriginLoading(false);
         return;
       }
@@ -481,9 +478,11 @@ const RouteScreen: React.FC = () => {
       try {
         const suggestions = await geocodeAddress(text);
         setOriginSuggestions(suggestions);
+        setShowNoResultsOrigin(suggestions.length === 0 && text.trim() !== '');
       } catch (error) {
         // console.error('Search failed:', error);
         setOriginSuggestions([]);
+        setShowNoResultsOrigin(true); // Show message on error for simplicity
       } finally {
         setIsOriginLoading(false);
       }
@@ -495,6 +494,7 @@ const RouteScreen: React.FC = () => {
     debounce(async (text: string) => {
       if (!text) {
         setDestinationSuggestions([]);
+        setShowNoResultsDestination(false);
         setIsDestinationLoading(false);
         return;
       }
@@ -502,9 +502,11 @@ const RouteScreen: React.FC = () => {
       try {
         const suggestions = await geocodeAddress(text);
         setDestinationSuggestions(suggestions);
+        setShowNoResultsDestination(suggestions.length === 0 && text.trim() !== '');
       } catch (error) {
         // console.error('Search failed:', error);
         setDestinationSuggestions([]);
+        setShowNoResultsDestination(true); // Show message on error
       } finally {
         setIsDestinationLoading(false);
       }
@@ -641,6 +643,7 @@ const RouteScreen: React.FC = () => {
   const selectOriginSuggestion = useCallback(async (item: any) => {
     setOrigin(item.name);
     setOriginSuggestions([]);
+    setShowNoResultsOrigin(false); // Reset flag
     setRegion((prev) => ({ ...prev, latitude: item.lat, longitude: item.lon }));
     const newRoute = route.length > 0
       ? [{ latitude: item.lat, longitude: item.lon }, ...route.slice(1)]
@@ -656,6 +659,7 @@ const RouteScreen: React.FC = () => {
   const selectDestinationSuggestion = useCallback(async (item: any) => {
     setDestination(item.name);
     setDestinationSuggestions([]);
+    setShowNoResultsDestination(false); // Reset flag
     setRoadPath([]);
     setRoute((prev) =>
       prev.length > 0
@@ -974,56 +978,71 @@ const RouteScreen: React.FC = () => {
       </View>
 
       <View style={styles.locationsContainer}>
-        <Text style={styles.subHeader}>From</Text>
+        {/* Starting Point Section */}
+        <Text style={styles.subHeader}>Starting Point</Text>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.userInput}
-            placeholder='Type Here...'
+            placeholder="Enter starting location"
             value={origin}
             onChangeText={handleOriginChange}
           />
           {origin && (
             <TouchableOpacity style={styles.clearButton} onPress={clearOrigin}>
-              <Ionicons name='close' size={20} color='#666' />
+              <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           )}
           {isOriginLoading && (
-            <ActivityIndicator size='small' color='#6366F1' style={styles.loadingIndicator} />
+            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
           )}
-          <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
+          {originSuggestions.length > 0 ? (
+            <SuggestionList suggestions={originSuggestions} onSelect={selectOriginSuggestion} />
+          ) : showNoResultsOrigin ? (
+            <View style={styles.noResultsContainer}>
+              <Text style={styles.noResultsText}>
+                No matching locations found. Try a different search term.
+              </Text>
+            </View>
+          ) : null}
         </View>
 
-        <Text style={styles.subHeader}>To</Text>
+        {/* Destination Section */}
+        <Text style={styles.subHeader}>Destination</Text>
         <View style={styles.inputContainer}>
-
           <TextInput
             value={destination}
             multiline
-            textAlignVertical="top" // Keeps text aligned properly
+            textAlignVertical="top"
             onChangeText={(value) => {
               handleDestinationChange(value);
               if (value.trim() === "") {
-                setdestInputHeight(40); // Reset to normal size when empty
+                setdestInputHeight(40);
               }
             }}
             onContentSizeChange={(event) => {
               const newHeight = event.nativeEvent.contentSize.height;
-              setdestInputHeight(newHeight < 40 ? 40 : newHeight); // Shrink if short, expand if needed
+              setdestInputHeight(newHeight < 40 ? 40 : newHeight);
             }}
             style={[styles.userInput, { height: destinputHeight }]}
-            placeholder="Where do you want to go?"
-
+            placeholder="Enter your destination"
           />
-
           {destination && (
-            <TouchableOpacity style={styles.clearButton} onPress={() => setDestination('')}>
-              <Ionicons name='close' size={20} color='#666' />
+            <TouchableOpacity style={styles.clearButton} onPress={() => setDestination("")}>
+              <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           )}
           {isDestinationLoading && (
-            <ActivityIndicator size='small' color='#6366F1' style={styles.loadingIndicator} />
+            <ActivityIndicator size="small" color="#6366F1" style={styles.loadingIndicator} />
           )}
-          <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
+          {destinationSuggestions.length > 0 ? (
+            <SuggestionList suggestions={destinationSuggestions} onSelect={selectDestinationSuggestion} />
+          ) : showNoResultsDestination ? (
+            <View style={styles.noResultsContainer}>
+              <Text style={styles.noResultsText}>
+                No matching locations found. Try a different search term.
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -1060,7 +1079,7 @@ const RouteScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       ) : !isRouteLoading ? (
-        <Text style={styles.errorText}>Search for your location and destination.</Text>
+        <Text style={styles.errorText}>Search for your starting point and destination.</Text>
       ) : null}
     </View>
   ), [
@@ -1544,6 +1563,23 @@ const CustomHandle = () => (
 // Styles
 // -------------------------
 const styles = StyleSheet.create({
+  noResultsContainer: {
+    position: 'absolute',
+    top: 40, // Matches suggestionList to appear below the input
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 12,
+    zIndex: 1000,
+  },
+  noResultsText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
   viewStepButton: {
     backgroundColor: "#6366F1",
     paddingHorizontal: 8,
@@ -1850,12 +1886,6 @@ const styles = StyleSheet.create({
     color: '#6366F1',
     fontSize: 12,
     marginRight: 4,
-  },
-  noResultsText: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-    paddingVertical: 8,
   },
   promptText: {
     fontSize: 12,
